@@ -1,0 +1,52 @@
+name: EZOMetter beta build
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_publish:
+        description: "Type PUBLISH to send to Discord. Any other value runs a dry run only."
+        required: true
+        default: "DRY_RUN"
+      note:
+        description: Optional note for Discord
+        required: false
+        default: Clean beta build generated from GitHub Actions.
+
+jobs:
+  publish-beta:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build clean addon ZIP
+        shell: pwsh
+        run: .\scripts\ezo\build-addon-package.ps1 -Force
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: EZOMetter-package
+          path: dist/*.zip
+          if-no-files-found: error
+
+      - name: Publish beta build to Discord
+        shell: pwsh
+        env:
+          EZO_CODEX_BETA_BUILDS: ${{ secrets.EZO_CODEX_BETA_BUILDS }}
+          CODEX_LOG: ${{ secrets.CODEX_LOG }}
+          EZO_BETA_NOTE: ${{ inputs.note }}
+          EZO_CONFIRM_PUBLISH: ${{ inputs.confirm_publish }}
+        run: |
+          $publish = "$env:EZO_CONFIRM_PUBLISH" -eq "PUBLISH"
+          .\scripts\ezo\publish-beta.ps1 -Force -Note $env:EZO_BETA_NOTE -DryRun:(!$publish)
+
+      - name: Publish automation log to Discord
+        shell: pwsh
+        env:
+          CODEX_LOG: ${{ secrets.CODEX_LOG }}
+          EZO_BETA_NOTE: ${{ inputs.note }}
+          EZO_CONFIRM_PUBLISH: ${{ inputs.confirm_publish }}
+        run: |
+          $publish = "$env:EZO_CONFIRM_PUBLISH" -eq "PUBLISH"
+          .\scripts\ezo\publish-codex-log.ps1 -Action "Beta build published" -Note $env:EZO_BETA_NOTE -DryRun:(!$publish)

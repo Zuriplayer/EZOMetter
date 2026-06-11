@@ -1,0 +1,58 @@
+name: EZOMetter release
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_publish:
+        description: "Type PUBLISH to send to Discord. Any other value runs a dry run only."
+        required: true
+        default: "DRY_RUN"
+      note:
+        description: Release note for Discord
+        required: false
+        default: Release prepared from GitHub Actions.
+      publish_download:
+        description: Also publish the clean ZIP to the downloads channel
+        required: true
+        type: boolean
+        default: false
+      publish_announcement:
+        description: Also publish a human announcement
+        required: true
+        type: boolean
+        default: false
+
+jobs:
+  publish-release:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build clean addon ZIP
+        shell: pwsh
+        run: .\scripts\ezo\build-addon-package.ps1 -Force
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: EZOMetter-release-package
+          path: dist/*.zip
+          if-no-files-found: error
+
+      - name: Publish release to Discord
+        shell: pwsh
+        env:
+          EZO_CODEX_RELEASES: ${{ secrets.EZO_CODEX_RELEASES }}
+          EZO_CODEX_DOWNLOADS: ${{ secrets.EZO_CODEX_DOWNLOADS }}
+          EZO_CODEX_ANNOUNCER: ${{ secrets.EZO_CODEX_ANNOUNCER }}
+          CODEX_LOG: ${{ secrets.CODEX_LOG }}
+          EZO_RELEASE_NOTE: ${{ inputs.note }}
+          EZO_PUBLISH_DOWNLOAD: ${{ inputs.publish_download }}
+          EZO_PUBLISH_ANNOUNCEMENT: ${{ inputs.publish_announcement }}
+          EZO_CONFIRM_PUBLISH: ${{ inputs.confirm_publish }}
+        run: |
+          $publish = "$env:EZO_CONFIRM_PUBLISH" -eq "PUBLISH"
+          $publishDownload = "$env:EZO_PUBLISH_DOWNLOAD" -eq "true"
+          $publishAnnouncement = "$env:EZO_PUBLISH_ANNOUNCEMENT" -eq "true"
+          .\scripts\ezo\publish-release.ps1 -Force -Note $env:EZO_RELEASE_NOTE -PublishDownload:$publishDownload -PublishAnnouncement:$publishAnnouncement -PublishCodexLog -DryRun:(!$publish)
