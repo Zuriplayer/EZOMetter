@@ -20,13 +20,22 @@ modules/i18n.lua
 EZOMetter.lua
 modules/debug.lua
 modules/core.lua
+modules/effect_catalog.lua
+modules/meter_session.lua
+modules/buff_alert.lua
 modules/saved_vars.lua
 modules/menu.lua
 ```
 
+## Perfil de rol
+
+`EZOMetter` guarda un perfil manual de rol (`dd`, `healer`, `tank`) para separar las metricas desde el principio.
+
+La primera funcionalidad activa usa el perfil `dd` y comprueba buffs propios requeridos. `healer` y `tank` quedan preparados en configuracion y catalogo, pero sin metricas activas todavia.
+
 ## Pendiente antes de implementar medicion
 
-- Confirmar alcance exacto: combate, recursos, grupo, encounter, parse local u otro uso.
-- Verificar APIs reales de ESO en UESP o cliente.
+- Confirmar alcance exacto: combate local segun `docs/meter-scope.md`, recursos, grupo, encounter, parse local u otro uso.
+- Verificar APIs reales de ESO en UESP o cliente segun `docs/api-research.md`.
 - Definir si la UI sera LAM, ventana propia, chat controlado o integracion opcional con `EZOTools`.
 - Definir SavedVariables necesarias.

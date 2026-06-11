@@ -3,14 +3,14 @@
   "addon": {
     "id": "ezometter",
     "name": "EZOMetter",
-    "version": "0.1.0",
+    "version": "0.1.4",
     "status": "alpha",
     "phase": "scaffold",
     "visibility": "public",
     "manifest": "EZOMetter.txt",
     "package": {
       "rootFolderName": "EZOMetter",
-      "zipName": "EZOMetter_v0.1.0.zip",
+      "zipName": "EZOMetter_v0.1.4.zip",
       "outputPath": "dist",
       "include": [
         "*.txt",

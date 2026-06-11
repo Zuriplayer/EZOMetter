@@ -64,6 +64,10 @@ function EZOM:Initialize()
         EZOMetter_Menu.Init()
     end
 
+    if EZOMetter_BuffAlert and EZOMetter_BuffAlert.Init then
+        EZOMetter_BuffAlert.Init()
+    end
+
     Print(GetString(EZOM_MSG_INIT))
 end
 

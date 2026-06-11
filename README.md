@@ -19,6 +19,9 @@ El objetivo de este repositorio inicial es dejar estructura, versionado, idiomas
 - `EZOMetter.txt`: manifest del addon.
 - `EZOMetter.lua`: inicializacion.
 - `modules/core.lua`: constantes publicas.
+- `modules/effect_catalog.lua`: catalogo inicial de efectos por rol.
+- `modules/meter_session.lua`: estado y calculos puros de una sesion local.
+- `modules/buff_alert.lua`: aviso movible para buffs propios requeridos.
 - `modules/saved_vars.lua`: defaults y SavedVariables.
 - `modules/i18n.lua`: aplicacion de idiomas.
 - `modules/debug.lua`: salida tecnica opcional.
@@ -26,6 +29,8 @@ El objetivo de este repositorio inicial es dejar estructura, versionado, idiomas
 - `lang/en.lua`: textos en ingles.
 - `lang/es.lua`: textos en espanol.
 - `docs/architecture.md`: decisiones tecnicas iniciales.
+- `docs/meter-scope.md`: propuesta de alcance para la primera iteracion del medidor.
+- `docs/api-research.md`: verificacion pendiente de APIs ESO para el medidor.
 - `docs/discord.md`: politica de Discord.
 - `docs/integration-with-ezotools.md`: integracion futura opcional.
 

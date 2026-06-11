@@ -59,6 +59,122 @@ function EZOMetter_Menu.Init()
                     end,
                     default = EZOMetter.GetDefaultLanguage(),
                 },
+                {
+                    type = "dropdown",
+                    name = GetString(EZOM_OPTION_ROLE),
+                    tooltip = GetString(EZOM_OPTION_ROLE_TOOLTIP),
+                    choices = {
+                        GetString(EZOM_OPTION_ROLE_DD),
+                        GetString(EZOM_OPTION_ROLE_HEALER),
+                        GetString(EZOM_OPTION_ROLE_TANK),
+                    },
+                    choicesValues = {
+                        "dd",
+                        "healer",
+                        "tank",
+                    },
+                    getFunc = function()
+                        return EZOMetter.sv.general.role or "dd"
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.general.role = value
+                        if EZOMetter_BuffAlert and EZOMetter_BuffAlert.ApplySettings then
+                            EZOMetter_BuffAlert.ApplySettings()
+                        end
+                    end,
+                    default = "dd",
+                },
+            },
+        },
+        {
+            type = "submenu",
+            name = GetString(EZOM_OPTION_ALERTS),
+            controls = {
+                {
+                    type = "checkbox",
+                    name = GetString(EZOM_OPTION_MISSING_BUFF_ALERTS),
+                    tooltip = GetString(EZOM_OPTION_MISSING_BUFF_ALERTS_TOOLTIP),
+                    getFunc = function()
+                        return EZOMetter.sv.alerts and EZOMetter.sv.alerts.missingBuffAlerts == true
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.alerts.missingBuffAlerts = value == true
+                        if EZOMetter_BuffAlert and EZOMetter_BuffAlert.ApplySettings then
+                            EZOMetter_BuffAlert.ApplySettings()
+                        end
+                    end,
+                    default = true,
+                },
+                {
+                    type = "checkbox",
+                    name = GetString(EZOM_OPTION_UNLOCK_ALERT),
+                    tooltip = GetString(EZOM_OPTION_UNLOCK_ALERT_TOOLTIP),
+                    getFunc = function()
+                        return EZOMetter.sv.alerts and EZOMetter.sv.alerts.unlockAlert == true
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.alerts.unlockAlert = value == true
+                        if EZOMetter_BuffAlert and EZOMetter_BuffAlert.ApplySettings then
+                            EZOMetter_BuffAlert.ApplySettings()
+                        end
+                    end,
+                    default = false,
+                },
+                {
+                    type = "slider",
+                    name = GetString(EZOM_OPTION_ALERT_BACKGROUND_OPACITY),
+                    tooltip = GetString(EZOM_OPTION_ALERT_BACKGROUND_OPACITY_TOOLTIP),
+                    min = 0,
+                    max = 100,
+                    step = 5,
+                    getFunc = function()
+                        return EZOMetter.sv.alerts.backgroundOpacity or 86
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.alerts.backgroundOpacity = tonumber(value) or 86
+                        if EZOMetter_BuffAlert and EZOMetter_BuffAlert.ApplySettings then
+                            EZOMetter_BuffAlert.ApplySettings()
+                        end
+                    end,
+                    default = 86,
+                },
+                {
+                    type = "checkbox",
+                    name = GetString(EZOM_OPTION_ALERT_SHOW_BORDER),
+                    tooltip = GetString(EZOM_OPTION_ALERT_SHOW_BORDER_TOOLTIP),
+                    getFunc = function()
+                        return EZOMetter.sv.alerts.showBorder ~= false
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.alerts.showBorder = value == true
+                        if EZOMetter_BuffAlert and EZOMetter_BuffAlert.ApplySettings then
+                            EZOMetter_BuffAlert.ApplySettings()
+                        end
+                    end,
+                    default = true,
+                },
+                {
+                    type = "button",
+                    name = GetString(EZOM_OPTION_TEST_ALERT),
+                    tooltip = GetString(EZOM_OPTION_TEST_ALERT_TOOLTIP),
+                    func = function()
+                        if EZOMetter_BuffAlert and EZOMetter_BuffAlert.ShowTest then
+                            EZOMetter_BuffAlert.ShowTest()
+                        end
+                    end,
+                },
+                {
+                    type = "button",
+                    name = GetString(EZOM_OPTION_RESET_ALERT_POSITION),
+                    tooltip = GetString(EZOM_OPTION_RESET_ALERT_POSITION_TOOLTIP),
+                    func = function()
+                        EZOMetter.sv.alerts.alertX = 0
+                        EZOMetter.sv.alerts.alertY = -180
+                        if EZOMetter_BuffAlert and EZOMetter_BuffAlert.ApplySettings then
+                            EZOMetter_BuffAlert.ApplySettings()
+                        end
+                    end,
+                },
             },
         },
         {
