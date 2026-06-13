@@ -7,6 +7,8 @@ local CONTROL_NAME = "EZOMetterMissingBuffAlert"
 local ROW_HEIGHT = 32
 local ROW_GAP = 4
 local WIDTH = 280
+local COMBAT_SAMPLE_INTERVAL_MS = 250
+local SUMMARY_TOLERANCE_MS = 250
 
 local activeEffects = {}
 local lastMissing = {}
@@ -14,6 +16,13 @@ local lastIconByKey = {}
 local rows = {}
 local control
 local backdrop
+local testPreviewActive = false
+local testPreviewToken = 0
+local isCombat = false
+local statsUpdateRegistered = false
+local statsTracker
+local lastCombatSummary
+local ScanPlayerBuffs
 
 local function GetSettings()
     if not EZOMetter.sv then return nil end
@@ -28,6 +37,10 @@ end
 local function IsEnabled()
     local settings = GetSettings()
     return settings and settings.missingBuffAlerts == true and GetRole() == "dd"
+end
+
+local function CanShowHud()
+    return EZOMetter_VisualContext and EZOMetter_VisualContext.CanShowHud and EZOMetter_VisualContext.CanShowHud()
 end
 
 local function GetEffectName(effect)
@@ -52,6 +65,63 @@ local function GetEffectIcon(effect)
     return ""
 end
 
+local function GetSummaryEffects()
+    local effects = {}
+    if not lastCombatSummary or not lastCombatSummary.hasIssues then
+        return effects
+    end
+
+    local required = EZOMetter.Effects and EZOMetter.Effects.GetRequiredForRole(GetRole()) or {}
+    for _, effect in ipairs(required) do
+        if lastCombatSummary.byKey and lastCombatSummary.byKey[effect.key] then
+            table.insert(effects, effect)
+        end
+    end
+
+    return effects
+end
+
+local function BuildTooltipText()
+    if not lastCombatSummary or not lastCombatSummary.rows then
+        return GetString(EZOM_LAST_COMBAT_NO_DATA)
+    end
+
+    local lines = {
+        GetString(EZOM_LAST_COMBAT_TITLE),
+        GetString(EZOM_SUMMARY_DURATION) .. ": " .. EZOMetter_CombatSummary.FormatSeconds(lastCombatSummary.durationMs) .. "s",
+    }
+
+    if not lastCombatSummary.hasIssues then
+        table.insert(lines, GetString(EZOM_LAST_COMBAT_ALL_OK))
+        return table.concat(lines, "\n")
+    end
+
+    for _, row in ipairs(lastCombatSummary.rows) do
+        table.insert(lines, string.format(
+            "%s: %s | %ss | %s %d",
+            row.name,
+            EZOMetter_CombatSummary.FormatPercent(row.uptime),
+            EZOMetter_CombatSummary.FormatSeconds(row.missingMs),
+            GetString(EZOM_SUMMARY_DROPS),
+            row.drops
+        ))
+    end
+
+    return table.concat(lines, "\n")
+end
+
+local function ShowTooltip()
+    if EZOMetter_CombatSummary then
+        EZOMetter_CombatSummary.ShowTooltip(control, BuildTooltipText())
+    end
+end
+
+local function HideTooltip()
+    if EZOMetter_CombatSummary then
+        EZOMetter_CombatSummary.HideTooltip()
+    end
+end
+
 local function SavePosition()
     local settings = GetSettings()
     if not settings or not control then return end
@@ -71,7 +141,7 @@ end
 local function SetMoveMode(enabled)
     if not control then return end
 
-    control:SetMouseEnabled(enabled == true)
+    control:SetMouseEnabled(true)
     control:SetMovable(enabled == true)
 end
 
@@ -122,11 +192,17 @@ local function EnsureControl()
     control:SetDrawTier(DT_HIGH)
     control:SetHidden(true)
     control:SetHandler("OnMoveStop", SavePosition)
+    control:SetHandler("OnMouseEnter", ShowTooltip)
+    control:SetHandler("OnMouseExit", HideTooltip)
 
     backdrop = wm:CreateControl(CONTROL_NAME .. "Backdrop", control, CT_BACKDROP)
     backdrop:SetAnchorFill(control)
     backdrop:SetEdgeTexture("EsoUI/Art/Tooltips/UI-Border.dds", 128, 16)
     ApplyStyle()
+
+    if EZOMetter_VisualContext and EZOMetter_VisualContext.AddHudFragment then
+        EZOMetter_VisualContext.AddHudFragment(control)
+    end
 
     ApplyPosition()
     SetMoveMode(GetSettings() and GetSettings().unlockAlert == true)
@@ -134,13 +210,18 @@ local function EnsureControl()
 end
 
 local function HideAlert()
-    if control and not (GetSettings() and GetSettings().unlockAlert == true) then
+    if control and (not CanShowHud() or not (GetSettings() and GetSettings().unlockAlert == true)) then
         control:SetHidden(true)
     end
 end
 
 local function ShowEffects(effects)
     EnsureControl()
+
+    if not CanShowHud() then
+        control:SetHidden(true)
+        return
+    end
 
     local count = #effects
     if count == 0 then
@@ -173,12 +254,24 @@ local function GetMissingEffects()
     local required = EZOMetter.Effects and EZOMetter.Effects.GetRequiredForRole(GetRole()) or {}
 
     for _, effect in ipairs(required) do
-        if not EffectIsActive(effect) then
+        if EZOMetter.Effects.ShouldRequire(effect) and not EffectIsActive(effect) then
             table.insert(missing, effect)
         end
     end
 
     return missing
+end
+
+local function GetPreviewEffects()
+    return EZOMetter.Effects and EZOMetter.Effects.GetRequiredForRole("dd") or {}
+end
+
+local function ShouldShowPreview()
+    return testPreviewActive == true or (GetSettings() and GetSettings().unlockAlert == true)
+end
+
+local function ShowPreview()
+    ShowEffects(GetPreviewEffects())
 end
 
 local function MissingChanged(missing)
@@ -206,6 +299,13 @@ local function MissingChanged(missing)
 end
 
 local function Refresh()
+    if ShouldShowPreview() then
+        activeEffects = {}
+        lastMissing = {}
+        ShowPreview()
+        return
+    end
+
     if not IsEnabled() then
         activeEffects = {}
         lastMissing = {}
@@ -214,11 +314,51 @@ local function Refresh()
     end
 
     local missing = GetMissingEffects()
+    if #missing == 0 and not isCombat then
+        missing = GetSummaryEffects()
+    end
     MissingChanged(missing)
     ShowEffects(missing)
 end
 
-local function ScanPlayerBuffs()
+local function RegisterStatsUpdate()
+    if statsUpdateRegistered then return end
+    EVENT_MANAGER:RegisterForUpdate(ADDON_NAME .. "_BuffAlertStats", COMBAT_SAMPLE_INTERVAL_MS, function()
+        if statsTracker then
+            statsTracker:Sample(EZOMetter_CombatSummary.GetNowMs())
+        end
+    end)
+    statsUpdateRegistered = true
+end
+
+local function UnregisterStatsUpdate()
+    if not statsUpdateRegistered then return end
+    EVENT_MANAGER:UnregisterForUpdate(ADDON_NAME .. "_BuffAlertStats")
+    statsUpdateRegistered = false
+end
+
+local function OnCombatState(_, inCombat)
+    local nowInCombat = inCombat == true or (type(IsUnitInCombat) == "function" and IsUnitInCombat("player") == true)
+    if nowInCombat == isCombat then return end
+
+    isCombat = nowInCombat
+    if isCombat then
+        ScanPlayerBuffs()
+        if statsTracker then
+            statsTracker:Start(EZOMetter_CombatSummary.GetNowMs())
+            lastCombatSummary = nil
+        end
+        RegisterStatsUpdate()
+    else
+        if statsTracker then
+            lastCombatSummary = statsTracker:Finish(EZOMetter_CombatSummary.GetNowMs())
+        end
+        UnregisterStatsUpdate()
+        Refresh()
+    end
+end
+
+function ScanPlayerBuffs()
     activeEffects = {}
 
     if type(GetNumBuffs) ~= "function" or type(GetUnitBuffInfo) ~= "function" then
@@ -269,8 +409,19 @@ function BuffAlert.Refresh()
 end
 
 function BuffAlert.ShowTest()
-    local required = EZOMetter.Effects and EZOMetter.Effects.GetRequiredForRole("dd") or {}
-    ShowEffects(required)
+    testPreviewActive = true
+    testPreviewToken = testPreviewToken + 1
+    local token = testPreviewToken
+
+    if CanShowHud() then
+        ShowPreview()
+    end
+
+    zo_callLater(function()
+        if token ~= testPreviewToken then return end
+        testPreviewActive = false
+        ScanPlayerBuffs()
+    end, 5000)
 end
 
 function BuffAlert.ApplySettings()
@@ -279,13 +430,31 @@ function BuffAlert.ApplySettings()
     SetMoveMode(GetSettings() and GetSettings().unlockAlert == true)
     ApplyStyle()
     ScanPlayerBuffs()
-    if GetSettings() and GetSettings().unlockAlert == true then
-        BuffAlert.ShowTest()
-    end
 end
 
 function BuffAlert.Init()
     EnsureControl()
+    if EZOMetter_CombatSummary then
+        statsTracker = EZOMetter_CombatSummary.CreateUptimeTracker({
+            toleranceMs = SUMMARY_TOLERANCE_MS,
+            getItems = function()
+                return EZOMetter.Effects and EZOMetter.Effects.GetRequiredForRole(GetRole()) or {}
+            end,
+            getItemKey = function(effect)
+                return effect.key
+            end,
+            getItemName = GetEffectName,
+            isItemRequired = function(effect)
+                return EZOMetter.Effects and EZOMetter.Effects.ShouldRequire(effect)
+            end,
+            isItemActive = EffectIsActive,
+        })
+    end
+
+    if EZOMetter_VisualContext and EZOMetter_VisualContext.RegisterRefresh then
+        EZOMetter_VisualContext.RegisterRefresh(BuffAlert.Refresh)
+    end
+
     EVENT_MANAGER:RegisterForEvent(
         ADDON_NAME .. "_PlayerBuffs",
         EVENT_EFFECT_CHANGED,
@@ -293,7 +462,12 @@ function BuffAlert.Init()
     )
     EVENT_MANAGER:AddFilterForEvent(ADDON_NAME .. "_PlayerBuffs", EVENT_EFFECT_CHANGED, REGISTER_FILTER_UNIT_TAG, "player")
 
+    EVENT_MANAGER:RegisterForEvent(ADDON_NAME .. "_ActionSlotsAll", EVENT_ACTION_SLOTS_ALL_HOTBARS_UPDATED, ScanPlayerBuffs)
+    EVENT_MANAGER:RegisterForEvent(ADDON_NAME .. "_ActionSlotUpdated", EVENT_ACTION_SLOT_UPDATED, ScanPlayerBuffs)
+    EVENT_MANAGER:RegisterForEvent(ADDON_NAME .. "_BuffAlertCombat", EVENT_PLAYER_COMBAT_STATE, OnCombatState)
+
     zo_callLater(function()
         ScanPlayerBuffs()
+        OnCombatState(nil, type(IsUnitInCombat) == "function" and IsUnitInCombat("player"))
     end, 2000)
 end

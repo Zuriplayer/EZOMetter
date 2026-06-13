@@ -7,6 +7,7 @@ Este documento fija una propuesta de alcance inicial para que `EZOMetter` pueda 
 La primera iteracion debe orientarse a DD y empezar por senales locales seguras:
 
 - avisar cuando falten buffs propios basicos de DD;
+- mostrar Off Balance en un tracker separado de objetivo/boss, sin mezclarlo con buffs propios;
 - preparar perfiles de rol para `DD`, `Healer` y `Tank`;
 - dejar `Healer` y `Tank` sin checklist activo hasta definir sus metricas.
 
@@ -42,7 +43,7 @@ Antes de crear una ventana propia, se debe confirmar el formato de lectura desea
 - integracion opcional futura con una API pequena de `EZOTools`;
 - otra superficie definida por el usuario.
 
-No se debe anadir UI runtime nueva hasta confirmar una de esas opciones.
+El tracker live de Off Balance queda aceptado como UI runtime independiente porque responde a estado de objetivo/boss, no a resultados del medidor.
 
 ## Datos previstos
 

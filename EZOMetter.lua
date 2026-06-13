@@ -68,6 +68,10 @@ function EZOM:Initialize()
         EZOMetter_BuffAlert.Init()
     end
 
+    if EZOMetter_OffBalance and EZOMetter_OffBalance.Init then
+        EZOMetter_OffBalance.Init()
+    end
+
     Print(GetString(EZOM_MSG_INIT))
 end
 

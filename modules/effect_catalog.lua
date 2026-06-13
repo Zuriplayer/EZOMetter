@@ -34,6 +34,7 @@ Effects.RequiredByRole = {
             key = "banner_bearer",
             nameString = "EZOM_EFFECT_BANNER_BEARER",
             abilityIds = { 217699 },
+            requiresSlotted = true,
             aliases = {
                 "Banner Bearer",
                 "Binding Banner",
@@ -127,4 +128,55 @@ function Effects.Matches(effect, abilityId, effectName)
     if normalizedName == "" then return false end
 
     return GetLocalizedNames(effect)[normalizedName] == true
+end
+
+local function GetHotbarCategories()
+    local categories = {}
+    if HOTBAR_CATEGORY_PRIMARY then
+        table.insert(categories, HOTBAR_CATEGORY_PRIMARY)
+    end
+    if HOTBAR_CATEGORY_BACKUP then
+        table.insert(categories, HOTBAR_CATEGORY_BACKUP)
+    end
+    if #categories == 0 and type(GetActiveHotbarCategory) == "function" then
+        table.insert(categories, GetActiveHotbarCategory())
+    end
+    return categories
+end
+
+function Effects.IsSlotted(effect)
+    if not effect or type(GetSlotBoundId) ~= "function" or type(GetSlotType) ~= "function" then
+        return false
+    end
+
+    for _, hotbarCategory in ipairs(GetHotbarCategories()) do
+        for slotIndex = 3, 8 do
+            local actionType = GetSlotType(slotIndex, hotbarCategory)
+            local boundId = GetSlotBoundId(slotIndex, hotbarCategory)
+            local trueAbilityId = boundId
+
+            if actionType == ACTION_TYPE_CRAFTED_ABILITY and type(GetAbilityIdForCraftedAbilityId) == "function" then
+                trueAbilityId = GetAbilityIdForCraftedAbilityId(boundId)
+            end
+
+            local slotName = ""
+            if trueAbilityId and type(GetAbilityName) == "function" then
+                slotName = GetAbilityName(trueAbilityId)
+            end
+
+            if Effects.Matches(effect, trueAbilityId, slotName) or Effects.Matches(effect, boundId, slotName) then
+                return true
+            end
+        end
+    end
+
+    return false
+end
+
+function Effects.ShouldRequire(effect)
+    if not effect then return false end
+    if effect.requiresSlotted == true then
+        return Effects.IsSlotted(effect)
+    end
+    return true
 end

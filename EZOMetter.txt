@@ -1,8 +1,8 @@
 ## Title: E|cB040FFZ|rOMetter
 ## Author: @Zuriplayer
 ## Description: Lightweight meter foundation for the EZO addon family.
-## Version: 0.1.4
-## AddOnVersion: 10004
+## Version: 0.1.11
+## AddOnVersion: 10011
 ## APIVersion: 101049 101050
 ## DependsOn: LibAddonMenu-2.0
 ## OptionalDependsOn: LibChatMessage LibDebugLogger DebugLogViewer
@@ -16,6 +16,9 @@ modules/debug.lua
 modules/core.lua
 modules/effect_catalog.lua
 modules/meter_session.lua
+modules/visual_context.lua
+modules/combat_summary.lua
 modules/buff_alert.lua
+modules/off_balance_tracker.lua
 modules/saved_vars.lua
 modules/menu.lua

@@ -1,4 +1,4 @@
 -- Datos basicos que usa todo el addon.
 EZOMetter.ADDON_NAME    = "EZOMetter"
-EZOMetter.ADDON_VERSION = "0.1.4"
+EZOMetter.ADDON_VERSION = "0.1.11"
 EZOMetter.AUTHOR        = "@Zuriplayer"
