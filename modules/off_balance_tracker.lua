@@ -72,6 +72,7 @@ local lastDebugByKey = {}
 local statsUpdateRegistered = false
 local statsTracker
 local lastCombatSummary
+local IsHudUnlocked
 
 local bossTimers = {}
 local knownBosses = {}
@@ -424,7 +425,7 @@ local function EnsureControl()
     sourceLabel:SetMaxLineCount(1)
 
     ApplyPosition()
-    SetMoveMode(GetSettings() and GetSettings().unlock == true)
+    SetMoveMode(IsHudUnlocked())
     if EZOMetter_VisualContext and EZOMetter_VisualContext.AddHudFragment then
         EZOMetter_VisualContext.AddHudFragment(control)
     end
@@ -442,6 +443,10 @@ local function CanShowHud()
     return EZOMetter_VisualContext and EZOMetter_VisualContext.CanShowHud and EZOMetter_VisualContext.CanShowHud()
 end
 
+function IsHudUnlocked()
+    return EZOMetter_VisualContext and EZOMetter_VisualContext.IsHudUnlocked and EZOMetter_VisualContext.IsHudUnlocked()
+end
+
 local function UpdateVisibility()
     EnsureControl()
 
@@ -451,15 +456,15 @@ local function UpdateVisibility()
         hidden = true
     elseif forceShow then
         hidden = false
-    elseif settings.unlock == true then
-        hidden = not IsEnabled()
+    elseif IsHudUnlocked() then
+        hidden = false
     elseif not IsEnabled() then
         hidden = true
     elseif settings.onlyCombat ~= false and not isCombat and not (lastCombatSummary and lastCombatSummary.durationMs and lastCombatSummary.durationMs > 0) then
         hidden = true
     elseif settings.onlyBosses == true and not isTrackingBoss and not (lastCombatSummary and lastCombatSummary.durationMs and lastCombatSummary.durationMs > 0) then
         hidden = true
-    elseif not hasVisibleData and settings.unlock ~= true then
+    elseif not hasVisibleData then
         hidden = true
     end
 
@@ -686,7 +691,7 @@ end
 
 local function RefreshUpdateRegistration()
     local settings = GetSettings() or {}
-    if forceShow or (IsEnabled() and (settings.onlyCombat == false or isCombat)) then
+    if IsHudUnlocked() or forceShow or (IsEnabled() and (settings.onlyCombat == false or isCombat)) then
         RegisterUpdate()
     else
         UnregisterUpdate()
@@ -836,7 +841,7 @@ end
 function Tracker.ApplySettings()
     EnsureControl()
     ApplyPosition()
-    SetMoveMode(GetSettings() and GetSettings().unlock == true)
+    SetMoveMode(IsHudUnlocked())
     ApplyStyle()
     RefreshUpdateRegistration()
 end

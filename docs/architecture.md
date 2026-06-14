@@ -29,6 +29,8 @@ modules/buff_alert.lua
 modules/off_balance_tracker.lua
 modules/coral_tracker.lua
 modules/dd_stats_tracker.lua
+modules/observed_damage_tracker.lua
+modules/ability_tracker.lua
 modules/saved_vars.lua
 modules/menu.lua
 ```
@@ -49,6 +51,10 @@ Para auditar si la lectura es real, el tracker puede registrar en Debug Viewer l
 
 `DD Stats` vive en una ventana propia para no mezclar caps y objetivos de stats con alertas de buffs. Lee stats ofensivos propios mediante `GetPlayerStat` cuando las constantes existen, muestra el mayor Weapon/Spell Damage, critico, penetracion y dano critico, y guarda min/media/max por combate. Penetracion y dano critico se tratan como posibles sobrecaps; dano ofensivo y critico alto son informacion positiva o contextual, no fallo estricto.
 
+`Dano observado` vive en una ventana propia basada en `LibCombat` opcional. Muestra DPS propio, proporcion sobre grupo observado y resumen de combate al pasar el cursor. El dato de grupo se etiqueta siempre como observado porque depende de los eventos recibidos y clasificados por el cliente.
+
+`Habilidades` vive en un tracker separado para avisos de canal/cast concretos. La primera habilidad soportada es Fatecarver/Exhausting Fatecarver/Pragmatic Fatecarver. El tracker sigue el patron de addons especificos de Arcanist como Custom Beam Tracker: detecta `ACTION_RESULT_BEGIN` de los abilityId de Fatecarver y usa `hitValue` como duracion real del canal, de modo que morphs y Crux quedan mejor cubiertos que con un timer fijo.
+
 Los resumenes de ultimo combate y tooltips HUD reutilizan `modules/combat_summary.lua`. Nuevas funcionalidades con uptime, caidas o resumen al pasar el cursor deben consumir ese modulo comun en vez de duplicar muestreo, formato o manejo de tooltip.
 
 ## Visibilidad de HUD
@@ -62,9 +68,9 @@ Los controles visuales propios deben comportarse como HUDs de ESO, no como venta
 - Refrescar visibilidad desde el callback central `SceneStateChanged`.
 - No usar listas negativas de escenas.
 
-## Pendiente antes de implementar medicion
+El modo mover es global: `general.unlockHud` muestra todos los paneles visuales en HUD/HUD_UI y permite arrastrarlos individualmente. No hay botones de test, reset ni desbloqueo por panel en LAM.
 
-- Confirmar alcance exacto: combate local segun `docs/meter-scope.md`, recursos, grupo, encounter, parse local u otro uso.
-- Verificar APIs reales de ESO en UESP o cliente segun `docs/api-research.md`.
-- Definir si la UI sera LAM, ventana propia, chat controlado o integracion opcional con `EZOTools`.
-- Definir SavedVariables necesarias.
+## Pendiente de medicion avanzada
+
+- Validar en juego el comportamiento de LibCombat en trials grandes y separar claramente `boss` frente a `total`.
+- Decidir si se anade integracion opcional con `LibGroupCombatStats` para datos compartidos por jugador.

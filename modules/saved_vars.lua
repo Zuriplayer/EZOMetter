@@ -8,6 +8,7 @@ function EZOMetter.savedVars.Init()
             language = EZOMetter.GetDefaultLanguage(),
             role = "dd",
             debugMode = false,
+            unlockHud = false,
         },
         alerts = {
             missingBuffAlerts = true,
@@ -62,6 +63,23 @@ function EZOMetter.savedVars.Init()
             x = 0,
             y = 170,
         },
+        observedDamage = {
+            enabled = true,
+            ddOnly = true,
+            onlyCombat = true,
+            backgroundOpacity = 86,
+            showBorder = true,
+            x = 0,
+            y = 315,
+        },
+        abilities = {
+            fatecarverEnabled = true,
+            fatecarverWarningMs = 800,
+            backgroundOpacity = 86,
+            showBorder = true,
+            x = 0,
+            y = 445,
+        },
     }
 
     EZOMetter.sv = ZO_SavedVars:NewCharacterIdSettings("EZOMetter_Saved", 1, world, defaults)
@@ -70,9 +88,12 @@ function EZOMetter.savedVars.Init()
     EZOMetter.sv.offBalance = EZOMetter.sv.offBalance or defaults.offBalance
     EZOMetter.sv.coral = EZOMetter.sv.coral or defaults.coral
     EZOMetter.sv.ddStats = EZOMetter.sv.ddStats or defaults.ddStats
+    EZOMetter.sv.observedDamage = EZOMetter.sv.observedDamage or defaults.observedDamage
+    EZOMetter.sv.abilities = EZOMetter.sv.abilities or defaults.abilities
     EZOMetter.sv.general.language = EZOMetter.sv.general.language or defaults.general.language
     EZOMetter.sv.general.role = EZOMetter.sv.general.role or defaults.general.role
     EZOMetter.sv.general.debugMode = EZOMetter.sv.general.debugMode or defaults.general.debugMode
+    EZOMetter.sv.general.unlockHud = EZOMetter.sv.general.unlockHud or defaults.general.unlockHud
     if EZOMetter.sv.alerts.missingBuffAlerts == nil then
         EZOMetter.sv.alerts.missingBuffAlerts = defaults.alerts.missingBuffAlerts
     end
@@ -154,4 +175,29 @@ function EZOMetter.savedVars.Init()
     EZOMetter.sv.ddStats.critDamageHigh = EZOMetter.sv.ddStats.critDamageHigh or defaults.ddStats.critDamageHigh
     EZOMetter.sv.ddStats.x = EZOMetter.sv.ddStats.x or defaults.ddStats.x
     EZOMetter.sv.ddStats.y = EZOMetter.sv.ddStats.y or defaults.ddStats.y
+    if EZOMetter.sv.observedDamage.enabled == nil then
+        EZOMetter.sv.observedDamage.enabled = defaults.observedDamage.enabled
+    end
+    if EZOMetter.sv.observedDamage.ddOnly == nil then
+        EZOMetter.sv.observedDamage.ddOnly = defaults.observedDamage.ddOnly
+    end
+    if EZOMetter.sv.observedDamage.onlyCombat == nil then
+        EZOMetter.sv.observedDamage.onlyCombat = defaults.observedDamage.onlyCombat
+    end
+    EZOMetter.sv.observedDamage.backgroundOpacity = EZOMetter.sv.observedDamage.backgroundOpacity or defaults.observedDamage.backgroundOpacity
+    if EZOMetter.sv.observedDamage.showBorder == nil then
+        EZOMetter.sv.observedDamage.showBorder = defaults.observedDamage.showBorder
+    end
+    EZOMetter.sv.observedDamage.x = EZOMetter.sv.observedDamage.x or defaults.observedDamage.x
+    EZOMetter.sv.observedDamage.y = EZOMetter.sv.observedDamage.y or defaults.observedDamage.y
+    if EZOMetter.sv.abilities.fatecarverEnabled == nil then
+        EZOMetter.sv.abilities.fatecarverEnabled = defaults.abilities.fatecarverEnabled
+    end
+    EZOMetter.sv.abilities.fatecarverWarningMs = EZOMetter.sv.abilities.fatecarverWarningMs or defaults.abilities.fatecarverWarningMs
+    EZOMetter.sv.abilities.backgroundOpacity = EZOMetter.sv.abilities.backgroundOpacity or defaults.abilities.backgroundOpacity
+    if EZOMetter.sv.abilities.showBorder == nil then
+        EZOMetter.sv.abilities.showBorder = defaults.abilities.showBorder
+    end
+    EZOMetter.sv.abilities.x = EZOMetter.sv.abilities.x or defaults.abilities.x
+    EZOMetter.sv.abilities.y = EZOMetter.sv.abilities.y or defaults.abilities.y
 end

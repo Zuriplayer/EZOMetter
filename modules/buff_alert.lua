@@ -43,6 +43,10 @@ local function CanShowHud()
     return EZOMetter_VisualContext and EZOMetter_VisualContext.CanShowHud and EZOMetter_VisualContext.CanShowHud()
 end
 
+local function IsHudUnlocked()
+    return EZOMetter_VisualContext and EZOMetter_VisualContext.IsHudUnlocked and EZOMetter_VisualContext.IsHudUnlocked()
+end
+
 local function GetEffectName(effect)
     local stringId = effect and effect.nameString and _G[effect.nameString]
     if stringId then
@@ -201,7 +205,7 @@ local function EnsureControl()
     ApplyStyle()
 
     ApplyPosition()
-    SetMoveMode(GetSettings() and GetSettings().unlockAlert == true)
+    SetMoveMode(IsHudUnlocked())
     if EZOMetter_VisualContext and EZOMetter_VisualContext.AddHudFragment then
         EZOMetter_VisualContext.AddHudFragment(control)
     end
@@ -209,7 +213,7 @@ local function EnsureControl()
 end
 
 local function HideAlert()
-    if control and (not CanShowHud() or not (GetSettings() and GetSettings().unlockAlert == true)) then
+    if control and (not CanShowHud() or not IsHudUnlocked()) then
         control:SetHidden(true)
     end
 end
@@ -266,7 +270,7 @@ local function GetPreviewEffects()
 end
 
 local function ShouldShowPreview()
-    return testPreviewActive == true or (GetSettings() and GetSettings().unlockAlert == true)
+    return testPreviewActive == true or IsHudUnlocked()
 end
 
 local function ShowPreview()
@@ -426,7 +430,7 @@ end
 function BuffAlert.ApplySettings()
     EnsureControl()
     ApplyPosition()
-    SetMoveMode(GetSettings() and GetSettings().unlockAlert == true)
+    SetMoveMode(IsHudUnlocked())
     ApplyStyle()
     ScanPlayerBuffs()
 end

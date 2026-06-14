@@ -56,6 +56,7 @@ local currentBand = BAND_INACTIVE
 local currentStaminaPct = 100
 local statsTracker
 local lastCombatSummary
+local IsHudUnlocked
 
 local function GetSettings()
     if not EZOMetter.sv then return nil end
@@ -299,7 +300,7 @@ local function EnsureControl()
     piecesLabel:SetMaxLineCount(1)
 
     ApplyPosition()
-    SetMoveMode(GetSettings() and GetSettings().unlock == true)
+    SetMoveMode(IsHudUnlocked())
     if EZOMetter_VisualContext and EZOMetter_VisualContext.AddHudFragment then
         EZOMetter_VisualContext.AddHudFragment(control)
     end
@@ -317,6 +318,10 @@ local function CanShowHud()
     return EZOMetter_VisualContext and EZOMetter_VisualContext.CanShowHud and EZOMetter_VisualContext.CanShowHud()
 end
 
+function IsHudUnlocked()
+    return EZOMetter_VisualContext and EZOMetter_VisualContext.IsHudUnlocked and EZOMetter_VisualContext.IsHudUnlocked()
+end
+
 local function HasSummary()
     return lastCombatSummary and lastCombatSummary.hasData == true
 end
@@ -330,8 +335,8 @@ local function UpdateVisibility()
         hidden = true
     elseif forceShow then
         hidden = false
-    elseif settings.unlock == true then
-        hidden = not IsEnabled()
+    elseif IsHudUnlocked() then
+        hidden = false
     elseif not IsEnabled() then
         hidden = true
     elseif settings.onlyCombat ~= false and not isCombat and not HasSummary() then
@@ -414,7 +419,7 @@ end
 
 local function RefreshUpdateRegistration()
     local settings = GetSettings() or {}
-    if forceShow or (IsEnabled() and (settings.onlyCombat == false or isCombat or HasSummary())) then
+    if IsHudUnlocked() or forceShow or (IsEnabled() and (settings.onlyCombat == false or isCombat or HasSummary())) then
         RegisterUpdate()
     else
         UnregisterUpdate()
@@ -500,7 +505,7 @@ end
 function Tracker.ApplySettings()
     EnsureControl()
     ApplyPosition()
-    SetMoveMode(GetSettings() and GetSettings().unlock == true)
+    SetMoveMode(IsHudUnlocked())
     ApplyStyle()
     ScanEquipment()
     RefreshState()

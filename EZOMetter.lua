@@ -80,6 +80,14 @@ function EZOM:Initialize()
         EZOMetter_DDStats.Init()
     end
 
+    if EZOMetter_ObservedDamage and EZOMetter_ObservedDamage.Init then
+        EZOMetter_ObservedDamage.Init()
+    end
+
+    if EZOMetter_AbilityTracker and EZOMetter_AbilityTracker.Init then
+        EZOMetter_AbilityTracker.Init()
+    end
+
     Print(GetString(EZOM_MSG_INIT))
 end
 

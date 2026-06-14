@@ -55,3 +55,10 @@ end
 function VisualContext.CanShowHud()
     return VisualContext.IsHudSceneShowing()
 end
+
+function VisualContext.IsHudUnlocked()
+    return EZOMetter
+        and EZOMetter.sv
+        and EZOMetter.sv.general
+        and EZOMetter.sv.general.unlockHud == true
+end
