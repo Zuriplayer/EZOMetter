@@ -23,8 +23,11 @@ El objetivo de este repositorio inicial es dejar estructura, versionado, idiomas
 - `modules/meter_session.lua`: estado y calculos puros de una sesion local.
 - `modules/visual_context.lua`: guard compartido para mostrar HUDs solo en HUD/HUD_UI.
 - `modules/combat_summary.lua`: utilidades compartidas para resumenes del ultimo combate y tooltips HUD.
+- `modules/equipment_sets.lua`: lectura compartida de sets equipados.
 - `modules/buff_alert.lua`: aviso movible para buffs propios requeridos.
 - `modules/off_balance_tracker.lua`: tracker separado de Off Balance en target/boss, con auditoria opcional en Debug Viewer.
+- `modules/coral_tracker.lua`: tracker separado para el bonus estimado de Coral Riptide.
+- `modules/dd_stats_tracker.lua`: tracker separado para stats ofensivos DD dinamicos y resumen min/media/max de combate.
 - `modules/saved_vars.lua`: defaults y SavedVariables.
 - `modules/i18n.lua`: aplicacion de idiomas.
 - `modules/debug.lua`: salida tecnica opcional.

@@ -200,12 +200,11 @@ local function EnsureControl()
     backdrop:SetEdgeTexture("EsoUI/Art/Tooltips/UI-Border.dds", 128, 16)
     ApplyStyle()
 
+    ApplyPosition()
+    SetMoveMode(GetSettings() and GetSettings().unlockAlert == true)
     if EZOMetter_VisualContext and EZOMetter_VisualContext.AddHudFragment then
         EZOMetter_VisualContext.AddHudFragment(control)
     end
-
-    ApplyPosition()
-    SetMoveMode(GetSettings() and GetSettings().unlockAlert == true)
     return control
 end
 
@@ -464,6 +463,9 @@ function BuffAlert.Init()
 
     EVENT_MANAGER:RegisterForEvent(ADDON_NAME .. "_ActionSlotsAll", EVENT_ACTION_SLOTS_ALL_HOTBARS_UPDATED, ScanPlayerBuffs)
     EVENT_MANAGER:RegisterForEvent(ADDON_NAME .. "_ActionSlotUpdated", EVENT_ACTION_SLOT_UPDATED, ScanPlayerBuffs)
+    if EVENT_ACTIVE_WEAPON_PAIR_CHANGED then
+        EVENT_MANAGER:RegisterForEvent(ADDON_NAME .. "_BuffAlertWeaponPair", EVENT_ACTIVE_WEAPON_PAIR_CHANGED, ScanPlayerBuffs)
+    end
     EVENT_MANAGER:RegisterForEvent(ADDON_NAME .. "_BuffAlertCombat", EVENT_PLAYER_COMBAT_STATE, OnCombatState)
 
     zo_callLater(function()

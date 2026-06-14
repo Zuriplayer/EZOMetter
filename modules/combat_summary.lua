@@ -170,3 +170,135 @@ function Summary.CreateUptimeTracker(options)
 
     return tracker
 end
+
+function Summary.CreateValueTracker(options)
+    local tracker = {
+        getItems = options and options.getItems,
+        getItemKey = options and options.getItemKey,
+        getItemName = options and options.getItemName,
+        isItemRequired = options and options.isItemRequired,
+        getItemValue = options and options.getItemValue,
+        getItemBand = options and options.getItemBand,
+        order = {},
+        byKey = {},
+        started = false,
+        startMs = 0,
+        lastSampleMs = 0,
+        durationMs = 0,
+        lastSummary = nil,
+    }
+
+    local function EnsureStat(item)
+        local key = tracker.getItemKey(item)
+        local stat = tracker.byKey[key]
+        if not stat then
+            stat = {
+                key = key,
+                item = item,
+                requiredMs = 0,
+                weightedValue = 0,
+                minValue = nil,
+                maxValue = 0,
+                bandMs = {},
+            }
+            tracker.byKey[key] = stat
+            table.insert(tracker.order, key)
+        else
+            stat.item = item
+        end
+        return stat
+    end
+
+    function tracker:Start(nowMs)
+        nowMs = nowMs or Summary.GetNowMs()
+        self.order = {}
+        self.byKey = {}
+        self.started = true
+        self.startMs = nowMs
+        self.lastSampleMs = nowMs
+        self.durationMs = 0
+        self.lastSummary = nil
+    end
+
+    function tracker:Sample(nowMs)
+        if not self.started then return end
+
+        nowMs = nowMs or Summary.GetNowMs()
+        local deltaMs = nowMs - (self.lastSampleMs or nowMs)
+        if deltaMs <= 0 then
+            self.lastSampleMs = nowMs
+            return
+        end
+
+        self.durationMs = self.durationMs + deltaMs
+        local items = self.getItems and self.getItems() or {}
+        for _, item in ipairs(items) do
+            if not self.isItemRequired or self.isItemRequired(item) then
+                local stat = EnsureStat(item)
+                local value = tonumber(self.getItemValue and self.getItemValue(item) or 0) or 0
+                local band = self.getItemBand and self.getItemBand(item) or nil
+
+                stat.requiredMs = stat.requiredMs + deltaMs
+                stat.weightedValue = stat.weightedValue + (value * deltaMs)
+                stat.minValue = stat.minValue and math.min(stat.minValue, value) or value
+                stat.maxValue = math.max(stat.maxValue, value)
+                if band then
+                    stat.bandMs[band] = (stat.bandMs[band] or 0) + deltaMs
+                end
+            end
+        end
+
+        self.lastSampleMs = nowMs
+    end
+
+    local function BuildSummary(self)
+        local rows = {}
+        local byKey = {}
+
+        for _, key in ipairs(self.order) do
+            local stat = self.byKey[key]
+            if stat and stat.requiredMs > 0 then
+                local row = {
+                    key = key,
+                    name = self.getItemName and self.getItemName(stat.item) or tostring(key),
+                    requiredMs = stat.requiredMs,
+                    averageValue = stat.weightedValue / stat.requiredMs,
+                    minValue = stat.minValue or 0,
+                    maxValue = stat.maxValue,
+                    bandMs = stat.bandMs,
+                }
+                table.insert(rows, row)
+                byKey[key] = row
+            end
+        end
+
+        return {
+            durationMs = self.durationMs,
+            rows = rows,
+            byKey = byKey,
+            hasData = #rows > 0,
+        }
+    end
+
+    function tracker:Finish(nowMs)
+        if not self.started then return self.lastSummary end
+
+        self:Sample(nowMs or Summary.GetNowMs())
+        self.lastSummary = BuildSummary(self)
+        self.started = false
+        return self.lastSummary
+    end
+
+    function tracker:GetCurrentSummary()
+        if self.started then
+            return BuildSummary(self)
+        end
+        return self.lastSummary
+    end
+
+    function tracker:GetLastSummary()
+        return self.lastSummary
+    end
+
+    return tracker
+end

@@ -19,6 +19,8 @@ function VisualContext.AddHudFragment(control)
     if not control or control.ezomHudFragment then return end
     if not ZO_SimpleSceneFragment or not HUD_SCENE or not HUD_UI_SCENE then return end
 
+    control:SetHidden(true)
+
     local fragment = ZO_SimpleSceneFragment:New(control)
     if fragment and fragment.SetConditional then
         fragment:SetConditional(function()
@@ -29,6 +31,7 @@ function VisualContext.AddHudFragment(control)
     HUD_SCENE:AddFragment(fragment)
     HUD_UI_SCENE:AddFragment(fragment)
     control.ezomHudFragment = fragment
+    control:SetHidden(true)
 end
 
 function VisualContext.RefreshFragments()

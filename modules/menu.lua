@@ -103,6 +103,12 @@ function EZOMetter_Menu.Init()
                         if EZOMetter_OffBalance and EZOMetter_OffBalance.ApplySettings then
                             EZOMetter_OffBalance.ApplySettings()
                         end
+                        if EZOMetter_Coral and EZOMetter_Coral.ApplySettings then
+                            EZOMetter_Coral.ApplySettings()
+                        end
+                        if EZOMetter_DDStats and EZOMetter_DDStats.ApplySettings then
+                            EZOMetter_DDStats.ApplySettings()
+                        end
                     end,
                     default = "dd",
                 },
@@ -412,6 +418,360 @@ function EZOMetter_Menu.Init()
                         EZOMetter.sv.offBalance.y = -80
                         if EZOMetter_OffBalance and EZOMetter_OffBalance.ApplySettings then
                             EZOMetter_OffBalance.ApplySettings()
+                        end
+                    end,
+                },
+            },
+        },
+        {
+            type = "submenu",
+            name = GetString(EZOM_OPTION_CORAL),
+            controls = {
+                {
+                    type = "checkbox",
+                    name = GetString(EZOM_OPTION_CORAL_ENABLED),
+                    tooltip = GetString(EZOM_OPTION_CORAL_ENABLED_TOOLTIP),
+                    getFunc = function()
+                        return EZOMetter.sv.coral and EZOMetter.sv.coral.enabled == true
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.coral.enabled = value == true
+                        if EZOMetter_Coral and EZOMetter_Coral.ApplySettings then
+                            EZOMetter_Coral.ApplySettings()
+                        end
+                    end,
+                    default = true,
+                },
+                {
+                    type = "checkbox",
+                    name = GetString(EZOM_OPTION_CORAL_DD_ONLY),
+                    tooltip = GetString(EZOM_OPTION_CORAL_DD_ONLY_TOOLTIP),
+                    getFunc = function()
+                        return EZOMetter.sv.coral and EZOMetter.sv.coral.ddOnly ~= false
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.coral.ddOnly = value == true
+                        if EZOMetter_Coral and EZOMetter_Coral.ApplySettings then
+                            EZOMetter_Coral.ApplySettings()
+                        end
+                    end,
+                    default = true,
+                },
+                {
+                    type = "checkbox",
+                    name = GetString(EZOM_OPTION_CORAL_ONLY_COMBAT),
+                    tooltip = GetString(EZOM_OPTION_CORAL_ONLY_COMBAT_TOOLTIP),
+                    getFunc = function()
+                        return EZOMetter.sv.coral and EZOMetter.sv.coral.onlyCombat ~= false
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.coral.onlyCombat = value == true
+                        if EZOMetter_Coral and EZOMetter_Coral.ApplySettings then
+                            EZOMetter_Coral.ApplySettings()
+                        end
+                    end,
+                    default = true,
+                },
+                {
+                    type = "checkbox",
+                    name = GetString(EZOM_OPTION_CORAL_UNLOCK),
+                    tooltip = GetString(EZOM_OPTION_CORAL_UNLOCK_TOOLTIP),
+                    getFunc = function()
+                        return EZOMetter.sv.coral and EZOMetter.sv.coral.unlock == true
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.coral.unlock = value == true
+                        if EZOMetter_Coral and EZOMetter_Coral.ApplySettings then
+                            EZOMetter_Coral.ApplySettings()
+                        end
+                    end,
+                    default = false,
+                },
+                {
+                    type = "slider",
+                    name = GetString(EZOM_OPTION_CORAL_BACKGROUND_OPACITY),
+                    tooltip = GetString(EZOM_OPTION_CORAL_BACKGROUND_OPACITY_TOOLTIP),
+                    min = 0,
+                    max = 100,
+                    step = 5,
+                    getFunc = function()
+                        return EZOMetter.sv.coral.backgroundOpacity or 86
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.coral.backgroundOpacity = tonumber(value) or 86
+                        if EZOMetter_Coral and EZOMetter_Coral.ApplySettings then
+                            EZOMetter_Coral.ApplySettings()
+                        end
+                    end,
+                    default = 86,
+                },
+                {
+                    type = "checkbox",
+                    name = GetString(EZOM_OPTION_CORAL_SHOW_BORDER),
+                    tooltip = GetString(EZOM_OPTION_CORAL_SHOW_BORDER_TOOLTIP),
+                    getFunc = function()
+                        return EZOMetter.sv.coral.showBorder ~= false
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.coral.showBorder = value == true
+                        if EZOMetter_Coral and EZOMetter_Coral.ApplySettings then
+                            EZOMetter_Coral.ApplySettings()
+                        end
+                    end,
+                    default = true,
+                },
+                {
+                    type = "button",
+                    name = GetString(EZOM_OPTION_CORAL_TEST),
+                    tooltip = GetString(EZOM_OPTION_CORAL_TEST_TOOLTIP),
+                    func = function()
+                        if EZOMetter_Coral and EZOMetter_Coral.ShowTest then
+                            EZOMetter_Coral.ShowTest()
+                        end
+                    end,
+                },
+                {
+                    type = "checkbox",
+                    name = GetString(EZOM_OPTION_CORAL_DEBUG_EQUIPMENT),
+                    tooltip = GetString(EZOM_OPTION_CORAL_DEBUG_EQUIPMENT_TOOLTIP),
+                    getFunc = function()
+                        return EZOMetter.sv.coral and EZOMetter.sv.coral.debugEquipment == true
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.coral.debugEquipment = value == true
+                    end,
+                    default = false,
+                },
+                {
+                    type = "button",
+                    name = GetString(EZOM_OPTION_CORAL_DEBUG_SCAN),
+                    tooltip = GetString(EZOM_OPTION_CORAL_DEBUG_SCAN_TOOLTIP),
+                    func = function()
+                        if EZOMetter_Coral and EZOMetter_Coral.DebugScanEquipment then
+                            EZOMetter_Coral.DebugScanEquipment()
+                        end
+                    end,
+                },
+                {
+                    type = "button",
+                    name = GetString(EZOM_OPTION_CORAL_RESET_POSITION),
+                    tooltip = GetString(EZOM_OPTION_CORAL_RESET_POSITION_TOOLTIP),
+                    func = function()
+                        EZOMetter.sv.coral.x = 0
+                        EZOMetter.sv.coral.y = 40
+                        if EZOMetter_Coral and EZOMetter_Coral.ApplySettings then
+                            EZOMetter_Coral.ApplySettings()
+                        end
+                    end,
+                },
+            },
+        },
+        {
+            type = "submenu",
+            name = GetString(EZOM_OPTION_DD_STATS),
+            controls = {
+                {
+                    type = "checkbox",
+                    name = GetString(EZOM_OPTION_DD_STATS_ENABLED),
+                    tooltip = GetString(EZOM_OPTION_DD_STATS_ENABLED_TOOLTIP),
+                    getFunc = function()
+                        return EZOMetter.sv.ddStats and EZOMetter.sv.ddStats.enabled == true
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.ddStats.enabled = value == true
+                        if EZOMetter_DDStats and EZOMetter_DDStats.ApplySettings then
+                            EZOMetter_DDStats.ApplySettings()
+                        end
+                    end,
+                    default = true,
+                },
+                {
+                    type = "checkbox",
+                    name = GetString(EZOM_OPTION_DD_STATS_DD_ONLY),
+                    tooltip = GetString(EZOM_OPTION_DD_STATS_DD_ONLY_TOOLTIP),
+                    getFunc = function()
+                        return EZOMetter.sv.ddStats and EZOMetter.sv.ddStats.ddOnly ~= false
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.ddStats.ddOnly = value == true
+                        if EZOMetter_DDStats and EZOMetter_DDStats.ApplySettings then
+                            EZOMetter_DDStats.ApplySettings()
+                        end
+                    end,
+                    default = true,
+                },
+                {
+                    type = "checkbox",
+                    name = GetString(EZOM_OPTION_DD_STATS_ONLY_COMBAT),
+                    tooltip = GetString(EZOM_OPTION_DD_STATS_ONLY_COMBAT_TOOLTIP),
+                    getFunc = function()
+                        return EZOMetter.sv.ddStats and EZOMetter.sv.ddStats.onlyCombat == true
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.ddStats.onlyCombat = value == true
+                        if EZOMetter_DDStats and EZOMetter_DDStats.ApplySettings then
+                            EZOMetter_DDStats.ApplySettings()
+                        end
+                    end,
+                    default = false,
+                },
+                {
+                    type = "checkbox",
+                    name = GetString(EZOM_OPTION_DD_STATS_UNLOCK),
+                    tooltip = GetString(EZOM_OPTION_DD_STATS_UNLOCK_TOOLTIP),
+                    getFunc = function()
+                        return EZOMetter.sv.ddStats and EZOMetter.sv.ddStats.unlock == true
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.ddStats.unlock = value == true
+                        if EZOMetter_DDStats and EZOMetter_DDStats.ApplySettings then
+                            EZOMetter_DDStats.ApplySettings()
+                        end
+                    end,
+                    default = false,
+                },
+                {
+                    type = "slider",
+                    name = GetString(EZOM_OPTION_DD_STATS_BACKGROUND_OPACITY),
+                    tooltip = GetString(EZOM_OPTION_DD_STATS_BACKGROUND_OPACITY_TOOLTIP),
+                    min = 0,
+                    max = 100,
+                    step = 5,
+                    getFunc = function()
+                        return EZOMetter.sv.ddStats.backgroundOpacity or 86
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.ddStats.backgroundOpacity = tonumber(value) or 86
+                        if EZOMetter_DDStats and EZOMetter_DDStats.ApplySettings then
+                            EZOMetter_DDStats.ApplySettings()
+                        end
+                    end,
+                    default = 86,
+                },
+                {
+                    type = "checkbox",
+                    name = GetString(EZOM_OPTION_DD_STATS_SHOW_BORDER),
+                    tooltip = GetString(EZOM_OPTION_DD_STATS_SHOW_BORDER_TOOLTIP),
+                    getFunc = function()
+                        return EZOMetter.sv.ddStats.showBorder ~= false
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.ddStats.showBorder = value == true
+                        if EZOMetter_DDStats and EZOMetter_DDStats.ApplySettings then
+                            EZOMetter_DDStats.ApplySettings()
+                        end
+                    end,
+                    default = true,
+                },
+                {
+                    type = "slider",
+                    name = GetString(EZOM_OPTION_DD_STATS_DAMAGE_TARGET),
+                    tooltip = GetString(EZOM_OPTION_DD_STATS_DAMAGE_TARGET_TOOLTIP),
+                    min = 0,
+                    max = 10000,
+                    step = 100,
+                    getFunc = function()
+                        return EZOMetter.sv.ddStats.damageTarget or 5000
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.ddStats.damageTarget = tonumber(value) or 5000
+                    end,
+                    default = 5000,
+                },
+                {
+                    type = "slider",
+                    name = GetString(EZOM_OPTION_DD_STATS_CRIT_TARGET),
+                    tooltip = GetString(EZOM_OPTION_DD_STATS_CRIT_TARGET_TOOLTIP),
+                    min = 0,
+                    max = 100,
+                    step = 1,
+                    getFunc = function()
+                        return EZOMetter.sv.ddStats.critTarget or 50
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.ddStats.critTarget = tonumber(value) or 50
+                    end,
+                    default = 50,
+                },
+                {
+                    type = "slider",
+                    name = GetString(EZOM_OPTION_DD_STATS_CRIT_HIGH),
+                    tooltip = GetString(EZOM_OPTION_DD_STATS_CRIT_HIGH_TOOLTIP),
+                    min = 0,
+                    max = 100,
+                    step = 1,
+                    getFunc = function()
+                        return EZOMetter.sv.ddStats.critHigh or 70
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.ddStats.critHigh = tonumber(value) or 70
+                    end,
+                    default = 70,
+                },
+                {
+                    type = "slider",
+                    name = GetString(EZOM_OPTION_DD_STATS_PEN_TARGET),
+                    tooltip = GetString(EZOM_OPTION_DD_STATS_PEN_TARGET_TOOLTIP),
+                    min = 0,
+                    max = 18200,
+                    step = 100,
+                    getFunc = function()
+                        return EZOMetter.sv.ddStats.penetrationTarget or 7200
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.ddStats.penetrationTarget = tonumber(value) or 7200
+                    end,
+                    default = 7200,
+                },
+                {
+                    type = "slider",
+                    name = GetString(EZOM_OPTION_DD_STATS_PEN_HIGH),
+                    tooltip = GetString(EZOM_OPTION_DD_STATS_PEN_HIGH_TOOLTIP),
+                    min = 0,
+                    max = 18200,
+                    step = 100,
+                    getFunc = function()
+                        return EZOMetter.sv.ddStats.penetrationHigh or 7700
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.ddStats.penetrationHigh = tonumber(value) or 7700
+                    end,
+                    default = 7700,
+                },
+                {
+                    type = "slider",
+                    name = GetString(EZOM_OPTION_DD_STATS_CRIT_DAMAGE_TARGET),
+                    tooltip = GetString(EZOM_OPTION_DD_STATS_CRIT_DAMAGE_TARGET_TOOLTIP),
+                    min = 50,
+                    max = 125,
+                    step = 1,
+                    getFunc = function()
+                        return EZOMetter.sv.ddStats.critDamageTarget or 125
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.ddStats.critDamageTarget = tonumber(value) or 125
+                    end,
+                    default = 125,
+                },
+                {
+                    type = "button",
+                    name = GetString(EZOM_OPTION_DD_STATS_TEST),
+                    tooltip = GetString(EZOM_OPTION_DD_STATS_TEST_TOOLTIP),
+                    func = function()
+                        if EZOMetter_DDStats and EZOMetter_DDStats.ShowTest then
+                            EZOMetter_DDStats.ShowTest()
+                        end
+                    end,
+                },
+                {
+                    type = "button",
+                    name = GetString(EZOM_OPTION_DD_STATS_RESET_POSITION),
+                    tooltip = GetString(EZOM_OPTION_DD_STATS_RESET_POSITION_TOOLTIP),
+                    func = function()
+                        EZOMetter.sv.ddStats.x = 0
+                        EZOMetter.sv.ddStats.y = 170
+                        if EZOMetter_DDStats and EZOMetter_DDStats.ApplySettings then
+                            EZOMetter_DDStats.ApplySettings()
                         end
                     end,
                 },

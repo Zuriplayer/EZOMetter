@@ -385,10 +385,6 @@ local function EnsureControl()
     backdrop:SetEdgeTexture("EsoUI/Art/Tooltips/UI-Border.dds", 128, 16)
     ApplyStyle()
 
-    if EZOMetter_VisualContext and EZOMetter_VisualContext.AddHudFragment then
-        EZOMetter_VisualContext.AddHudFragment(control)
-    end
-
     icon = wm:CreateControl(CONTROL_NAME .. "Icon", control, CT_TEXTURE)
     icon:SetDimensions(ICON_SIZE, ICON_SIZE)
     icon:SetAnchor(TOPLEFT, control, TOPLEFT, PADDING, 14)
@@ -429,6 +425,9 @@ local function EnsureControl()
 
     ApplyPosition()
     SetMoveMode(GetSettings() and GetSettings().unlock == true)
+    if EZOMetter_VisualContext and EZOMetter_VisualContext.AddHudFragment then
+        EZOMetter_VisualContext.AddHudFragment(control)
+    end
     return control
 end
 

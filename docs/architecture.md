@@ -23,8 +23,12 @@ modules/core.lua
 modules/effect_catalog.lua
 modules/meter_session.lua
 modules/visual_context.lua
+modules/combat_summary.lua
+modules/equipment_sets.lua
 modules/buff_alert.lua
 modules/off_balance_tracker.lua
+modules/coral_tracker.lua
+modules/dd_stats_tracker.lua
 modules/saved_vars.lua
 modules/menu.lua
 ```
@@ -40,6 +44,10 @@ La primera funcionalidad activa usa el perfil `dd` y comprueba buffs propios req
 `Off Balance` vive en un tracker separado porque no es un buff propio del jugador. El primer paso muestra estado live del objetivo o boss seguido; el calculo de uptime de pelea queda para una iteracion posterior.
 
 Para auditar si la lectura es real, el tracker puede registrar en Debug Viewer lecturas directas de `reticleover`, eventos de efecto, IDs, nombres, fuente y tiempos restantes. Esa auditoria queda desactivada por defecto y requiere tambien el modo debug general.
+
+`Coral Riptide` vive en otro tracker separado porque no es un buff binario. Se detecta desde equipo con `modules/equipment_sets.lua` y estima el bonus de Weapon/Spell Damage por stamina perdida. No intenta atribuir dano real por hit, porque Coral modifica el stat usado por las habilidades en vez de producir un evento de dano independiente.
+
+`DD Stats` vive en una ventana propia para no mezclar caps y objetivos de stats con alertas de buffs. Lee stats ofensivos propios mediante `GetPlayerStat` cuando las constantes existen, muestra el mayor Weapon/Spell Damage, critico, penetracion y dano critico, y guarda min/media/max por combate. Penetracion y dano critico se tratan como posibles sobrecaps; dano ofensivo y critico alto son informacion positiva o contextual, no fallo estricto.
 
 Los resumenes de ultimo combate y tooltips HUD reutilizan `modules/combat_summary.lua`. Nuevas funcionalidades con uptime, caidas o resumen al pasar el cursor deben consumir ese modulo comun en vez de duplicar muestreo, formato o manejo de tooltip.
 

@@ -72,6 +72,14 @@ function EZOM:Initialize()
         EZOMetter_OffBalance.Init()
     end
 
+    if EZOMetter_Coral and EZOMetter_Coral.Init then
+        EZOMetter_Coral.Init()
+    end
+
+    if EZOMetter_DDStats and EZOMetter_DDStats.Init then
+        EZOMetter_DDStats.Init()
+    end
+
     Print(GetString(EZOM_MSG_INIT))
 end
 

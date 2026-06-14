@@ -34,12 +34,42 @@ function EZOMetter.savedVars.Init()
             x = 0,
             y = -80,
         },
+        coral = {
+            enabled = true,
+            ddOnly = true,
+            onlyCombat = true,
+            unlock = false,
+            backgroundOpacity = 86,
+            showBorder = true,
+            debugEquipment = false,
+            x = 0,
+            y = 40,
+        },
+        ddStats = {
+            enabled = true,
+            ddOnly = true,
+            onlyCombat = false,
+            unlock = false,
+            backgroundOpacity = 86,
+            showBorder = true,
+            damageTarget = 5000,
+            critTarget = 50,
+            critHigh = 70,
+            penetrationTarget = 7200,
+            penetrationHigh = 7700,
+            critDamageTarget = 125,
+            critDamageHigh = 125,
+            x = 0,
+            y = 170,
+        },
     }
 
     EZOMetter.sv = ZO_SavedVars:NewCharacterIdSettings("EZOMetter_Saved", 1, world, defaults)
     EZOMetter.sv.general = EZOMetter.sv.general or defaults.general
     EZOMetter.sv.alerts = EZOMetter.sv.alerts or defaults.alerts
     EZOMetter.sv.offBalance = EZOMetter.sv.offBalance or defaults.offBalance
+    EZOMetter.sv.coral = EZOMetter.sv.coral or defaults.coral
+    EZOMetter.sv.ddStats = EZOMetter.sv.ddStats or defaults.ddStats
     EZOMetter.sv.general.language = EZOMetter.sv.general.language or defaults.general.language
     EZOMetter.sv.general.role = EZOMetter.sv.general.role or defaults.general.role
     EZOMetter.sv.general.debugMode = EZOMetter.sv.general.debugMode or defaults.general.debugMode
@@ -82,4 +112,46 @@ function EZOMetter.savedVars.Init()
     EZOMetter.sv.offBalance.cooldownColor = EZOMetter.sv.offBalance.cooldownColor or defaults.offBalance.cooldownColor
     EZOMetter.sv.offBalance.x = EZOMetter.sv.offBalance.x or defaults.offBalance.x
     EZOMetter.sv.offBalance.y = EZOMetter.sv.offBalance.y or defaults.offBalance.y
+    if EZOMetter.sv.coral.enabled == nil then
+        EZOMetter.sv.coral.enabled = defaults.coral.enabled
+    end
+    if EZOMetter.sv.coral.ddOnly == nil then
+        EZOMetter.sv.coral.ddOnly = defaults.coral.ddOnly
+    end
+    if EZOMetter.sv.coral.onlyCombat == nil then
+        EZOMetter.sv.coral.onlyCombat = defaults.coral.onlyCombat
+    end
+    EZOMetter.sv.coral.unlock = EZOMetter.sv.coral.unlock or defaults.coral.unlock
+    EZOMetter.sv.coral.backgroundOpacity = EZOMetter.sv.coral.backgroundOpacity or defaults.coral.backgroundOpacity
+    if EZOMetter.sv.coral.showBorder == nil then
+        EZOMetter.sv.coral.showBorder = defaults.coral.showBorder
+    end
+    if EZOMetter.sv.coral.debugEquipment == nil then
+        EZOMetter.sv.coral.debugEquipment = defaults.coral.debugEquipment
+    end
+    EZOMetter.sv.coral.x = EZOMetter.sv.coral.x or defaults.coral.x
+    EZOMetter.sv.coral.y = EZOMetter.sv.coral.y or defaults.coral.y
+    if EZOMetter.sv.ddStats.enabled == nil then
+        EZOMetter.sv.ddStats.enabled = defaults.ddStats.enabled
+    end
+    if EZOMetter.sv.ddStats.ddOnly == nil then
+        EZOMetter.sv.ddStats.ddOnly = defaults.ddStats.ddOnly
+    end
+    if EZOMetter.sv.ddStats.onlyCombat == nil then
+        EZOMetter.sv.ddStats.onlyCombat = defaults.ddStats.onlyCombat
+    end
+    EZOMetter.sv.ddStats.unlock = EZOMetter.sv.ddStats.unlock or defaults.ddStats.unlock
+    EZOMetter.sv.ddStats.backgroundOpacity = EZOMetter.sv.ddStats.backgroundOpacity or defaults.ddStats.backgroundOpacity
+    if EZOMetter.sv.ddStats.showBorder == nil then
+        EZOMetter.sv.ddStats.showBorder = defaults.ddStats.showBorder
+    end
+    EZOMetter.sv.ddStats.damageTarget = EZOMetter.sv.ddStats.damageTarget or defaults.ddStats.damageTarget
+    EZOMetter.sv.ddStats.critTarget = EZOMetter.sv.ddStats.critTarget or defaults.ddStats.critTarget
+    EZOMetter.sv.ddStats.critHigh = EZOMetter.sv.ddStats.critHigh or defaults.ddStats.critHigh
+    EZOMetter.sv.ddStats.penetrationTarget = EZOMetter.sv.ddStats.penetrationTarget or defaults.ddStats.penetrationTarget
+    EZOMetter.sv.ddStats.penetrationHigh = EZOMetter.sv.ddStats.penetrationHigh or defaults.ddStats.penetrationHigh
+    EZOMetter.sv.ddStats.critDamageTarget = EZOMetter.sv.ddStats.critDamageTarget or defaults.ddStats.critDamageTarget
+    EZOMetter.sv.ddStats.critDamageHigh = EZOMetter.sv.ddStats.critDamageHigh or defaults.ddStats.critDamageHigh
+    EZOMetter.sv.ddStats.x = EZOMetter.sv.ddStats.x or defaults.ddStats.x
+    EZOMetter.sv.ddStats.y = EZOMetter.sv.ddStats.y or defaults.ddStats.y
 end
