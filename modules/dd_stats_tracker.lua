@@ -3,6 +3,7 @@ EZOMetter_DDStats = EZOMetter_DDStats or {}
 
 local Tracker = EZOMetter_DDStats
 local ADDON_NAME = "EZOMetter"
+local CALLBACK_NAME = "EZOMetterDDStats"
 local CONTROL_NAME = "EZOMetterDDStatsTracker"
 local UPDATE_INTERVAL_MS = 250
 local WIDTH = 320
@@ -11,7 +12,9 @@ local PADDING = 12
 local ROW_HEIGHT = 22
 local NAME_WIDTH = 92
 local VALUE_WIDTH = 86
-local STATE_WIDTH = 70
+local EFFECTIVE_WIDTH = 70
+local EFFECTIVE_COLOR = { r = 0.78, g = 0.9, b = 1, a = 1 }
+local EFFECTIVE_OVERCAP_COLOR = { r = 1, g = 0.35, b = 0.25, a = 1 }
 
 local BAND_LOW = "low"
 local BAND_OK = "ok"
@@ -31,8 +34,13 @@ local isCombat = false
 local currentValues = {}
 local statsTracker
 local effectiveStatsTracker
+local overcapStatsTracker
 local lastCombatSummary
 local lastEffectiveCombatSummary
+local lastOvercapCombatSummary
+local damageWeightedTracker
+local lastDamageWeightedSummary
+local libCombatRegistered = false
 local IsHudUnlocked
 
 local STAT_DEFS = {
@@ -233,11 +241,14 @@ local function GetEffectiveBand(def, ownValue, effectiveValue)
     return GetBand(def, effectiveValue)
 end
 
-local function GetBandName(band)
-    if band == BAND_LOW then return GetString(EZOM_DD_STATS_STATE_LOW) end
-    if band == BAND_HIGH then return GetString(EZOM_DD_STATS_STATE_HIGH) end
-    if band == BAND_OK then return GetString(EZOM_DD_STATS_STATE_OK) end
-    return GetString(EZOM_DD_STATS_STATE_UNKNOWN)
+local function GetEffectiveCap(def)
+    if def.key == "penetration" and EZOMetter_DDEffectiveStats and EZOMetter_DDEffectiveStats.GetTargetResistance then
+        return EZOMetter_DDEffectiveStats.GetTargetResistance(GetSettings())
+    end
+    if def.key == "critDamage" and EZOMetter_DDEffectiveStats and EZOMetter_DDEffectiveStats.GetCritDamageCap then
+        return EZOMetter_DDEffectiveStats.GetCritDamageCap(GetSettings())
+    end
+    return nil
 end
 
 local function GetBandColor(band, positiveHigh)
@@ -257,39 +268,27 @@ local function FormatValue(def, value)
     return tostring(math.floor(value + 0.5))
 end
 
-local function FormatCompactNumber(value)
-    value = tonumber(value)
-    if not value then return "--" end
-    if value >= 10000 then
-        return string.format("%.1fk", value / 1000)
-    end
-    if value >= 1000 then
-        return string.format("%.1fk", value / 1000)
-    end
-    return tostring(math.floor(value + 0.5))
-end
-
-local function FormatCompactValue(def, value)
-    value = tonumber(value)
-    if not value then return "--" end
-    if def.format == "percent" then
-        return string.format("%.0f%%", value)
-    end
-    return FormatCompactNumber(value)
-end
-
 local function ShouldShowEffective(def)
     return def.key == "penetration" or def.key == "critDamage"
 end
 
-local function FormatCurrentValue(def, data)
+local function FormatOwnValue(def, data)
     if not data then return "--" end
-    local ownValue = data.ownValue
-    local effectiveValue = data.uncappedEffectiveValue or data.effectiveValue
-    if ShouldShowEffective(def) and ownValue and effectiveValue and math.abs(effectiveValue - ownValue) >= 0.1 then
-        return FormatCompactValue(def, ownValue) .. "/" .. FormatCompactValue(def, effectiveValue)
-    end
-    return FormatValue(def, data.value)
+    return FormatValue(def, data.ownValue or data.value)
+end
+
+local function FormatEffectiveValue(def, data)
+    if not data then return "--" end
+    return FormatValue(def, data.effectiveValue or data.value)
+end
+
+local function GetOvercapValue(def, data)
+    if not ShouldShowEffective(def) or not data then return nil end
+
+    local cap = GetEffectiveCap(def)
+    local uncappedValue = tonumber(data.uncappedEffectiveValue or data.effectiveValue)
+    if not cap or not uncappedValue then return nil end
+    return math.max(0, uncappedValue - cap)
 end
 
 local function FormatSeconds(ms)
@@ -309,6 +308,36 @@ end
 local function GetBandPercent(row, band)
     if not row or not row.bandMs or (tonumber(row.requiredMs) or 0) <= 0 then return 0 end
     return ((row.bandMs[band] or 0) / row.requiredMs) * 100
+end
+
+local function GetDamageBandPercent(row, band)
+    if not row or not row.bandDamage or (tonumber(row.damageWeight) or 0) <= 0 then return 0 end
+    return ((row.bandDamage[band] or 0) / row.damageWeight) * 100
+end
+
+local function FormatBandBreakdown(prefix, lowPercent, okPercent, highPercent)
+    return string.format(
+        "  %s %s %s  %s %s  %s %s",
+        prefix,
+        GetString(EZOM_DD_STATS_SUMMARY_LOW),
+        FormatPercent(lowPercent),
+        GetString(EZOM_DD_STATS_SUMMARY_OK),
+        FormatPercent(okPercent),
+        GetString(EZOM_DD_STATS_SUMMARY_HIGH),
+        FormatPercent(highPercent)
+    )
+end
+
+local function FormatCapText(def)
+    local cap = GetEffectiveCap(def)
+    if not cap then return "" end
+    return " " .. string.format("(%s %s)", GetString(EZOM_DD_STATS_SUMMARY_CAP), FormatValue(def, cap))
+end
+
+local function HasLibCombatDamage()
+    return LibCombat ~= nil
+        and LIBCOMBAT_EVENT_DAMAGE_OUT ~= nil
+        and type(LibCombat.RegisterCallbackType) == "function"
 end
 
 local function RefreshCurrentValues()
@@ -343,13 +372,55 @@ end
 local function GetTooltipSummary()
     if isCombat and statsTracker and statsTracker.GetCurrentSummary then
         local effectiveSummary = effectiveStatsTracker and effectiveStatsTracker:GetCurrentSummary() or nil
-        return statsTracker:GetCurrentSummary(), effectiveSummary, GetString(EZOM_DD_STATS_SUMMARY_CURRENT)
+        local overcapSummary = overcapStatsTracker and overcapStatsTracker:GetCurrentSummary() or nil
+        local weightedSummary = damageWeightedTracker and damageWeightedTracker:GetCurrentSummary() or nil
+        return statsTracker:GetCurrentSummary(), effectiveSummary, overcapSummary, weightedSummary, GetString(EZOM_DD_STATS_SUMMARY_CURRENT)
     end
-    return lastCombatSummary, lastEffectiveCombatSummary, GetString(EZOM_DD_STATS_SUMMARY_LAST)
+    return lastCombatSummary, lastEffectiveCombatSummary, lastOvercapCombatSummary, lastDamageWeightedSummary, GetString(EZOM_DD_STATS_SUMMARY_LAST)
+end
+
+local function AppendWeightedSummary(lines, weightedSummary)
+    if not weightedSummary or not weightedSummary.hasData then return end
+
+    table.insert(lines, "")
+    table.insert(lines, GetString(EZOM_DD_STATS_WEIGHTED_TITLE))
+    for _, def in ipairs(STAT_DEFS) do
+        local row = weightedSummary.byKey and weightedSummary.byKey[def.key] or nil
+        if row then
+            if ShouldShowEffective(def) then
+                table.insert(lines, GetLocalizedString(def.nameString, def.key) .. ":")
+                table.insert(lines, string.format("  %s %s", GetString(EZOM_DD_STATS_SUMMARY_OWN), FormatValue(def, row.averageOwn)))
+                table.insert(lines, string.format(
+                    "  %s%s %s",
+                    GetString(EZOM_DD_STATS_SUMMARY_EFFECTIVE),
+                    FormatCapText(def),
+                    FormatValue(def, row.averageEffective)
+                ))
+                table.insert(lines, string.format(
+                    "  %s %s / %s",
+                    GetString(EZOM_DD_STATS_SUMMARY_OVERCAP),
+                    FormatValue(def, row.averageOvercap),
+                    FormatValue(def, row.maxOvercap)
+                ))
+                table.insert(lines, FormatBandBreakdown(
+                    GetString(EZOM_DD_STATS_WEIGHTED_BY_DAMAGE),
+                    GetDamageBandPercent(row, BAND_LOW),
+                    GetDamageBandPercent(row, BAND_OK),
+                    GetDamageBandPercent(row, BAND_HIGH)
+                ))
+            else
+                table.insert(lines, string.format(
+                    "%s: %s",
+                    GetLocalizedString(def.nameString, def.key),
+                    FormatValue(def, row.averageOwn)
+                ))
+            end
+        end
+    end
 end
 
 local function BuildTooltipText()
-    local summary, effectiveSummary, title = GetTooltipSummary()
+    local summary, effectiveSummary, overcapSummary, weightedSummary, title = GetTooltipSummary()
     if not summary or not summary.hasData then
         return GetString(EZOM_LAST_COMBAT_NO_DATA)
     end
@@ -362,45 +433,60 @@ local function BuildTooltipText()
     for _, def in ipairs(STAT_DEFS) do
         local row = summary.byKey and summary.byKey[def.key] or nil
         local effectiveRow = effectiveSummary and effectiveSummary.byKey and effectiveSummary.byKey[def.key] or nil
+        local overcapRow = overcapSummary and overcapSummary.byKey and overcapSummary.byKey[def.key] or nil
         if row then
             if ShouldShowEffective(def) and effectiveRow then
+                table.insert(lines, GetLocalizedString(def.nameString, def.key) .. ":")
                 table.insert(lines, string.format(
-                    "%s: %s %s / %s / %s | %s %s / %s / %s | %s %s %s %s %s %s",
-                    GetLocalizedString(def.nameString, def.key),
+                    "  %s %s / %s / %s",
                     GetString(EZOM_DD_STATS_SUMMARY_OWN),
                     FormatValue(def, row.minValue),
                     FormatValue(def, row.averageValue),
-                    FormatValue(def, row.maxValue),
+                    FormatValue(def, row.maxValue)
+                ))
+                table.insert(lines, string.format(
+                    "  %s%s %s / %s / %s",
                     GetString(EZOM_DD_STATS_SUMMARY_EFFECTIVE),
+                    FormatCapText(def),
                     FormatValue(def, effectiveRow.minValue),
                     FormatValue(def, effectiveRow.averageValue),
-                    FormatValue(def, effectiveRow.maxValue),
-                    GetString(EZOM_DD_STATS_SUMMARY_LOW),
-                    FormatPercent(GetBandPercent(effectiveRow, BAND_LOW)),
-                    GetString(EZOM_DD_STATS_SUMMARY_OK),
-                    FormatPercent(GetBandPercent(effectiveRow, BAND_OK)),
-                    GetString(EZOM_DD_STATS_SUMMARY_HIGH),
-                    FormatPercent(GetBandPercent(effectiveRow, BAND_HIGH))
+                    FormatValue(def, effectiveRow.maxValue)
+                ))
+                if overcapRow then
+                    table.insert(lines, string.format(
+                        "  %s %s / %s",
+                        GetString(EZOM_DD_STATS_SUMMARY_OVERCAP),
+                        FormatValue(def, overcapRow.averageValue),
+                        FormatValue(def, overcapRow.maxValue)
+                    ))
+                end
+                table.insert(lines, FormatBandBreakdown(
+                    GetString(EZOM_DD_STATS_SUMMARY_TIME),
+                    GetBandPercent(effectiveRow, BAND_LOW),
+                    GetBandPercent(effectiveRow, BAND_OK),
+                    GetBandPercent(effectiveRow, BAND_HIGH)
                 ))
             else
                 table.insert(lines, string.format(
-                    "%s: %s / %s / %s | %s %s %s %s %s %s",
+                    "%s: %s / %s / %s",
                     GetLocalizedString(def.nameString, def.key),
                     FormatValue(def, row.minValue),
                     FormatValue(def, row.averageValue),
-                    FormatValue(def, row.maxValue),
-                    GetString(EZOM_DD_STATS_SUMMARY_LOW),
-                    FormatPercent(GetBandPercent(row, BAND_LOW)),
-                    GetString(EZOM_DD_STATS_SUMMARY_OK),
-                    FormatPercent(GetBandPercent(row, BAND_OK)),
-                    GetString(EZOM_DD_STATS_SUMMARY_HIGH),
-                    FormatPercent(GetBandPercent(row, BAND_HIGH))
+                    FormatValue(def, row.maxValue)
+                ))
+                table.insert(lines, FormatBandBreakdown(
+                    GetString(EZOM_DD_STATS_SUMMARY_TIME),
+                    GetBandPercent(row, BAND_LOW),
+                    GetBandPercent(row, BAND_OK),
+                    GetBandPercent(row, BAND_HIGH)
                 ))
             end
         else
             table.insert(lines, GetLocalizedString(def.nameString, def.key) .. ": " .. GetString(EZOM_DD_STATS_UNAVAILABLE))
         end
     end
+
+    AppendWeightedSummary(lines, weightedSummary)
 
     return table.concat(lines, "\n")
 end
@@ -506,13 +592,14 @@ local function EnsureControl()
         row.value:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
         row.value:SetMaxLineCount(1)
 
-        row.state = wm:CreateControl(CONTROL_NAME .. def.key .. "State", control, CT_LABEL)
-        row.state:SetAnchor(TOPRIGHT, control, TOPRIGHT, -PADDING, top)
-        row.state:SetDimensions(STATE_WIDTH, ROW_HEIGHT)
-        row.state:SetFont("ZoFontGameSmall")
-        row.state:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
-        row.state:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
-        row.state:SetMaxLineCount(1)
+        row.effective = wm:CreateControl(CONTROL_NAME .. def.key .. "Effective", control, CT_LABEL)
+        row.effective:SetAnchor(TOPRIGHT, control, TOPRIGHT, -PADDING, top)
+        row.effective:SetDimensions(EFFECTIVE_WIDTH, ROW_HEIGHT)
+        row.effective:SetFont("ZoFontGameSmall")
+        row.effective:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
+        row.effective:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
+        row.effective:SetMaxLineCount(1)
+        row.effective:SetColor(EFFECTIVE_COLOR.r, EFFECTIVE_COLOR.g, EFFECTIVE_COLOR.b, EFFECTIVE_COLOR.a)
 
         rows[def.key] = row
     end
@@ -575,10 +662,19 @@ local function UpdateVisuals()
         local r, g, b, a = GetBandColor(band, def.positiveHigh)
 
         row.name:SetText(GetLocalizedString(def.nameString, def.key))
-        row.value:SetText(FormatCurrentValue(def, data))
+        row.value:SetText(FormatOwnValue(def, data))
         row.value:SetColor(r, g, b, a)
-        row.state:SetText(GetBandName(band))
-        row.state:SetColor(r, g, b, a)
+        row.effective:SetText(FormatEffectiveValue(def, data))
+        if (GetOvercapValue(def, data) or 0) > 0 then
+            row.effective:SetColor(
+                EFFECTIVE_OVERCAP_COLOR.r,
+                EFFECTIVE_OVERCAP_COLOR.g,
+                EFFECTIVE_OVERCAP_COLOR.b,
+                EFFECTIVE_OVERCAP_COLOR.a
+            )
+        else
+            row.effective:SetColor(EFFECTIVE_COLOR.r, EFFECTIVE_COLOR.g, EFFECTIVE_COLOR.b, EFFECTIVE_COLOR.a)
+        end
     end
 end
 
@@ -592,8 +688,160 @@ local function OnUpdate()
     if isCombat and effectiveStatsTracker then
         effectiveStatsTracker:Sample(GetNowMs())
     end
+    if isCombat and overcapStatsTracker then
+        overcapStatsTracker:Sample(GetNowMs())
+    end
 
     UpdateVisibility()
+end
+
+local function CreateDamageWeightedTracker()
+    local tracker = {
+        started = false,
+        startMs = 0,
+        durationMs = 0,
+        totalDamage = 0,
+        order = {},
+        byKey = {},
+        lastSummary = nil,
+    }
+
+    local function EnsureStat(self, def)
+        local stat = self.byKey[def.key]
+        if not stat then
+            stat = {
+                key = def.key,
+                item = def,
+                damageWeight = 0,
+                ownWeighted = 0,
+                effectiveWeighted = 0,
+                overcapWeighted = 0,
+                minOwn = nil,
+                maxOwn = 0,
+                minEffective = nil,
+                maxEffective = 0,
+                maxOvercap = 0,
+                bandDamage = {},
+            }
+            self.byKey[def.key] = stat
+            table.insert(self.order, def.key)
+        else
+            stat.item = def
+        end
+        return stat
+    end
+
+    local function BuildSummary(self, nowMs)
+        local rows = {}
+        local byKey = {}
+        local durationMs = self.durationMs
+        if self.started then
+            durationMs = math.max(0, (nowMs or GetNowMs()) - self.startMs)
+        end
+
+        for _, key in ipairs(self.order) do
+            local stat = self.byKey[key]
+            if stat and stat.damageWeight > 0 then
+                local row = {
+                    key = key,
+                    name = GetLocalizedString(stat.item.nameString, key),
+                    damageWeight = stat.damageWeight,
+                    averageOwn = stat.ownWeighted / stat.damageWeight,
+                    averageEffective = stat.effectiveWeighted / stat.damageWeight,
+                    averageOvercap = stat.overcapWeighted / stat.damageWeight,
+                    minOwn = stat.minOwn or 0,
+                    maxOwn = stat.maxOwn,
+                    minEffective = stat.minEffective or 0,
+                    maxEffective = stat.maxEffective,
+                    maxOvercap = stat.maxOvercap,
+                    bandDamage = stat.bandDamage,
+                }
+                table.insert(rows, row)
+                byKey[key] = row
+            end
+        end
+
+        return {
+            durationMs = durationMs,
+            totalDamage = self.totalDamage,
+            rows = rows,
+            byKey = byKey,
+            hasData = #rows > 0,
+        }
+    end
+
+    function tracker:Start(nowMs)
+        self.started = true
+        self.startMs = nowMs or GetNowMs()
+        self.durationMs = 0
+        self.totalDamage = 0
+        self.order = {}
+        self.byKey = {}
+        self.lastSummary = nil
+    end
+
+    function tracker:AddDamage(hitValue)
+        if not self.started then return end
+
+        local damage = tonumber(hitValue) or 0
+        if damage <= 0 then return end
+
+        if not currentValues or not next(currentValues) then
+            RefreshCurrentValues()
+        end
+
+        self.totalDamage = self.totalDamage + damage
+        for _, def in ipairs(STAT_DEFS) do
+            local data = currentValues[def.key]
+            if data and data.available == true then
+                local ownValue = tonumber(data.ownValue or data.value) or 0
+                local effectiveValue = tonumber(data.effectiveValue or data.value) or ownValue
+                local overcapValue = GetOvercapValue(def, data) or 0
+                local band = data.band or GetBand(def, ownValue)
+                local stat = EnsureStat(self, def)
+
+                stat.damageWeight = stat.damageWeight + damage
+                stat.ownWeighted = stat.ownWeighted + (ownValue * damage)
+                stat.effectiveWeighted = stat.effectiveWeighted + (effectiveValue * damage)
+                stat.overcapWeighted = stat.overcapWeighted + (overcapValue * damage)
+                stat.minOwn = stat.minOwn and math.min(stat.minOwn, ownValue) or ownValue
+                stat.maxOwn = math.max(stat.maxOwn, ownValue)
+                stat.minEffective = stat.minEffective and math.min(stat.minEffective, effectiveValue) or effectiveValue
+                stat.maxEffective = math.max(stat.maxEffective, effectiveValue)
+                stat.maxOvercap = math.max(stat.maxOvercap, overcapValue)
+                stat.bandDamage[band] = (stat.bandDamage[band] or 0) + damage
+            end
+        end
+    end
+
+    function tracker:Finish(nowMs)
+        if not self.started then return self.lastSummary end
+
+        self.durationMs = math.max(0, (nowMs or GetNowMs()) - self.startMs)
+        self.lastSummary = BuildSummary(self, nowMs)
+        self.started = false
+        return self.lastSummary
+    end
+
+    function tracker:GetCurrentSummary()
+        if self.started then
+            return BuildSummary(self, GetNowMs())
+        end
+        return self.lastSummary
+    end
+
+    return tracker
+end
+
+local function OnLibCombatDamageOut(_, _timems, _result, _sourceUnitId, _targetUnitId, _abilityId, hitValue)
+    if not isCombat or not damageWeightedTracker then return end
+    damageWeightedTracker:AddDamage(hitValue)
+end
+
+local function RegisterLibCombat()
+    if libCombatRegistered or not HasLibCombatDamage() then return end
+    LibCombat:RegisterCallbackType(LIBCOMBAT_EVENT_DAMAGE_OUT, OnLibCombatDamageOut, CALLBACK_NAME)
+    libCombatRegistered = true
 end
 
 local function RegisterUpdate()
@@ -625,11 +873,19 @@ local function OnCombatState(_, inCombat)
     if isCombat then
         lastCombatSummary = nil
         lastEffectiveCombatSummary = nil
+        lastOvercapCombatSummary = nil
+        lastDamageWeightedSummary = nil
         if statsTracker then
             statsTracker:Start(GetNowMs())
         end
         if effectiveStatsTracker then
             effectiveStatsTracker:Start(GetNowMs())
+        end
+        if overcapStatsTracker then
+            overcapStatsTracker:Start(GetNowMs())
+        end
+        if damageWeightedTracker then
+            damageWeightedTracker:Start(GetNowMs())
         end
     else
         if statsTracker then
@@ -639,6 +895,13 @@ local function OnCombatState(_, inCombat)
         if effectiveStatsTracker then
             effectiveStatsTracker:Sample(GetNowMs())
             lastEffectiveCombatSummary = effectiveStatsTracker:Finish(GetNowMs())
+        end
+        if overcapStatsTracker then
+            overcapStatsTracker:Sample(GetNowMs())
+            lastOvercapCombatSummary = overcapStatsTracker:Finish(GetNowMs())
+        end
+        if damageWeightedTracker then
+            lastDamageWeightedSummary = damageWeightedTracker:Finish(GetNowMs())
         end
     end
 
@@ -671,6 +934,7 @@ function Tracker.ApplySettings()
     ApplyPosition()
     SetMoveMode(IsHudUnlocked())
     ApplyStyle()
+    RegisterLibCombat()
     OnUpdate()
     RefreshUpdateRegistration()
 end
@@ -717,14 +981,39 @@ function Tracker.Init()
             end,
             getItemValue = function(item)
                 local data = currentValues[item.key]
-                return data and (data.uncappedEffectiveValue or data.effectiveValue or data.value) or 0
+                return data and (data.effectiveValue or data.value) or 0
             end,
             getItemBand = function(item)
                 local data = currentValues[item.key]
                 return data and data.band or BAND_UNKNOWN
             end,
         })
+        overcapStatsTracker = EZOMetter_CombatSummary.CreateValueTracker({
+            getItems = function()
+                return STAT_DEFS
+            end,
+            getItemKey = function(item)
+                return item.key
+            end,
+            getItemName = function(item)
+                return GetLocalizedString(item.nameString, item.key)
+            end,
+            isItemRequired = function(item)
+                local data = currentValues[item.key]
+                return data and data.available == true and ShouldShowEffective(item) == true
+            end,
+            getItemValue = function(item)
+                local data = currentValues[item.key]
+                return GetOvercapValue(item, data) or 0
+            end,
+            getItemBand = function(item)
+                local value = GetOvercapValue(item, currentValues[item.key]) or 0
+                return value > 0 and BAND_HIGH or BAND_OK
+            end,
+        })
+        damageWeightedTracker = CreateDamageWeightedTracker()
     end
+    RegisterLibCombat()
 
     if EZOMetter_VisualContext and EZOMetter_VisualContext.RegisterRefresh then
         EZOMetter_VisualContext.RegisterRefresh(UpdateVisibility)
