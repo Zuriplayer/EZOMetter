@@ -9,6 +9,7 @@ function EZOMetter.savedVars.Init()
             role = "dd",
             debugMode = false,
             unlockHud = false,
+            combatReportEnabled = false,
         },
         alerts = {
             missingBuffAlerts = true,
@@ -60,6 +61,11 @@ function EZOMetter.savedVars.Init()
             penetrationHigh = 7700,
             critDamageTarget = 125,
             critDamageHigh = 125,
+            targetResistance = 18200,
+            crusherValue = 2108,
+            alkoshValue = 6000,
+            tremorscaleValue = 2640,
+            critDamageCap = 125,
             x = 0,
             y = 170,
         },
@@ -94,6 +100,9 @@ function EZOMetter.savedVars.Init()
     EZOMetter.sv.general.role = EZOMetter.sv.general.role or defaults.general.role
     EZOMetter.sv.general.debugMode = EZOMetter.sv.general.debugMode or defaults.general.debugMode
     EZOMetter.sv.general.unlockHud = EZOMetter.sv.general.unlockHud or defaults.general.unlockHud
+    if EZOMetter.sv.general.combatReportEnabled == nil then
+        EZOMetter.sv.general.combatReportEnabled = defaults.general.combatReportEnabled
+    end
     if EZOMetter.sv.alerts.missingBuffAlerts == nil then
         EZOMetter.sv.alerts.missingBuffAlerts = defaults.alerts.missingBuffAlerts
     end
@@ -173,6 +182,11 @@ function EZOMetter.savedVars.Init()
     EZOMetter.sv.ddStats.penetrationHigh = EZOMetter.sv.ddStats.penetrationHigh or defaults.ddStats.penetrationHigh
     EZOMetter.sv.ddStats.critDamageTarget = EZOMetter.sv.ddStats.critDamageTarget or defaults.ddStats.critDamageTarget
     EZOMetter.sv.ddStats.critDamageHigh = EZOMetter.sv.ddStats.critDamageHigh or defaults.ddStats.critDamageHigh
+    EZOMetter.sv.ddStats.targetResistance = EZOMetter.sv.ddStats.targetResistance or defaults.ddStats.targetResistance
+    EZOMetter.sv.ddStats.crusherValue = EZOMetter.sv.ddStats.crusherValue or defaults.ddStats.crusherValue
+    EZOMetter.sv.ddStats.alkoshValue = EZOMetter.sv.ddStats.alkoshValue or defaults.ddStats.alkoshValue
+    EZOMetter.sv.ddStats.tremorscaleValue = EZOMetter.sv.ddStats.tremorscaleValue or defaults.ddStats.tremorscaleValue
+    EZOMetter.sv.ddStats.critDamageCap = EZOMetter.sv.ddStats.critDamageCap or defaults.ddStats.critDamageCap
     EZOMetter.sv.ddStats.x = EZOMetter.sv.ddStats.x or defaults.ddStats.x
     EZOMetter.sv.ddStats.y = EZOMetter.sv.ddStats.y or defaults.ddStats.y
     if EZOMetter.sv.observedDamage.enabled == nil then

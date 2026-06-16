@@ -30,7 +30,9 @@ local forceShow = false
 local isCombat = false
 local currentValues = {}
 local statsTracker
+local effectiveStatsTracker
 local lastCombatSummary
+local lastEffectiveCombatSummary
 local IsHudUnlocked
 
 local STAT_DEFS = {
@@ -213,6 +215,24 @@ local function GetBand(def, value)
     return BAND_OK
 end
 
+local function GetEffectiveBand(def, ownValue, effectiveValue)
+    effectiveValue = tonumber(effectiveValue)
+    if not effectiveValue then return BAND_UNKNOWN end
+
+    if def.key == "penetration" then
+        local cap = EZOMetter_DDEffectiveStats and EZOMetter_DDEffectiveStats.GetTargetResistance(GetSettings()) or 18200
+        if effectiveValue < cap then
+            return BAND_LOW
+        end
+        if effectiveValue > cap then
+            return BAND_HIGH
+        end
+        return BAND_OK
+    end
+
+    return GetBand(def, effectiveValue)
+end
+
 local function GetBandName(band)
     if band == BAND_LOW then return GetString(EZOM_DD_STATS_STATE_LOW) end
     if band == BAND_HIGH then return GetString(EZOM_DD_STATS_STATE_HIGH) end
@@ -237,6 +257,41 @@ local function FormatValue(def, value)
     return tostring(math.floor(value + 0.5))
 end
 
+local function FormatCompactNumber(value)
+    value = tonumber(value)
+    if not value then return "--" end
+    if value >= 10000 then
+        return string.format("%.1fk", value / 1000)
+    end
+    if value >= 1000 then
+        return string.format("%.1fk", value / 1000)
+    end
+    return tostring(math.floor(value + 0.5))
+end
+
+local function FormatCompactValue(def, value)
+    value = tonumber(value)
+    if not value then return "--" end
+    if def.format == "percent" then
+        return string.format("%.0f%%", value)
+    end
+    return FormatCompactNumber(value)
+end
+
+local function ShouldShowEffective(def)
+    return def.key == "penetration" or def.key == "critDamage"
+end
+
+local function FormatCurrentValue(def, data)
+    if not data then return "--" end
+    local ownValue = data.ownValue
+    local effectiveValue = data.uncappedEffectiveValue or data.effectiveValue
+    if ShouldShowEffective(def) and ownValue and effectiveValue and math.abs(effectiveValue - ownValue) >= 0.1 then
+        return FormatCompactValue(def, ownValue) .. "/" .. FormatCompactValue(def, effectiveValue)
+    end
+    return FormatValue(def, data.value)
+end
+
 local function FormatSeconds(ms)
     if EZOMetter_CombatSummary then
         return EZOMetter_CombatSummary.FormatSeconds(ms)
@@ -257,25 +312,44 @@ local function GetBandPercent(row, band)
 end
 
 local function RefreshCurrentValues()
+    local settings = GetSettings()
+    local ownValues = {}
     for _, def in ipairs(STAT_DEFS) do
-        local value = ReadStatValue(def.key)
+        ownValues[def.key] = ReadStatValue(def.key)
+    end
+
+    local effectiveData = nil
+    if EZOMetter_DDEffectiveStats and EZOMetter_DDEffectiveStats.BuildValues then
+        effectiveData = EZOMetter_DDEffectiveStats.BuildValues(ownValues, settings)
+    end
+
+    for _, def in ipairs(STAT_DEFS) do
+        local ownValue = ownValues[def.key]
+        local effectiveValue = effectiveData and effectiveData.values and effectiveData.values[def.key] or ownValue
+        local uncappedEffectiveValue = effectiveData and effectiveData.uncappedValues and effectiveData.uncappedValues[def.key] or effectiveValue
+        local value = effectiveValue or ownValue
+
         currentValues[def.key] = {
             value = value,
-            available = value ~= nil,
-            band = GetBand(def, value),
+            ownValue = ownValue,
+            effectiveValue = effectiveValue,
+            uncappedEffectiveValue = uncappedEffectiveValue,
+            available = ownValue ~= nil,
+            band = GetEffectiveBand(def, ownValue, uncappedEffectiveValue or effectiveValue),
         }
     end
 end
 
 local function GetTooltipSummary()
     if isCombat and statsTracker and statsTracker.GetCurrentSummary then
-        return statsTracker:GetCurrentSummary(), GetString(EZOM_DD_STATS_SUMMARY_CURRENT)
+        local effectiveSummary = effectiveStatsTracker and effectiveStatsTracker:GetCurrentSummary() or nil
+        return statsTracker:GetCurrentSummary(), effectiveSummary, GetString(EZOM_DD_STATS_SUMMARY_CURRENT)
     end
-    return lastCombatSummary, GetString(EZOM_DD_STATS_SUMMARY_LAST)
+    return lastCombatSummary, lastEffectiveCombatSummary, GetString(EZOM_DD_STATS_SUMMARY_LAST)
 end
 
 local function BuildTooltipText()
-    local summary, title = GetTooltipSummary()
+    local summary, effectiveSummary, title = GetTooltipSummary()
     if not summary or not summary.hasData then
         return GetString(EZOM_LAST_COMBAT_NO_DATA)
     end
@@ -287,26 +361,53 @@ local function BuildTooltipText()
 
     for _, def in ipairs(STAT_DEFS) do
         local row = summary.byKey and summary.byKey[def.key] or nil
+        local effectiveRow = effectiveSummary and effectiveSummary.byKey and effectiveSummary.byKey[def.key] or nil
         if row then
-            table.insert(lines, string.format(
-                "%s: %s / %s / %s | %s %s %s %s %s %s",
-                GetLocalizedString(def.nameString, def.key),
-                FormatValue(def, row.minValue),
-                FormatValue(def, row.averageValue),
-                FormatValue(def, row.maxValue),
-                GetString(EZOM_DD_STATS_SUMMARY_LOW),
-                FormatPercent(GetBandPercent(row, BAND_LOW)),
-                GetString(EZOM_DD_STATS_SUMMARY_OK),
-                FormatPercent(GetBandPercent(row, BAND_OK)),
-                GetString(EZOM_DD_STATS_SUMMARY_HIGH),
-                FormatPercent(GetBandPercent(row, BAND_HIGH))
-            ))
+            if ShouldShowEffective(def) and effectiveRow then
+                table.insert(lines, string.format(
+                    "%s: %s %s / %s / %s | %s %s / %s / %s | %s %s %s %s %s %s",
+                    GetLocalizedString(def.nameString, def.key),
+                    GetString(EZOM_DD_STATS_SUMMARY_OWN),
+                    FormatValue(def, row.minValue),
+                    FormatValue(def, row.averageValue),
+                    FormatValue(def, row.maxValue),
+                    GetString(EZOM_DD_STATS_SUMMARY_EFFECTIVE),
+                    FormatValue(def, effectiveRow.minValue),
+                    FormatValue(def, effectiveRow.averageValue),
+                    FormatValue(def, effectiveRow.maxValue),
+                    GetString(EZOM_DD_STATS_SUMMARY_LOW),
+                    FormatPercent(GetBandPercent(effectiveRow, BAND_LOW)),
+                    GetString(EZOM_DD_STATS_SUMMARY_OK),
+                    FormatPercent(GetBandPercent(effectiveRow, BAND_OK)),
+                    GetString(EZOM_DD_STATS_SUMMARY_HIGH),
+                    FormatPercent(GetBandPercent(effectiveRow, BAND_HIGH))
+                ))
+            else
+                table.insert(lines, string.format(
+                    "%s: %s / %s / %s | %s %s %s %s %s %s",
+                    GetLocalizedString(def.nameString, def.key),
+                    FormatValue(def, row.minValue),
+                    FormatValue(def, row.averageValue),
+                    FormatValue(def, row.maxValue),
+                    GetString(EZOM_DD_STATS_SUMMARY_LOW),
+                    FormatPercent(GetBandPercent(row, BAND_LOW)),
+                    GetString(EZOM_DD_STATS_SUMMARY_OK),
+                    FormatPercent(GetBandPercent(row, BAND_OK)),
+                    GetString(EZOM_DD_STATS_SUMMARY_HIGH),
+                    FormatPercent(GetBandPercent(row, BAND_HIGH))
+                ))
+            end
         else
             table.insert(lines, GetLocalizedString(def.nameString, def.key) .. ": " .. GetString(EZOM_DD_STATS_UNAVAILABLE))
         end
     end
 
     return table.concat(lines, "\n")
+end
+
+function Tracker.GetReportSection()
+    if not lastCombatSummary or not lastCombatSummary.hasData then return nil end
+    return BuildTooltipText()
 end
 
 local function ShowTooltip()
@@ -474,7 +575,7 @@ local function UpdateVisuals()
         local r, g, b, a = GetBandColor(band, def.positiveHigh)
 
         row.name:SetText(GetLocalizedString(def.nameString, def.key))
-        row.value:SetText(FormatValue(def, data.value))
+        row.value:SetText(FormatCurrentValue(def, data))
         row.value:SetColor(r, g, b, a)
         row.state:SetText(GetBandName(band))
         row.state:SetColor(r, g, b, a)
@@ -487,6 +588,9 @@ local function OnUpdate()
 
     if isCombat and statsTracker then
         statsTracker:Sample(GetNowMs())
+    end
+    if isCombat and effectiveStatsTracker then
+        effectiveStatsTracker:Sample(GetNowMs())
     end
 
     UpdateVisibility()
@@ -520,13 +624,21 @@ local function OnCombatState(_, inCombat)
 
     if isCombat then
         lastCombatSummary = nil
+        lastEffectiveCombatSummary = nil
         if statsTracker then
             statsTracker:Start(GetNowMs())
+        end
+        if effectiveStatsTracker then
+            effectiveStatsTracker:Start(GetNowMs())
         end
     else
         if statsTracker then
             statsTracker:Sample(GetNowMs())
             lastCombatSummary = statsTracker:Finish(GetNowMs())
+        end
+        if effectiveStatsTracker then
+            effectiveStatsTracker:Sample(GetNowMs())
+            lastEffectiveCombatSummary = effectiveStatsTracker:Finish(GetNowMs())
         end
     end
 
@@ -541,10 +653,10 @@ function Tracker.ShowTest()
     EnsureControl()
     SetMoveMode(true)
     currentValues = {
-        damage = { value = 6200, available = true, band = BAND_OK },
-        crit = { value = 55.4, available = true, band = BAND_OK },
-        penetration = { value = 7200, available = true, band = BAND_OK },
-        critDamage = { value = 125, available = true, band = BAND_OK },
+        damage = { value = 6200, ownValue = 6200, effectiveValue = 6200, available = true, band = BAND_OK },
+        crit = { value = 55.4, ownValue = 55.4, effectiveValue = 55.4, available = true, band = BAND_OK },
+        penetration = { value = 18200, ownValue = 7200, effectiveValue = 18200, available = true, band = BAND_OK },
+        critDamage = { value = 125, ownValue = 125, effectiveValue = 125, available = true, band = BAND_OK },
     }
     UpdateVisuals()
     RefreshUpdateRegistration()
@@ -582,7 +694,30 @@ function Tracker.Init()
             end,
             getItemValue = function(item)
                 local data = currentValues[item.key]
-                return data and data.value or 0
+                return data and (data.ownValue or data.value) or 0
+            end,
+            getItemBand = function(item)
+                local data = currentValues[item.key]
+                return data and GetBand(item, data.ownValue or data.value) or BAND_UNKNOWN
+            end,
+        })
+        effectiveStatsTracker = EZOMetter_CombatSummary.CreateValueTracker({
+            getItems = function()
+                return STAT_DEFS
+            end,
+            getItemKey = function(item)
+                return item.key
+            end,
+            getItemName = function(item)
+                return GetLocalizedString(item.nameString, item.key)
+            end,
+            isItemRequired = function(item)
+                local data = currentValues[item.key]
+                return data and data.available == true
+            end,
+            getItemValue = function(item)
+                local data = currentValues[item.key]
+                return data and (data.uncappedEffectiveValue or data.effectiveValue or data.value) or 0
             end,
             getItemBand = function(item)
                 local data = currentValues[item.key]

@@ -135,6 +135,18 @@ function EZOMetter_Menu.Init()
                     end,
                     default = false,
                 },
+                {
+                    type = "checkbox",
+                    name = GetString(EZOM_OPTION_COMBAT_REPORT),
+                    tooltip = GetString(EZOM_OPTION_COMBAT_REPORT_TOOLTIP),
+                    getFunc = function()
+                        return EZOMetter.sv.general.combatReportEnabled == true
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.general.combatReportEnabled = value == true
+                    end,
+                    default = false,
+                },
             },
         },
         {
@@ -649,6 +661,70 @@ function EZOMetter_Menu.Init()
                         EZOMetter.sv.ddStats.critDamageTarget = tonumber(value) or 125
                     end,
                     default = 125,
+                },
+                {
+                    type = "header",
+                    name = GetString(EZOM_OPTION_DD_STATS_EFFECTIVE_HEADER),
+                },
+                {
+                    type = "slider",
+                    name = GetString(EZOM_OPTION_DD_STATS_TARGET_RESISTANCE),
+                    tooltip = GetString(EZOM_OPTION_DD_STATS_TARGET_RESISTANCE_TOOLTIP),
+                    min = 0,
+                    max = 25000,
+                    step = 100,
+                    getFunc = function()
+                        return EZOMetter.sv.ddStats.targetResistance or 18200
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.ddStats.targetResistance = tonumber(value) or 18200
+                    end,
+                    default = 18200,
+                },
+                {
+                    type = "slider",
+                    name = GetString(EZOM_OPTION_DD_STATS_CRUSHER_VALUE),
+                    tooltip = GetString(EZOM_OPTION_DD_STATS_CRUSHER_VALUE_TOOLTIP),
+                    min = 0,
+                    max = 5000,
+                    step = 1,
+                    getFunc = function()
+                        return EZOMetter.sv.ddStats.crusherValue or 2108
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.ddStats.crusherValue = tonumber(value) or 2108
+                    end,
+                    default = 2108,
+                },
+                {
+                    type = "slider",
+                    name = GetString(EZOM_OPTION_DD_STATS_ALKOSH_VALUE),
+                    tooltip = GetString(EZOM_OPTION_DD_STATS_ALKOSH_VALUE_TOOLTIP),
+                    min = 0,
+                    max = 6000,
+                    step = 1,
+                    getFunc = function()
+                        return EZOMetter.sv.ddStats.alkoshValue or 6000
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.ddStats.alkoshValue = tonumber(value) or 6000
+                    end,
+                    default = 6000,
+                },
+                {
+                    type = "slider",
+                    name = GetString(EZOM_OPTION_DD_STATS_TREMORSCALE_VALUE),
+                    tooltip = GetString(EZOM_OPTION_DD_STATS_TREMORSCALE_VALUE_TOOLTIP),
+                    min = 0,
+                    max = 5000,
+                    step = 1,
+                    getFunc = function()
+                        return EZOMetter.sv.ddStats.tremorscaleValue or 2640
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.ddStats.tremorscaleValue = tonumber(value) or 2640
+                    end,
+                    default = 2640,
                 },
             },
         },

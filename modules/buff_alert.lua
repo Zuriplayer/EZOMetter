@@ -114,6 +114,11 @@ local function BuildTooltipText()
     return table.concat(lines, "\n")
 end
 
+function BuffAlert.GetReportSection()
+    if not lastCombatSummary or not lastCombatSummary.rows then return nil end
+    return BuildTooltipText()
+end
+
 local function ShowTooltip()
     if EZOMetter_CombatSummary then
         EZOMetter_CombatSummary.ShowTooltip(control, BuildTooltipText())

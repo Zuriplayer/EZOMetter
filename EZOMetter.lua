@@ -88,6 +88,10 @@ function EZOM:Initialize()
         EZOMetter_AbilityTracker.Init()
     end
 
+    if EZOMetter_CombatReporter and EZOMetter_CombatReporter.Init then
+        EZOMetter_CombatReporter.Init()
+    end
+
     Print(GetString(EZOM_MSG_INIT))
 end
 

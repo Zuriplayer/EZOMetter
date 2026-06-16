@@ -5,22 +5,28 @@ local Tracker = EZOMetter_ObservedDamage
 local ADDON_NAME = "EZOMetter"
 local CALLBACK_NAME = "EZOMetterObservedDamage"
 local CONTROL_NAME = "EZOMetterObservedDamageTracker"
-local WIDTH = 320
-local HEIGHT = 112
-local PADDING = 12
-local ROW_HEIGHT = 22
+local WIDTH = 250
+local HEIGHT = 104
+local PADDING = 10
+local LABEL_WIDTH = 98
+local VALUE_WIDTH = 122
+local ROW_HEIGHT = 30
 local WINDOW_MS = 3000
 
 local control
 local backdrop
-local titleLabel
 local rows = {}
 local isCombat = false
 local currentData
 local lastCombatData
+local lastRawData
 local snapshots = {}
 local callbackRegistered = false
 local IsHudUnlocked
+local combatStartMs = 0
+local combatDurationMs = 0
+local lastCombatEndMs = 0
+local combatBaseline
 
 local ROW_DEFS = {
     { key = "instant", labelString = "EZOM_DAMAGE_ROW_INSTANT" },
@@ -105,11 +111,11 @@ local function FormatPercent(value)
     return string.format("%.1f%%", math.max(0, math.min(100, Number(value))))
 end
 
-local function FormatSeconds(seconds)
+local function FormatDurationMs(ms)
     if EZOMetter_CombatSummary then
-        return EZOMetter_CombatSummary.FormatSeconds((Number(seconds) * 1000))
+        return EZOMetter_CombatSummary.FormatSeconds(Number(ms))
     end
-    return string.format("%.1f", Number(seconds))
+    return string.format("%.1f", Number(ms) / 1000)
 end
 
 local function Share(myValue, totalValue)
@@ -139,7 +145,51 @@ local function CopyData(data)
         group = data.group == true,
         bossfight = data.bossfight == true or data.bossFight == true,
         receivedAtMs = GetNowMs(),
+        combatDurationMs = Number(data.combatDurationMs),
     }
+end
+
+local function GetCombatWindowDurationMs(nowMs)
+    nowMs = nowMs or GetNowMs()
+    if isCombat and combatStartMs > 0 then
+        return math.max(0, nowMs - combatStartMs)
+    end
+    return math.max(0, combatDurationMs)
+end
+
+local function ApplyCombatWindow(rawData)
+    if not rawData then return nil end
+
+    local data = CopyData(rawData)
+    local durationMs = GetCombatWindowDurationMs(data.receivedAtMs)
+    data.combatDurationMs = durationMs
+
+    local baseline = combatBaseline
+    if baseline and Number(data.damageOutTotal) < Number(baseline.damageOutTotal) then
+        baseline = nil
+        combatBaseline = nil
+    end
+
+    if baseline then
+        data.damageOutTotal = math.max(0, data.damageOutTotal - Number(baseline.damageOutTotal))
+        data.damageOutTotalGroup = math.max(0, data.damageOutTotalGroup - Number(baseline.damageOutTotalGroup))
+        data.bossDamageTotal = math.max(0, data.bossDamageTotal - Number(baseline.bossDamageTotal))
+        data.bossDamageTotalGroup = math.max(0, data.bossDamageTotalGroup - Number(baseline.bossDamageTotalGroup))
+    end
+
+    if durationMs > 0 then
+        local seconds = math.max(1, durationMs / 1000)
+        data.DPSOut = math.floor(data.damageOutTotal / seconds + 0.5)
+        data.groupDPSOut = math.floor(data.damageOutTotalGroup / seconds + 0.5)
+        data.bossDPSOut = math.floor(data.bossDamageTotal / seconds + 0.5)
+        data.bossDPSOutGroup = math.floor(data.bossDamageTotalGroup / seconds + 0.5)
+        data.dpstime = durationMs / 1000
+        data.bossTime = durationMs / 1000
+    end
+
+    data.group = data.group == true or data.damageOutTotalGroup > 0
+    data.bossfight = data.bossfight == true or data.bossDamageTotal > 0
+    return data
 end
 
 local function ResetSnapshots()
@@ -230,7 +280,7 @@ local function BuildTooltipText()
     local bossShare = Share(data.bossDamageTotal, data.bossDamageTotalGroup)
     local lines = {
         title,
-        GetString(EZOM_SUMMARY_DURATION) .. ": " .. FormatSeconds(data.dpstime) .. "s",
+        GetString(EZOM_SUMMARY_DURATION) .. ": " .. FormatDurationMs(data.combatDurationMs or (data.dpstime * 1000)) .. "s",
         GetString(EZOM_DAMAGE_SUMMARY_DAMAGE) .. ": " .. FormatNumber(data.damageOutTotal),
         GetString(EZOM_DAMAGE_SUMMARY_DPS) .. ": " .. FormatDps(data.DPSOut),
     }
@@ -256,6 +306,11 @@ local function BuildTooltipText()
     return table.concat(lines, "\n")
 end
 
+function Tracker.GetReportSection()
+    if not lastCombatData then return nil end
+    return BuildTooltipText()
+end
+
 local function ShowTooltip()
     if EZOMetter_CombatSummary then
         EZOMetter_CombatSummary.ShowTooltip(control, BuildTooltipText())
@@ -274,18 +329,19 @@ local function CreateRow(parent, key, top)
 
     row.name = wm:CreateControl(CONTROL_NAME .. key .. "Name", parent, CT_LABEL)
     row.name:SetAnchor(TOPLEFT, parent, TOPLEFT, PADDING, top)
-    row.name:SetDimensions(86, ROW_HEIGHT)
-    row.name:SetFont("ZoFontGameSmall")
+    row.name:SetDimensions(LABEL_WIDTH, ROW_HEIGHT)
+    row.name:SetFont("ZoFontWinH4")
     row.name:SetColor(0.78, 0.82, 0.9, 1)
     row.name:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
     row.name:SetMaxLineCount(1)
+    row.name:SetVerticalAlignment(TEXT_ALIGN_CENTER)
 
     row.value = wm:CreateControl(CONTROL_NAME .. key .. "Value", parent, CT_LABEL)
-    row.value:SetAnchor(TOPLEFT, row.name, TOPRIGHT, 8, 0)
-    row.value:SetAnchor(TOPRIGHT, parent, TOPRIGHT, -PADDING, top)
-    row.value:SetHeight(ROW_HEIGHT)
-    row.value:SetFont("ZoFontGameSmall")
+    row.value:SetAnchor(TOPLEFT, row.name, TOPRIGHT, 6, 0)
+    row.value:SetDimensions(VALUE_WIDTH, ROW_HEIGHT)
+    row.value:SetFont("ZoFontWinH3")
     row.value:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
+    row.value:SetVerticalAlignment(TEXT_ALIGN_CENTER)
     row.value:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
     row.value:SetMaxLineCount(1)
 
@@ -310,15 +366,8 @@ local function EnsureControl()
     backdrop:SetEdgeTexture("EsoUI/Art/Tooltips/UI-Border.dds", 128, 16)
     ApplyStyle()
 
-    titleLabel = wm:CreateControl(CONTROL_NAME .. "Title", control, CT_LABEL)
-    titleLabel:SetAnchor(TOPLEFT, control, TOPLEFT, PADDING, 8)
-    titleLabel:SetAnchor(TOPRIGHT, control, TOPRIGHT, -PADDING, 8)
-    titleLabel:SetHeight(24)
-    titleLabel:SetFont("ZoFontGameMedium")
-    titleLabel:SetText(GetString(EZOM_DAMAGE_TITLE))
-
     for index, def in ipairs(ROW_DEFS) do
-        CreateRow(control, def.key, 34 + ((index - 1) * ROW_HEIGHT))
+        CreateRow(control, def.key, 7 + ((index - 1) * ROW_HEIGHT))
         rows[def.key].name:SetText(GetString(_G[def.labelString]))
     end
 
@@ -332,12 +381,13 @@ end
 
 local function UpdateVisuals()
     EnsureControl()
-    titleLabel:SetText(GetString(EZOM_DAMAGE_TITLE))
 
     for _, def in ipairs(ROW_DEFS) do
         rows[def.key].name:SetText(GetString(_G[def.labelString]))
         rows[def.key].value:SetColor(0.9, 0.9, 0.9, 1)
     end
+    rows.instant.value:SetColor(0.35, 1, 0.45, 1)
+    rows.group.value:SetColor(0.55, 0.8, 1, 1)
 
     if not HasLibCombat() then
         rows.instant.value:SetText(GetString(EZOM_DAMAGE_LIBCOMBAT_SHORT))
@@ -346,7 +396,7 @@ local function UpdateVisuals()
         return
     end
 
-    local data = currentData or lastCombatData
+    local data = isCombat and currentData or lastCombatData
     if not data then
         rows.instant.value:SetText("--")
         rows.average.value:SetText("--")
@@ -360,7 +410,7 @@ local function UpdateVisuals()
 
     if IsGroupObserved(data) then
         local groupShare = Share(data.DPSOut, data.groupDPSOut)
-        rows.group.value:SetText(FormatDps(data.groupDPSOut) .. " | " .. FormatPercent(groupShare or 0))
+        rows.group.value:SetText(FormatPercent(groupShare or 0) .. " | " .. FormatDps(data.groupDPSOut))
     else
         rows.group.value:SetText(GetString(EZOM_DAMAGE_GROUP_UNAVAILABLE_SHORT))
     end
@@ -390,10 +440,15 @@ local function Refresh()
 end
 
 local function OnFightRecap(_, data)
-    currentData = CopyData(data)
+    local rawData = CopyData(data)
+    if not rawData then return end
+
+    lastRawData = rawData
+    currentData = ApplyCombatWindow(rawData)
     if currentData then
         AddSnapshot(currentData)
-        if isCombat or currentData.dpstime > 0 then
+        local recentCombatEnd = lastCombatEndMs > 0 and (GetNowMs() - lastCombatEndMs) <= 3000
+        if isCombat or recentCombatEnd then
             lastCombatData = currentData
         end
     end
@@ -407,12 +462,22 @@ local function RegisterLibCombat()
 end
 
 local function OnCombatState(_, inCombat)
+    local nowMs = GetNowMs()
     isCombat = inCombat == true or (type(IsUnitInCombat) == "function" and IsUnitInCombat("player") == true)
     if isCombat then
+        combatStartMs = nowMs
+        combatDurationMs = 0
+        lastCombatEndMs = 0
+        combatBaseline = lastRawData and CopyData(lastRawData) or nil
         currentData = nil
         ResetSnapshots()
     else
+        if combatStartMs > 0 then
+            combatDurationMs = math.max(0, nowMs - combatStartMs)
+            lastCombatEndMs = nowMs
+        end
         if currentData then
+            currentData.combatDurationMs = combatDurationMs
             lastCombatData = currentData
         end
         ResetSnapshots()
