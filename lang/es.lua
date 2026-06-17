@@ -216,6 +216,7 @@ EZOMETTER_STRINGS_ES = {
     EZOM_DAMAGE_LIBCOMBAT_SHORT = "sin LibCombat",
     EZOM_DAMAGE_SUMMARY_CURRENT = "Dano del combate actual",
     EZOM_DAMAGE_SUMMARY_LAST = "Dano del ultimo combate",
+    EZOM_DAMAGE_SUMMARY_DPS_TIME = "Tiempo DPS",
     EZOM_DAMAGE_SUMMARY_DAMAGE = "Dano propio",
     EZOM_DAMAGE_SUMMARY_DPS = "DPS medio",
     EZOM_DAMAGE_SUMMARY_GROUP_DAMAGE = "Dano grupo observado",

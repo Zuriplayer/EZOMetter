@@ -5,10 +5,10 @@ local Tracker = EZOMetter_AbilityTracker
 local ADDON_NAME = "EZOMetter"
 local CONTROL_NAME = "EZOMetterAbilityTracker"
 local UPDATE_INTERVAL_MS = 33
-local WIDTH = 420
-local HEIGHT = 34
-local PADDING = 5
-local BAR_HEIGHT = 24
+local WIDTH = 190
+local HEIGHT = 30
+local PADDING = 4
+local BAR_HEIGHT = 22
 local ICON_SIZE = 42
 local TEXT_GAP = 10
 

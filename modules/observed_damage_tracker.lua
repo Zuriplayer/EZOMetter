@@ -146,7 +146,43 @@ local function CopyData(data)
         bossfight = data.bossfight == true or data.bossFight == true,
         receivedAtMs = GetNowMs(),
         combatDurationMs = Number(data.combatDurationMs),
+        dpsDurationMs = Number(data.dpsDurationMs),
     }
+end
+
+local function GetDpsSeconds(data)
+    if not data then return 0 end
+    local dpstime = Number(data.dpstime)
+    if dpstime > 0 then return dpstime end
+    return Number(data.dpsDurationMs) / 1000
+end
+
+local function GetBossSeconds(data)
+    if not data then return 0 end
+    local bossTime = Number(data.bossTime)
+    if bossTime > 0 then return bossTime end
+    return GetDpsSeconds(data)
+end
+
+local function RecalculateDps(data)
+    if not data then return end
+
+    local dpsSeconds = GetDpsSeconds(data)
+    if dpsSeconds > 0 then
+        local seconds = math.max(1, dpsSeconds)
+        data.DPSOut = math.floor(data.damageOutTotal / seconds + 0.5)
+        data.groupDPSOut = math.floor(data.damageOutTotalGroup / seconds + 0.5)
+        data.dpstime = seconds
+        data.dpsDurationMs = seconds * 1000
+    end
+
+    local bossSeconds = GetBossSeconds(data)
+    if bossSeconds > 0 then
+        local seconds = math.max(1, bossSeconds)
+        data.bossDPSOut = math.floor(data.bossDamageTotal / seconds + 0.5)
+        data.bossDPSOutGroup = math.floor(data.bossDamageTotalGroup / seconds + 0.5)
+        data.bossTime = seconds
+    end
 end
 
 local function GetCombatWindowDurationMs(nowMs)
@@ -165,7 +201,12 @@ local function ApplyCombatWindow(rawData)
     data.combatDurationMs = durationMs
 
     local baseline = combatBaseline
-    if baseline and Number(data.damageOutTotal) < Number(baseline.damageOutTotal) then
+    if baseline
+        and (
+            Number(data.damageOutTotal) < Number(baseline.damageOutTotal)
+            or Number(data.dpstime) < Number(baseline.dpstime)
+        )
+    then
         baseline = nil
         combatBaseline = nil
     end
@@ -175,17 +216,12 @@ local function ApplyCombatWindow(rawData)
         data.damageOutTotalGroup = math.max(0, data.damageOutTotalGroup - Number(baseline.damageOutTotalGroup))
         data.bossDamageTotal = math.max(0, data.bossDamageTotal - Number(baseline.bossDamageTotal))
         data.bossDamageTotalGroup = math.max(0, data.bossDamageTotalGroup - Number(baseline.bossDamageTotalGroup))
+        data.dpstime = math.max(0, data.dpstime - Number(baseline.dpstime))
+        data.bossTime = math.max(0, data.bossTime - Number(baseline.bossTime))
     end
 
-    if durationMs > 0 then
-        local seconds = math.max(1, durationMs / 1000)
-        data.DPSOut = math.floor(data.damageOutTotal / seconds + 0.5)
-        data.groupDPSOut = math.floor(data.damageOutTotalGroup / seconds + 0.5)
-        data.bossDPSOut = math.floor(data.bossDamageTotal / seconds + 0.5)
-        data.bossDPSOutGroup = math.floor(data.bossDamageTotalGroup / seconds + 0.5)
-        data.dpstime = durationMs / 1000
-        data.bossTime = durationMs / 1000
-    end
+    data.dpsDurationMs = GetDpsSeconds(data) * 1000
+    RecalculateDps(data)
 
     data.group = data.group == true or data.damageOutTotalGroup > 0
     data.bossfight = data.bossfight == true or data.bossDamageTotal > 0
@@ -281,6 +317,7 @@ local function BuildTooltipText()
     local lines = {
         title,
         GetString(EZOM_SUMMARY_DURATION) .. ": " .. FormatDurationMs(data.combatDurationMs or (data.dpstime * 1000)) .. "s",
+        GetString(EZOM_DAMAGE_SUMMARY_DPS_TIME) .. ": " .. FormatDurationMs(data.dpsDurationMs or (data.dpstime * 1000)) .. "s",
         GetString(EZOM_DAMAGE_SUMMARY_DAMAGE) .. ": " .. FormatNumber(data.damageOutTotal),
         GetString(EZOM_DAMAGE_SUMMARY_DPS) .. ": " .. FormatDps(data.DPSOut),
     }

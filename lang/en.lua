@@ -216,6 +216,7 @@ EZOMETTER_STRINGS_EN = {
     EZOM_DAMAGE_LIBCOMBAT_SHORT = "no LibCombat",
     EZOM_DAMAGE_SUMMARY_CURRENT = "Current combat damage",
     EZOM_DAMAGE_SUMMARY_LAST = "Last combat damage",
+    EZOM_DAMAGE_SUMMARY_DPS_TIME = "DPS time",
     EZOM_DAMAGE_SUMMARY_DAMAGE = "Your damage",
     EZOM_DAMAGE_SUMMARY_DPS = "Average DPS",
     EZOM_DAMAGE_SUMMARY_GROUP_DAMAGE = "Observed group damage",
