@@ -199,6 +199,7 @@ function Summary.CreateValueTracker(options)
                 weightedValue = 0,
                 minValue = nil,
                 maxValue = 0,
+                lastValue = nil,
                 bandMs = {},
             }
             tracker.byKey[key] = stat
@@ -242,6 +243,7 @@ function Summary.CreateValueTracker(options)
                 stat.weightedValue = stat.weightedValue + (value * deltaMs)
                 stat.minValue = stat.minValue and math.min(stat.minValue, value) or value
                 stat.maxValue = math.max(stat.maxValue, value)
+                stat.lastValue = value
                 if band then
                     stat.bandMs[band] = (stat.bandMs[band] or 0) + deltaMs
                 end
@@ -265,6 +267,7 @@ function Summary.CreateValueTracker(options)
                     averageValue = stat.weightedValue / stat.requiredMs,
                     minValue = stat.minValue or 0,
                     maxValue = stat.maxValue,
+                    lastValue = stat.lastValue or 0,
                     bandMs = stat.bandMs,
                 }
                 table.insert(rows, row)

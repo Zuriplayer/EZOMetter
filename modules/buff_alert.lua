@@ -23,6 +23,7 @@ local statsUpdateRegistered = false
 local statsTracker
 local lastCombatSummary
 local ScanPlayerBuffs
+local ScanPlayerBuffsOnly
 
 local function GetSettings()
     if not EZOMetter.sv then return nil end
@@ -332,9 +333,13 @@ end
 local function RegisterStatsUpdate()
     if statsUpdateRegistered then return end
     EVENT_MANAGER:RegisterForUpdate(ADDON_NAME .. "_BuffAlertStats", COMBAT_SAMPLE_INTERVAL_MS, function()
+        if ScanPlayerBuffsOnly then
+            ScanPlayerBuffsOnly()
+        end
         if statsTracker then
             statsTracker:Sample(EZOMetter_CombatSummary.GetNowMs())
         end
+        Refresh()
     end)
     statsUpdateRegistered = true
 end
@@ -366,11 +371,10 @@ local function OnCombatState(_, inCombat)
     end
 end
 
-function ScanPlayerBuffs()
+function ScanPlayerBuffsOnly()
     activeEffects = {}
 
     if type(GetNumBuffs) ~= "function" or type(GetUnitBuffInfo) ~= "function" then
-        Refresh()
         return
     end
 
@@ -388,7 +392,10 @@ function ScanPlayerBuffs()
             end
         end
     end
+end
 
+function ScanPlayerBuffs()
+    ScanPlayerBuffsOnly()
     Refresh()
 end
 

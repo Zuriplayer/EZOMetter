@@ -236,6 +236,7 @@ function Effective.ScanTarget(settings)
         groups = {},
         active = {},
         targetTag = nil,
+        hasReadableTarget = false,
     }
 
     if type(GetNumBuffs) ~= "function" or type(GetUnitBuffInfo) ~= "function" then
@@ -244,6 +245,8 @@ function Effective.ScanTarget(settings)
 
     for _, unitTag in ipairs(TARGET_TAGS) do
         if IsReadableTarget(unitTag) then
+            result.hasReadableTarget = true
+            result.targetTag = result.targetTag or unitTag
             for index = 1, GetNumBuffs(unitTag) do
                 local buffName, _, _, _, _, _, _, _, _, _, abilityId = GetUnitBuffInfo(unitTag, index)
                 AddModifier(result, GetModifier(abilityId, buffName), settings)

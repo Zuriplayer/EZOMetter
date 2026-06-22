@@ -66,6 +66,7 @@ function EZOMetter.savedVars.Init()
             alkoshValue = 6000,
             tremorscaleValue = 2640,
             critDamageCap = 125,
+            lastCombat = nil,
             x = 0,
             y = 170,
         },

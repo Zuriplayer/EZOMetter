@@ -5,10 +5,13 @@ local Tracker = EZOMetter_AbilityTracker
 local ADDON_NAME = "EZOMetter"
 local CONTROL_NAME = "EZOMetterAbilityTracker"
 local UPDATE_INTERVAL_MS = 33
-local WIDTH = 190
-local HEIGHT = 30
+local WIDTH = 260
+local HEIGHT = 38
 local PADDING = 4
-local BAR_HEIGHT = 22
+local BAR_HEIGHT = 30
+local BAR_INSET = 2
+local BAR_INNER_WIDTH = WIDTH - (PADDING * 2) - (BAR_INSET * 2)
+local PRE_WARNING_MS = 350
 local ICON_SIZE = 42
 local TEXT_GAP = 10
 
@@ -344,13 +347,6 @@ local function EnsureControl()
     titleLabel:SetMaxLineCount(1)
     titleLabel:SetHidden(true)
 
-    timerLabel = wm:CreateControl(CONTROL_NAME .. "Timer", control, CT_LABEL)
-    timerLabel:SetAnchor(TOPRIGHT, control, TOPRIGHT, -PADDING, 9)
-    timerLabel:SetDimensions(46, 24)
-    timerLabel:SetFont("ZoFontGameMedium")
-    timerLabel:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
-    timerLabel:SetHidden(true)
-
     stateLabel = wm:CreateControl(CONTROL_NAME .. "State", control, CT_LABEL)
     stateLabel:SetAnchor(TOPLEFT, icon, TOPRIGHT, TEXT_GAP, 34)
     stateLabel:SetAnchor(TOPRIGHT, control, TOPRIGHT, -PADDING, 34)
@@ -369,17 +365,19 @@ local function EnsureControl()
     barBack:SetEdgeTexture("EsoUI/Art/Tooltips/UI-Border.dds", 128, 16)
     barBack:SetDrawLevel(1)
 
-    barFill = wm:CreateControl(CONTROL_NAME .. "BarFill", barBack, CT_STATUSBAR)
-    barFill:SetAnchor(TOPLEFT, barBack, TOPLEFT, 2, 2)
-    barFill:SetAnchor(BOTTOMRIGHT, barBack, BOTTOMRIGHT, -2, -2)
+    barFill = wm:CreateControl(CONTROL_NAME .. "BarFill", barBack, CT_TEXTURE)
+    barFill:SetAnchor(CENTER, barBack, CENTER, 0, 0)
+    barFill:SetDimensions(BAR_INNER_WIDTH, BAR_HEIGHT - (BAR_INSET * 2))
     barFill:SetTexture("EsoUI/Art/Miscellaneous/progressbar_genericfill_tall.dds")
-    barFill:SetMinMax(0, 1)
-    barFill:SetValue(1)
     barFill:SetColor(0, 0.85, 1, 1)
-    if type(barFill.SetBarAlignment) == "function" and BAR_ALIGNMENT_NORMAL then
-        barFill:SetBarAlignment(BAR_ALIGNMENT_NORMAL)
-    end
     barFill:SetDrawLevel(2)
+
+    timerLabel = wm:CreateControl(CONTROL_NAME .. "Timer", barBack, CT_LABEL)
+    timerLabel:SetAnchorFill(barBack)
+    timerLabel:SetFont("ZoFontGameLargeBold")
+    timerLabel:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
+    timerLabel:SetVerticalAlignment(TEXT_ALIGN_CENTER)
+    timerLabel:SetDrawLevel(3)
 
     ApplyPosition()
     SetMoveMode(IsHudUnlocked())
@@ -463,6 +461,18 @@ local function FormatRemaining(ms)
     return string.format("%.1f", ms / 1000)
 end
 
+local function SetBarProgress(progress)
+    if not barFill then return end
+
+    progress = tonumber(progress) or 0
+    if progress < 0 then progress = 0 end
+    if progress > 1 then progress = 1 end
+
+    barFill:ClearAnchors()
+    barFill:SetAnchor(CENTER, barBack, CENTER, 0, 0)
+    barFill:SetDimensions(math.max(1, BAR_INNER_WIDTH * progress), BAR_HEIGHT - (BAR_INSET * 2))
+end
+
 function UpdateVisuals()
     EnsureControl()
 
@@ -473,29 +483,42 @@ function UpdateVisuals()
         timerLabel:SetColor(0.7, 0.75, 0.82, 1)
         stateLabel:SetText(GetString(EZOM_ABILITY_FATECARVER_READY))
         stateLabel:SetColor(0.7, 0.75, 0.82, 1)
-        barFill:SetMinMax(0, 1)
-        barFill:SetValue(1)
+        SetBarProgress(1)
+        barBack:SetCenterColor(0, 0, 0, 1)
+        barBack:SetEdgeColor(0.95, 0.95, 0.95, 0.85)
         barFill:SetColor(0.35, 0.35, 0.35, IsHudUnlocked() and 0.85 or 0.45)
         return
     end
 
     local nowMs = GetNowMs()
     remainingMs = math.max(0, (startMs + durationMs) - nowMs)
-    local ready = remainingMs <= GetWarningMs()
+    local warningMs = GetWarningMs()
+    local ready = remainingMs <= warningMs
+    local approaching = not ready and remainingMs <= warningMs + PRE_WARNING_MS
     timerLabel:SetText(FormatRemaining(remainingMs))
 
-    barFill:SetMinMax(0, durationMs)
-    barFill:SetValue(remainingMs)
+    SetBarProgress(durationMs > 0 and (remainingMs / durationMs) or 0)
 
     if ready then
         stateLabel:SetText(GetString(EZOM_ABILITY_FATECARVER_CAN_CANCEL))
         stateLabel:SetColor(0.25, 1, 0.35, 1)
         timerLabel:SetColor(0.25, 1, 0.35, 1)
+        barBack:SetCenterColor(0.02, 0.18, 0.04, 0.96)
+        barBack:SetEdgeColor(0.25, 1, 0.35, 1)
         barFill:SetColor(0.15, 1, 0.2, 1)
+    elseif approaching then
+        stateLabel:SetText(GetString(EZOM_ABILITY_FATECARVER_CHANNELING))
+        stateLabel:SetColor(1, 0.78, 0.25, 1)
+        timerLabel:SetColor(1, 0.78, 0.25, 1)
+        barBack:SetCenterColor(0.18, 0.12, 0.02, 0.96)
+        barBack:SetEdgeColor(1, 0.78, 0.25, 1)
+        barFill:SetColor(1, 0.55, 0.05, 1)
     else
         stateLabel:SetText(GetString(EZOM_ABILITY_FATECARVER_CHANNELING))
         stateLabel:SetColor(1, 0.78, 0.25, 1)
         timerLabel:SetColor(1, 0.78, 0.25, 1)
+        barBack:SetCenterColor(0, 0, 0, 1)
+        barBack:SetEdgeColor(0.95, 0.95, 0.95, 0.85)
         barFill:SetColor(0, 0.85, 1, 1)
     end
 

@@ -43,6 +43,17 @@ local function GetNowText()
     return "--:--"
 end
 
+local function GetCharacterName()
+    if type(GetUnitName) ~= "function" then return nil end
+
+    local name = GetUnitName("player")
+    if name and name ~= "" then
+        return name
+    end
+
+    return nil
+end
+
 local function GetZoneInfo()
     local zoneName = "-"
     local zoneId = nil
@@ -139,6 +150,7 @@ local function BuildContext()
 
     return {
         date = GetNowText(),
+        characterName = GetCharacterName(),
         zoneName = zoneName,
         zoneId = zoneId,
         content = GetContentText(difficulty, zoneId),
@@ -200,6 +212,7 @@ local function EmitReport(token)
     local lines = {
         GetString(EZOM_REPORT_TITLE),
         GetString(EZOM_REPORT_DATE) .. ": " .. (context.date or GetNowText()),
+        GetString(EZOM_REPORT_CHARACTER) .. ": " .. (context.characterName or "-"),
         GetString(EZOM_REPORT_CONTENT) .. ": " .. (context.content or "-"),
         GetString(EZOM_REPORT_ZONE) .. ": " .. zoneText,
         GetString(EZOM_REPORT_BOSS) .. ": " .. (context.bossName or GetString(EZOM_REPORT_TRASH)),
