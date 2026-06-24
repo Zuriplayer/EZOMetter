@@ -41,6 +41,7 @@ function EZOMetter.savedVars.Init()
             ddOnly = true,
             onlyCombat = true,
             unlock = false,
+            size = 100,
             backgroundOpacity = 86,
             showBorder = true,
             debugEquipment = false,
@@ -100,14 +101,14 @@ function EZOMetter.savedVars.Init()
     EZOMetter.sv.general.language = EZOMetter.sv.general.language or defaults.general.language
     EZOMetter.sv.general.role = EZOMetter.sv.general.role or defaults.general.role
     EZOMetter.sv.general.debugMode = EZOMetter.sv.general.debugMode or defaults.general.debugMode
-    EZOMetter.sv.general.unlockHud = EZOMetter.sv.general.unlockHud or defaults.general.unlockHud
+    EZOMetter.sv.general.unlockHud = false
     if EZOMetter.sv.general.combatReportEnabled == nil then
         EZOMetter.sv.general.combatReportEnabled = defaults.general.combatReportEnabled
     end
     if EZOMetter.sv.alerts.missingBuffAlerts == nil then
         EZOMetter.sv.alerts.missingBuffAlerts = defaults.alerts.missingBuffAlerts
     end
-    EZOMetter.sv.alerts.unlockAlert = EZOMetter.sv.alerts.unlockAlert or defaults.alerts.unlockAlert
+    EZOMetter.sv.alerts.unlockAlert = false
     EZOMetter.sv.alerts.backgroundOpacity = EZOMetter.sv.alerts.backgroundOpacity or defaults.alerts.backgroundOpacity
     if EZOMetter.sv.alerts.showBorder == nil then
         EZOMetter.sv.alerts.showBorder = defaults.alerts.showBorder
@@ -127,7 +128,7 @@ function EZOMetter.savedVars.Init()
         EZOMetter.sv.offBalance.bossFocus = defaults.offBalance.bossFocus
     end
     EZOMetter.sv.offBalance.onlyBosses = EZOMetter.sv.offBalance.onlyBosses or defaults.offBalance.onlyBosses
-    EZOMetter.sv.offBalance.unlock = EZOMetter.sv.offBalance.unlock or defaults.offBalance.unlock
+    EZOMetter.sv.offBalance.unlock = false
     EZOMetter.sv.offBalance.backgroundOpacity = EZOMetter.sv.offBalance.backgroundOpacity or defaults.offBalance.backgroundOpacity
     if EZOMetter.sv.offBalance.showBorder == nil then
         EZOMetter.sv.offBalance.showBorder = defaults.offBalance.showBorder
@@ -152,7 +153,8 @@ function EZOMetter.savedVars.Init()
     if EZOMetter.sv.coral.onlyCombat == nil then
         EZOMetter.sv.coral.onlyCombat = defaults.coral.onlyCombat
     end
-    EZOMetter.sv.coral.unlock = EZOMetter.sv.coral.unlock or defaults.coral.unlock
+    EZOMetter.sv.coral.unlock = false
+    EZOMetter.sv.coral.size = EZOMetter.sv.coral.size or defaults.coral.size
     EZOMetter.sv.coral.backgroundOpacity = EZOMetter.sv.coral.backgroundOpacity or defaults.coral.backgroundOpacity
     if EZOMetter.sv.coral.showBorder == nil then
         EZOMetter.sv.coral.showBorder = defaults.coral.showBorder
@@ -171,7 +173,7 @@ function EZOMetter.savedVars.Init()
     if EZOMetter.sv.ddStats.onlyCombat == nil then
         EZOMetter.sv.ddStats.onlyCombat = defaults.ddStats.onlyCombat
     end
-    EZOMetter.sv.ddStats.unlock = EZOMetter.sv.ddStats.unlock or defaults.ddStats.unlock
+    EZOMetter.sv.ddStats.unlock = false
     EZOMetter.sv.ddStats.backgroundOpacity = EZOMetter.sv.ddStats.backgroundOpacity or defaults.ddStats.backgroundOpacity
     if EZOMetter.sv.ddStats.showBorder == nil then
         EZOMetter.sv.ddStats.showBorder = defaults.ddStats.showBorder

@@ -11,12 +11,13 @@ local CAP_STAMINA_PCT = 50
 local OK_STAMINA_PCT = 55
 local MID_STAMINA_PCT = 65
 local LOW_STAMINA_PCT = 80
-local WIDTH = 250
-local HEIGHT = 104
-local ICON_SIZE = 42
+local WIDTH = 196
+local HEIGHT = 56
 local PADDING = 12
-local TEXT_GAP = 10
-local BONUS_WIDTH = 62
+local CONTENT_HEIGHT = 30
+local TITLE_WIDTH = 96
+local BONUS_WIDTH = 60
+local BONUS_GAP = 4
 
 local BAND_CAP = "cap"
 local BAND_OK = "ok"
@@ -40,11 +41,8 @@ local CORAL_ALIASES = {
 
 local control
 local backdrop
-local icon
 local stateLabel
 local bonusLabel
-local staminaLabel
-local piecesLabel
 local updateRegistered = false
 local statsUpdateRegistered = false
 local forceShow = false
@@ -236,6 +234,13 @@ local function ApplyStyle()
     if not backdrop then return end
 
     local settings = GetSettings() or {}
+    local size = tonumber(settings.size) or 100
+    if size < 70 then size = 70 end
+    if size > 140 then size = 140 end
+    if control and control.SetScale then
+        control:SetScale(size / 100)
+    end
+
     local opacity = tonumber(settings.backgroundOpacity) or 86
     if opacity < 0 then opacity = 0 end
     if opacity > 100 then opacity = 100 end
@@ -246,6 +251,38 @@ local function ApplyStyle()
     else
         backdrop:SetEdgeColor(0.1, 0.75, 0.85, 0.95)
     end
+end
+
+local function GetLabelWidth(label, fallback)
+    if not label then return fallback end
+    if label.GetTextWidth then
+        return tonumber(label:GetTextWidth()) or fallback
+    end
+    if label.GetTextDimensions then
+        local width = label:GetTextDimensions()
+        return tonumber(width) or fallback
+    end
+    return fallback
+end
+
+local function LayoutContent()
+    if not control or not stateLabel or not bonusLabel then return end
+
+    local maxContentWidth = WIDTH - (PADDING * 2)
+    local measuredTitleWidth = math.ceil(GetLabelWidth(stateLabel, TITLE_WIDTH)) + 2
+    local measuredBonusWidth = math.ceil(GetLabelWidth(bonusLabel, BONUS_WIDTH)) + 2
+    local bonusWidth = math.max(40, math.min(BONUS_WIDTH, measuredBonusWidth))
+    local titleWidth = math.max(1, math.min(maxContentWidth - BONUS_GAP - bonusWidth, measuredTitleWidth))
+    local groupWidth = titleWidth + BONUS_GAP + bonusWidth
+    local left = math.max(PADDING, (WIDTH - groupWidth) / 2)
+
+    stateLabel:ClearAnchors()
+    stateLabel:SetAnchor(LEFT, control, LEFT, left, 0)
+    stateLabel:SetDimensions(titleWidth, CONTENT_HEIGHT)
+
+    bonusLabel:ClearAnchors()
+    bonusLabel:SetAnchor(LEFT, stateLabel, RIGHT, BONUS_GAP, 0)
+    bonusLabel:SetDimensions(bonusWidth, CONTENT_HEIGHT)
 end
 
 local function EnsureControl()
@@ -266,43 +303,21 @@ local function EnsureControl()
     backdrop:SetEdgeTexture("EsoUI/Art/Tooltips/UI-Border.dds", 128, 16)
     ApplyStyle()
 
-    icon = wm:CreateControl(CONTROL_NAME .. "Icon", control, CT_TEXTURE)
-    icon:SetDimensions(ICON_SIZE, ICON_SIZE)
-    icon:SetAnchor(TOPLEFT, control, TOPLEFT, PADDING, 14)
-    icon:SetTexture("EsoUI/Art/Stats/stats_stamina.dds")
-
     stateLabel = wm:CreateControl(CONTROL_NAME .. "State", control, CT_LABEL)
-    stateLabel:SetAnchor(TOPLEFT, icon, TOPRIGHT, TEXT_GAP, 12)
-    stateLabel:SetAnchor(TOPRIGHT, control, TOPRIGHT, -(PADDING + BONUS_WIDTH + 8), 12)
-    stateLabel:SetHeight(26)
+    stateLabel:SetAnchor(LEFT, control, LEFT, PADDING, 0)
+    stateLabel:SetDimensions(TITLE_WIDTH, CONTENT_HEIGHT)
     stateLabel:SetFont("ZoFontGameMedium")
+    stateLabel:SetHorizontalAlignment(TEXT_ALIGN_LEFT)
+    stateLabel:SetVerticalAlignment(TEXT_ALIGN_CENTER)
     stateLabel:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
     stateLabel:SetMaxLineCount(1)
 
     bonusLabel = wm:CreateControl(CONTROL_NAME .. "Bonus", control, CT_LABEL)
-    bonusLabel:SetAnchor(TOPRIGHT, control, TOPRIGHT, -PADDING, 8)
-    bonusLabel:SetDimensions(BONUS_WIDTH, 30)
+    bonusLabel:SetAnchor(LEFT, stateLabel, RIGHT, BONUS_GAP, 0)
+    bonusLabel:SetDimensions(BONUS_WIDTH, CONTENT_HEIGHT)
     bonusLabel:SetFont("ZoFontGameLargeBold")
-    bonusLabel:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
+    bonusLabel:SetHorizontalAlignment(TEXT_ALIGN_LEFT)
     bonusLabel:SetVerticalAlignment(TEXT_ALIGN_CENTER)
-
-    staminaLabel = wm:CreateControl(CONTROL_NAME .. "Stamina", control, CT_LABEL)
-    staminaLabel:SetAnchor(TOPLEFT, icon, TOPRIGHT, TEXT_GAP, 46)
-    staminaLabel:SetAnchor(TOPRIGHT, control, TOPRIGHT, -PADDING, 46)
-    staminaLabel:SetHeight(24)
-    staminaLabel:SetFont("ZoFontGameSmall")
-    staminaLabel:SetColor(0.82, 0.82, 0.82, 1)
-    staminaLabel:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
-    staminaLabel:SetMaxLineCount(1)
-
-    piecesLabel = wm:CreateControl(CONTROL_NAME .. "Pieces", control, CT_LABEL)
-    piecesLabel:SetAnchor(TOPLEFT, icon, TOPRIGHT, TEXT_GAP, 68)
-    piecesLabel:SetAnchor(TOPRIGHT, control, TOPRIGHT, -PADDING, 68)
-    piecesLabel:SetHeight(20)
-    piecesLabel:SetFont("ZoFontGameSmall")
-    piecesLabel:SetColor(0.62, 0.72, 0.88, 1)
-    piecesLabel:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
-    piecesLabel:SetMaxLineCount(1)
 
     ApplyPosition()
     SetMoveMode(IsHudUnlocked())
@@ -367,17 +382,7 @@ local function UpdateVisuals()
         bonusLabel:SetText("+" .. tostring(currentBonus))
     end
 
-    staminaLabel:SetText(GetString(EZOM_CORAL_STAMINA_LABEL) .. ": " .. string.format("%.0f%%", currentStaminaPct))
-
-    local pieces = currentSnapshot and tonumber(currentSnapshot.numEquipped) or 0
-    local maxPieces = currentSnapshot and tonumber(currentSnapshot.maxEquipped) or 0
-    if currentSnapshot and currentSnapshot.hasSet then
-        piecesLabel:SetText(GetString(EZOM_CORAL_PIECES_LABEL) .. ": " .. tostring(pieces) .. "/" .. tostring(math.max(5, maxPieces)))
-    elseif HasSummary() then
-        piecesLabel:SetText(GetString(EZOM_LAST_COMBAT_TITLE))
-    else
-        piecesLabel:SetText(GetString(EZOM_CORAL_NOT_EQUIPPED))
-    end
+    LayoutContent()
 end
 
 local function RefreshState()

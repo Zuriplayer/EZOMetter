@@ -435,6 +435,24 @@ function EZOMetter_Menu.Init()
                 },
                 {
                     type = "slider",
+                    name = GetString(EZOM_OPTION_CORAL_SIZE),
+                    tooltip = GetString(EZOM_OPTION_CORAL_SIZE_TOOLTIP),
+                    min = 70,
+                    max = 140,
+                    step = 5,
+                    getFunc = function()
+                        return EZOMetter.sv.coral.size or 100
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.coral.size = tonumber(value) or 100
+                        if EZOMetter_Coral and EZOMetter_Coral.ApplySettings then
+                            EZOMetter_Coral.ApplySettings()
+                        end
+                    end,
+                    default = 100,
+                },
+                {
+                    type = "slider",
                     name = GetString(EZOM_OPTION_CORAL_BACKGROUND_OPACITY),
                     tooltip = GetString(EZOM_OPTION_CORAL_BACKGROUND_OPACITY_TOOLTIP),
                     min = 0,
@@ -477,16 +495,6 @@ function EZOMetter_Menu.Init()
                         EZOMetter.sv.coral.debugEquipment = value == true
                     end,
                     default = false,
-                },
-                {
-                    type = "button",
-                    name = GetString(EZOM_OPTION_CORAL_DEBUG_SCAN),
-                    tooltip = GetString(EZOM_OPTION_CORAL_DEBUG_SCAN_TOOLTIP),
-                    func = function()
-                        if EZOMetter_Coral and EZOMetter_Coral.DebugScanEquipment then
-                            EZOMetter_Coral.DebugScanEquipment()
-                        end
-                    end,
                 },
             },
         },
@@ -881,16 +889,6 @@ function EZOMetter_Menu.Init()
                         end
                     end,
                     default = true,
-                },
-                {
-                    type = "button",
-                    name = GetString(EZOM_OPTION_FATECARVER_SCAN),
-                    tooltip = GetString(EZOM_OPTION_FATECARVER_SCAN_TOOLTIP),
-                    func = function()
-                        if EZOMetter_AbilityTracker and EZOMetter_AbilityTracker.DebugScan then
-                            EZOMetter_AbilityTracker.DebugScan()
-                        end
-                    end,
                 },
             },
         },
