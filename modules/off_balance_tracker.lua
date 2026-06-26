@@ -8,12 +8,12 @@ local UPDATE_INTERVAL_MS = 100
 local OFF_BALANCE_ID = 62988
 local OFF_BALANCE_IMMUNITY_ID = 134599
 local OFF_BALANCE_IMMUNITY_MS = 15000
-local WIDTH = 250
-local HEIGHT = 104
-local ICON_SIZE = 42
-local PADDING = 12
-local TEXT_GAP = 10
-local TIMER_WIDTH = 54
+local WIDTH = 220
+local HEIGHT = 58
+local ICON_SIZE = 18
+local PADDING = 8
+local TEXT_GAP = 8
+local TIMER_WIDTH = 48
 local PULSE_DURATION_MS = 650
 local PULSE_SCALE = 1.18
 local DEBUG_THROTTLE_MS = 750
@@ -220,7 +220,7 @@ local function BuildTooltipText()
             EZOMetter_CombatSummary.FormatSeconds(active.activeMs)
         ))
     else
-        table.insert(lines, GetString(EZOM_OFF_BALANCE_SUMMARY_ACTIVE) .. ": " .. EZOMetter_CombatSummary.FormatPercent(100))
+        table.insert(lines, GetString(EZOM_OFF_BALANCE_SUMMARY_ACTIVE) .. ": " .. GetString(EZOM_SUMMARY_NOT_APPLICABLE))
     end
 
     if cycle then
@@ -354,7 +354,7 @@ local function ApplyStyle()
     if settings.showBorder == false then
         backdrop:SetEdgeColor(0, 0, 0, 0)
     else
-        backdrop:SetEdgeColor(0.95, 0.45, 0.1, 0.95)
+        backdrop:SetEdgeColor(0.95, 0.45, 0.1, 0.70)
     end
 end
 
@@ -393,41 +393,42 @@ local function EnsureControl()
 
     icon = wm:CreateControl(CONTROL_NAME .. "Icon", control, CT_TEXTURE)
     icon:SetDimensions(ICON_SIZE, ICON_SIZE)
-    icon:SetAnchor(TOPLEFT, control, TOPLEFT, PADDING, 14)
+    icon:SetAnchor(TOPLEFT, control, TOPLEFT, PADDING, 11)
     icon:SetTexture("esoui/art/icons/ability_debuff_offbalance.dds")
 
     stateLabel = wm:CreateControl(CONTROL_NAME .. "State", control, CT_LABEL)
-    stateLabel:SetAnchor(TOPLEFT, icon, TOPRIGHT, TEXT_GAP, 12)
-    stateLabel:SetAnchor(TOPRIGHT, control, TOPRIGHT, -(PADDING + TIMER_WIDTH + 8), 12)
-    stateLabel:SetHeight(26)
+    stateLabel:SetAnchor(TOPLEFT, icon, TOPRIGHT, TEXT_GAP, -1)
+    stateLabel:SetAnchor(TOPRIGHT, control, TOPRIGHT, -(PADDING + TIMER_WIDTH + 8), -1)
+    stateLabel:SetHeight(24)
     stateLabel:SetFont("ZoFontGameMedium")
     stateLabel:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
     stateLabel:SetMaxLineCount(1)
 
     timerLabel = wm:CreateControl(CONTROL_NAME .. "Timer", control, CT_LABEL)
-    timerLabel:SetAnchor(TOPRIGHT, control, TOPRIGHT, -PADDING, 8)
-    timerLabel:SetDimensions(TIMER_WIDTH, 30)
+    timerLabel:SetAnchor(TOPRIGHT, control, TOPRIGHT, -PADDING, 4)
+    timerLabel:SetDimensions(TIMER_WIDTH, 24)
     timerLabel:SetFont("ZoFontGameLargeBold")
     timerLabel:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
     timerLabel:SetVerticalAlignment(TEXT_ALIGN_CENTER)
 
     targetLabel = wm:CreateControl(CONTROL_NAME .. "Target", control, CT_LABEL)
-    targetLabel:SetAnchor(TOPLEFT, icon, TOPRIGHT, TEXT_GAP, 46)
-    targetLabel:SetAnchor(TOPRIGHT, control, TOPRIGHT, -PADDING, 46)
-    targetLabel:SetHeight(24)
+    targetLabel:SetAnchor(TOPLEFT, control, TOPLEFT, PADDING, 34)
+    targetLabel:SetAnchor(TOPRIGHT, control, TOPRIGHT, -PADDING, 34)
+    targetLabel:SetHeight(18)
     targetLabel:SetFont("ZoFontGameSmall")
     targetLabel:SetColor(0.82, 0.82, 0.82, 1)
     targetLabel:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
     targetLabel:SetMaxLineCount(1)
 
     sourceLabel = wm:CreateControl(CONTROL_NAME .. "Source", control, CT_LABEL)
-    sourceLabel:SetAnchor(TOPLEFT, icon, TOPRIGHT, TEXT_GAP, 68)
-    sourceLabel:SetAnchor(TOPRIGHT, control, TOPRIGHT, -PADDING, 68)
+    sourceLabel:SetAnchor(TOPLEFT, control, TOPLEFT, PADDING, 50)
+    sourceLabel:SetAnchor(TOPRIGHT, control, TOPRIGHT, -PADDING, 50)
     sourceLabel:SetHeight(20)
     sourceLabel:SetFont("ZoFontGameSmall")
     sourceLabel:SetColor(0.62, 0.72, 0.88, 1)
     sourceLabel:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
     sourceLabel:SetMaxLineCount(1)
+    sourceLabel:SetHidden(true)
 
     ApplyPosition()
     SetMoveMode(IsHudUnlocked())
@@ -488,6 +489,7 @@ local function UpdateVisuals(state, remainingMs, targetName, targetIsBoss, sourc
     ApplyPulse(nowMs)
 
     local r, g, b, a = GetStateColor(state)
+    icon:SetColor(r, g, b, a)
     stateLabel:SetText(GetStateName(state))
     stateLabel:SetColor(r, g, b, a)
     timerLabel:SetColor(r, g, b, a)
@@ -504,12 +506,7 @@ local function UpdateVisuals(state, remainingMs, targetName, targetIsBoss, sourc
         targetLabel:SetText(GetString(EZOM_OFF_BALANCE_NO_TARGET))
     end
 
-    local sourceName = GetSourceName(source)
-    if sourceName ~= "" and (targetName and targetName ~= "") then
-        sourceLabel:SetText(GetString(EZOM_OFF_BALANCE_SOURCE_LABEL) .. ": " .. sourceName)
-    else
-        sourceLabel:SetText("")
-    end
+    sourceLabel:SetText("")
 end
 
 local function IsTargetBossOrDummy(unitTag, unitName)
@@ -868,7 +865,8 @@ function Tracker.Init()
             getItemName = function(item)
                 return item.name
             end,
-            isItemRequired = function()
+            isItemRequired = function(item)
+                if item and item.key == "active" and currentState == STATE_IMMUNE then return false end
                 return true
             end,
             isItemActive = function(item)

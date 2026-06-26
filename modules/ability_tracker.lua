@@ -14,6 +14,14 @@ local BAR_INNER_WIDTH = WIDTH - (PADDING * 2) - (BAR_INSET * 2)
 local PRE_WARNING_MS = 350
 local ICON_SIZE = 42
 local TEXT_GAP = 10
+local DEFAULT_BACKGROUND_OPACITY = 22
+local CHANNEL_EFFECT_GRACE_MS = 250
+local INACTIVE_BACKGROUND_ALPHA = 0.03
+local INACTIVE_MOVE_BACKGROUND_ALPHA = 0.10
+local BAR_IDLE_ALPHA = 0.06
+local BAR_ACTIVE_ALPHA = 0.24
+local BAR_WARNING_ALPHA = 0.30
+local BAR_READY_ALPHA = 0.24
 
 local FATECARVER_IDS = {
     [185805] = true,
@@ -32,6 +40,14 @@ local FATECARVER_NAMES = {
 
 local RESULT_BEGIN = ACTION_RESULT_BEGIN or 2200
 local RESULT_EFFECT_FADED = ACTION_RESULT_EFFECT_FADED or 2250
+local RESULT_INTERRUPT = ACTION_RESULT_INTERRUPT or 2230
+local RESULT_BEGIN_CHANNEL = ACTION_RESULT_BEGIN_CHANNEL or -10001
+local RESULT_KNOCKBACK = ACTION_RESULT_KNOCKBACK or -10002
+local RESULT_PACIFIED = ACTION_RESULT_PACIFIED or -10003
+local RESULT_STAGGERED = ACTION_RESULT_STAGGERED or -10004
+local RESULT_STUNNED = ACTION_RESULT_STUNNED or -10005
+local RESULT_FEARED = ACTION_RESULT_FEARED or -10006
+local RESULT_LEVITATED = ACTION_RESULT_LEVITATED or -10007
 local localizedFatecarverNames
 
 local control
@@ -43,7 +59,10 @@ local stateLabel
 local barBack
 local barFill
 local updateRegistered = false
+local activeWatcherRegistered = false
+local activeWatcherEventNames = {}
 local active = false
+local activeEffectSeen = false
 local activeAbilityId = 0
 local activeName = ""
 local startMs = 0
@@ -57,6 +76,23 @@ local lastCombatSummary
 local IsHudUnlocked
 local UpdateVisuals
 local FinishActiveChannel
+local OnActiveCombatEvent
+local OnPlayerEffectChanged
+local lastProgressWidth = -1
+local lastTimerText
+local lastTitleText
+local lastStateText
+local lastVisualMode
+
+local ACTIVE_TARGET_CANCEL_RESULTS = {
+    [RESULT_INTERRUPT] = true,
+    [RESULT_KNOCKBACK] = true,
+    [RESULT_PACIFIED] = true,
+    [RESULT_STAGGERED] = true,
+    [RESULT_STUNNED] = true,
+    [RESULT_FEARED] = true,
+    [RESULT_LEVITATED] = true,
+}
 
 local function GetSettings()
     if not EZOMetter.sv then return nil end
@@ -88,6 +124,37 @@ local function NormalizeName(name)
         return zo_strlower(name)
     end
     return string.lower(name)
+end
+
+local function IsPlayerCombatName(name)
+    local normalized = NormalizeName(name)
+    if normalized == "" then return false end
+
+    if type(GetRawUnitName) == "function" and normalized == NormalizeName(GetRawUnitName("player")) then
+        return true
+    end
+    if type(GetUnitName) == "function" and normalized == NormalizeName(GetUnitName("player")) then
+        return true
+    end
+    if type(GetUnitDisplayName) == "function" and normalized == NormalizeName(GetUnitDisplayName("player")) then
+        return true
+    end
+
+    return false
+end
+
+local function IsPlayerCombatTarget(targetName, targetType)
+    if COMBAT_UNIT_TYPE_PLAYER and targetType == COMBAT_UNIT_TYPE_PLAYER then
+        return true
+    end
+    return IsPlayerCombatName(targetName)
+end
+
+local function IsPlayerCombatSource(sourceName, sourceType)
+    if COMBAT_UNIT_TYPE_PLAYER and sourceType == COMBAT_UNIT_TYPE_PLAYER then
+        return true
+    end
+    return IsPlayerCombatName(sourceName)
 end
 
 local function IsFatecarverName(name)
@@ -140,6 +207,41 @@ local function IsFatecarverAbility(abilityId, abilityName)
     return false
 end
 
+local function ScanActiveFatecarverEffect(nowMs)
+    if type(GetNumBuffs) ~= "function" or type(GetUnitBuffInfo) ~= "function" then
+        return false, 0
+    end
+
+    local buffCount = GetNumBuffs("player") or 0
+    for index = 1, buffCount do
+        local buffName, _, endTime, _, _, iconFilename, _, _, _, _, abilityId = GetUnitBuffInfo("player", index)
+        if IsFatecarverAbility(abilityId, buffName) then
+            local endMs = (tonumber(endTime) or 0) * 1000
+            if endMs <= 0 or endMs > (nowMs or GetNowMs()) then
+                if iconFilename and iconFilename ~= "" then
+                    slottedFatecarverIcon = iconFilename
+                    if icon then icon:SetTexture(iconFilename) end
+                end
+                return true, endMs
+            end
+        end
+    end
+
+    return false, 0
+end
+
+local function RefreshActiveEffectFromBuffs(nowMs)
+    local found, endMs = ScanActiveFatecarverEffect(nowMs)
+    if found then
+        activeEffectSeen = true
+        if active and endMs and endMs > 0 and startMs > 0 then
+            durationMs = math.max(durationMs or 0, endMs - startMs)
+            remainingMs = math.max(0, endMs - (nowMs or GetNowMs()))
+        end
+    end
+    return found
+end
+
 local function GetSlotAbilityId(slotIndex, hotbarCategory)
     if type(GetSlotBoundId) ~= "function" or type(GetSlotType) ~= "function" then
         return nil
@@ -184,6 +286,21 @@ local function FormatPercent(value)
         return EZOMetter_CombatSummary.FormatPercent(value)
     end
     return string.format("%.1f%%", math.max(0, math.min(100, tonumber(value) or 0)))
+end
+
+local function SetLabelText(label, text, cacheName)
+    text = tostring(text or "")
+    if cacheName == "title" then
+        if text == lastTitleText then return end
+        lastTitleText = text
+    elseif cacheName == "state" then
+        if text == lastStateText then return end
+        lastStateText = text
+    else
+        if text == lastTimerText then return end
+        lastTimerText = text
+    end
+    label:SetText(text)
 end
 
 local function NewCombatStats(nowMs)
@@ -297,19 +414,61 @@ local function SetMoveMode(enabled)
     control:SetMovable(enabled == true)
 end
 
-local function ApplyStyle()
+local function ApplyStyle(activeStyle)
     if not backdrop then return end
 
     local settings = GetSettings() or {}
-    local opacity = tonumber(settings.backgroundOpacity) or 86
+    local opacity = tonumber(settings.backgroundOpacity) or DEFAULT_BACKGROUND_OPACITY
     if opacity < 0 then opacity = 0 end
     if opacity > 100 then opacity = 100 end
+
+    if activeStyle ~= true then
+        local idleAlpha = IsHudUnlocked() and INACTIVE_MOVE_BACKGROUND_ALPHA or INACTIVE_BACKGROUND_ALPHA
+        backdrop:SetCenterColor(0.03, 0.03, 0.03, idleAlpha)
+        backdrop:SetEdgeColor(0, 0, 0, 0)
+        return
+    end
 
     backdrop:SetCenterColor(0.03, 0.03, 0.03, opacity / 100)
     if settings.showBorder == false then
         backdrop:SetEdgeColor(0, 0, 0, 0)
     else
         backdrop:SetEdgeColor(0.2, 0.9, 0.75, 0.95)
+    end
+end
+
+local function SetVisualMode(mode)
+    if lastVisualMode == mode then return end
+    lastVisualMode = mode
+
+    if mode == "idle" then
+        ApplyStyle(false)
+        timerLabel:SetColor(0.7, 0.75, 0.82, 0.78)
+        stateLabel:SetColor(0.7, 0.75, 0.82, 1)
+        barBack:SetCenterColor(0, 0, 0, BAR_IDLE_ALPHA)
+        barBack:SetEdgeColor(0, 0, 0, 0)
+        barFill:SetColor(0.35, 0.35, 0.35, IsHudUnlocked() and 0.35 or 0.12)
+    elseif mode == "ready" then
+        ApplyStyle(true)
+        stateLabel:SetColor(0.25, 1, 0.35, 1)
+        timerLabel:SetColor(0.25, 1, 0.35, 1)
+        barBack:SetCenterColor(0.02, 0.18, 0.04, BAR_READY_ALPHA)
+        barBack:SetEdgeColor(0, 0, 0, 0)
+        barFill:SetColor(0.15, 1, 0.2, 1)
+    elseif mode == "warning" then
+        ApplyStyle(true)
+        stateLabel:SetColor(1, 0.78, 0.25, 1)
+        timerLabel:SetColor(1, 0.78, 0.25, 1)
+        barBack:SetCenterColor(0.18, 0.12, 0.02, BAR_WARNING_ALPHA)
+        barBack:SetEdgeColor(0, 0, 0, 0)
+        barFill:SetColor(1, 0.55, 0.05, 1)
+    else
+        ApplyStyle(true)
+        stateLabel:SetColor(1, 0.78, 0.25, 1)
+        timerLabel:SetColor(1, 0.78, 0.25, 1)
+        barBack:SetCenterColor(0, 0, 0, BAR_ACTIVE_ALPHA)
+        barBack:SetEdgeColor(0, 0, 0, 0)
+        barFill:SetColor(0, 0.85, 1, 1)
     end
 end
 
@@ -360,8 +519,8 @@ local function EnsureControl()
     barBack:SetAnchor(BOTTOMLEFT, control, BOTTOMLEFT, PADDING, -PADDING)
     barBack:SetAnchor(BOTTOMRIGHT, control, BOTTOMRIGHT, -PADDING, -PADDING)
     barBack:SetHeight(BAR_HEIGHT)
-    barBack:SetCenterColor(0, 0, 0, 1)
-    barBack:SetEdgeColor(0.95, 0.95, 0.95, 0.85)
+    barBack:SetCenterColor(0, 0, 0, BAR_IDLE_ALPHA)
+    barBack:SetEdgeColor(0, 0, 0, 0)
     barBack:SetEdgeTexture("EsoUI/Art/Tooltips/UI-Border.dds", 128, 16)
     barBack:SetDrawLevel(1)
 
@@ -373,9 +532,10 @@ local function EnsureControl()
     barFill:SetDrawLevel(2)
 
     timerLabel = wm:CreateControl(CONTROL_NAME .. "Timer", barBack, CT_LABEL)
-    timerLabel:SetAnchorFill(barBack)
+    timerLabel:SetAnchor(RIGHT, barBack, RIGHT, -8, 0)
+    timerLabel:SetDimensions(58, BAR_HEIGHT)
     timerLabel:SetFont("ZoFontGameLargeBold")
-    timerLabel:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
+    timerLabel:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
     timerLabel:SetVerticalAlignment(TEXT_ALIGN_CENTER)
     timerLabel:SetDrawLevel(3)
 
@@ -410,13 +570,57 @@ local function StopUpdate()
     updateRegistered = false
 end
 
+local function AddPlayerSourceFilter(eventName)
+    if REGISTER_FILTER_SOURCE_COMBAT_UNIT_TYPE and COMBAT_UNIT_TYPE_PLAYER then
+        EVENT_MANAGER:AddFilterForEvent(eventName, EVENT_COMBAT_EVENT, REGISTER_FILTER_SOURCE_COMBAT_UNIT_TYPE, COMBAT_UNIT_TYPE_PLAYER)
+    end
+end
+
+local function RegisterActiveCombatResult(suffix, result, filterTarget)
+    if filterTarget ~= true and not (REGISTER_FILTER_SOURCE_COMBAT_UNIT_TYPE and COMBAT_UNIT_TYPE_PLAYER) then
+        return
+    end
+
+    local eventName = ADDON_NAME .. "_AbilityTrackerActive" .. suffix
+    EVENT_MANAGER:RegisterForEvent(eventName, EVENT_COMBAT_EVENT, OnActiveCombatEvent)
+    EVENT_MANAGER:AddFilterForEvent(eventName, EVENT_COMBAT_EVENT, REGISTER_FILTER_COMBAT_RESULT, result)
+    if filterTarget ~= true then
+        AddPlayerSourceFilter(eventName)
+    end
+    table.insert(activeWatcherEventNames, eventName)
+end
+
+local function StartActiveWatcher()
+    if activeWatcherRegistered then return end
+    activeWatcherEventNames = {}
+    RegisterActiveCombatResult("Begin", RESULT_BEGIN, false)
+    if ACTION_RESULT_BEGIN_CHANNEL then
+        RegisterActiveCombatResult("BeginChannel", RESULT_BEGIN_CHANNEL, false)
+    end
+    for result in pairs(ACTIVE_TARGET_CANCEL_RESULTS) do
+        RegisterActiveCombatResult("Cancel" .. tostring(result), result, true)
+    end
+    activeWatcherRegistered = true
+end
+
+local function StopActiveWatcher()
+    if not activeWatcherRegistered then return end
+    for _, eventName in ipairs(activeWatcherEventNames) do
+        EVENT_MANAGER:UnregisterForEvent(eventName, EVENT_COMBAT_EVENT)
+    end
+    activeWatcherEventNames = {}
+    activeWatcherRegistered = false
+end
+
 local function StopChannel()
     active = false
+    activeEffectSeen = false
     activeAbilityId = 0
     activeName = ""
     startMs = 0
     durationMs = 0
     remainingMs = 0
+    StopActiveWatcher()
     StopUpdate()
     UpdateVisuals()
     UpdateVisibility()
@@ -468,58 +672,60 @@ local function SetBarProgress(progress)
     if progress < 0 then progress = 0 end
     if progress > 1 then progress = 1 end
 
+    if progress <= 0 then
+        if lastProgressWidth ~= 0 then
+            barFill:SetHidden(true)
+            lastProgressWidth = 0
+        end
+        return
+    end
+
+    local width = math.max(1, math.floor((BAR_INNER_WIDTH * progress) + 0.5))
+    if width == lastProgressWidth then return end
+    lastProgressWidth = width
+
+    barFill:SetHidden(false)
     barFill:ClearAnchors()
     barFill:SetAnchor(CENTER, barBack, CENTER, 0, 0)
-    barFill:SetDimensions(math.max(1, BAR_INNER_WIDTH * progress), BAR_HEIGHT - (BAR_INSET * 2))
+    barFill:SetDimensions(width, BAR_HEIGHT - (BAR_INSET * 2))
 end
 
 function UpdateVisuals()
     EnsureControl()
 
-    titleLabel:SetText(activeName ~= "" and activeName or GetString(EZOM_ABILITY_FATECARVER_NAME))
+    SetLabelText(titleLabel, activeName ~= "" and activeName or GetString(EZOM_ABILITY_FATECARVER_NAME), "title")
 
     if not active then
-        timerLabel:SetText("--")
-        timerLabel:SetColor(0.7, 0.75, 0.82, 1)
-        stateLabel:SetText(GetString(EZOM_ABILITY_FATECARVER_READY))
-        stateLabel:SetColor(0.7, 0.75, 0.82, 1)
-        SetBarProgress(1)
-        barBack:SetCenterColor(0, 0, 0, 1)
-        barBack:SetEdgeColor(0.95, 0.95, 0.95, 0.85)
-        barFill:SetColor(0.35, 0.35, 0.35, IsHudUnlocked() and 0.85 or 0.45)
+        SetLabelText(timerLabel, "", "timer")
+        SetLabelText(stateLabel, GetString(EZOM_ABILITY_FATECARVER_READY), "state")
+        SetBarProgress(0)
+        SetVisualMode("idle")
         return
     end
 
     local nowMs = GetNowMs()
+    if activeEffectSeen and nowMs - startMs > CHANNEL_EFFECT_GRACE_MS and not RefreshActiveEffectFromBuffs(nowMs) then
+        FinishActiveChannel("faded", nowMs)
+        return
+    end
+
     remainingMs = math.max(0, (startMs + durationMs) - nowMs)
     local warningMs = GetWarningMs()
     local ready = remainingMs <= warningMs
     local approaching = not ready and remainingMs <= warningMs + PRE_WARNING_MS
-    timerLabel:SetText(FormatRemaining(remainingMs))
+    SetLabelText(timerLabel, FormatRemaining(remainingMs), "timer")
 
     SetBarProgress(durationMs > 0 and (remainingMs / durationMs) or 0)
 
     if ready then
-        stateLabel:SetText(GetString(EZOM_ABILITY_FATECARVER_CAN_CANCEL))
-        stateLabel:SetColor(0.25, 1, 0.35, 1)
-        timerLabel:SetColor(0.25, 1, 0.35, 1)
-        barBack:SetCenterColor(0.02, 0.18, 0.04, 0.96)
-        barBack:SetEdgeColor(0.25, 1, 0.35, 1)
-        barFill:SetColor(0.15, 1, 0.2, 1)
+        SetLabelText(stateLabel, GetString(EZOM_ABILITY_FATECARVER_CAN_CANCEL), "state")
+        SetVisualMode("ready")
     elseif approaching then
-        stateLabel:SetText(GetString(EZOM_ABILITY_FATECARVER_CHANNELING))
-        stateLabel:SetColor(1, 0.78, 0.25, 1)
-        timerLabel:SetColor(1, 0.78, 0.25, 1)
-        barBack:SetCenterColor(0.18, 0.12, 0.02, 0.96)
-        barBack:SetEdgeColor(1, 0.78, 0.25, 1)
-        barFill:SetColor(1, 0.55, 0.05, 1)
+        SetLabelText(stateLabel, GetString(EZOM_ABILITY_FATECARVER_CHANNELING), "state")
+        SetVisualMode("warning")
     else
-        stateLabel:SetText(GetString(EZOM_ABILITY_FATECARVER_CHANNELING))
-        stateLabel:SetColor(1, 0.78, 0.25, 1)
-        timerLabel:SetColor(1, 0.78, 0.25, 1)
-        barBack:SetCenterColor(0, 0, 0, 1)
-        barBack:SetEdgeColor(0.95, 0.95, 0.95, 0.85)
-        barFill:SetColor(0, 0.85, 1, 1)
+        SetLabelText(stateLabel, GetString(EZOM_ABILITY_FATECARVER_CHANNELING), "state")
+        SetVisualMode("active")
     end
 
     if remainingMs <= 0 then
@@ -552,6 +758,7 @@ local function StartChannel(abilityId, abilityName, actualDurationMs)
     end
 
     active = true
+    activeEffectSeen = false
     activeAbilityId = abilityId
     activeName = tostring(abilityName or "")
     if activeName == "" and type(GetAbilityName) == "function" and activeAbilityId > 0 then
@@ -563,6 +770,7 @@ local function StartChannel(abilityId, abilityName, actualDurationMs)
 
     startMs = nowMs
     remainingMs = durationMs
+    RefreshActiveEffectFromBuffs(nowMs)
     EnsureCombatStats(nowMs)
     if type(GetAbilityIcon) == "function" and activeAbilityId > 0 then
         local abilityIcon = GetAbilityIcon(activeAbilityId)
@@ -573,6 +781,7 @@ local function StartChannel(abilityId, abilityName, actualDurationMs)
 
     UpdateVisuals()
     UpdateVisibility()
+    StartActiveWatcher()
     StartUpdate()
 end
 
@@ -660,10 +869,54 @@ local function OnCombatEvent(_, result, isError, abilityName, _, _, sourceName, 
     if not IsFatecarverAbility(abilityId, abilityName) then return end
 
     if result == RESULT_BEGIN then
+        if not IsPlayerCombatSource(sourceName, sourceType) then return end
         if tonumber(hitValue) and tonumber(hitValue) <= 75 then return end
         StartChannel(abilityId, abilityName, hitValue)
-    elseif result == RESULT_EFFECT_FADED and active then
-        FinishActiveChannel("faded", GetNowMs())
+    elseif active and (result == RESULT_EFFECT_FADED or result == RESULT_INTERRUPT) then
+        if result == RESULT_EFFECT_FADED and not IsPlayerCombatTarget(targetName, targetType) then return end
+        FinishActiveChannel(result == RESULT_INTERRUPT and "interrupted" or "faded", GetNowMs())
+    end
+end
+
+function OnActiveCombatEvent(_, result, isError, abilityName, _, _, sourceName, sourceType, targetName, targetType, hitValue, powerType, damageType, log, sourceUnitId, targetUnitId, abilityId)
+    if isError or not active or not IsEnabled() then return end
+
+    if ACTIVE_TARGET_CANCEL_RESULTS[result] == true then
+        if not IsPlayerCombatTarget(targetName, targetType) then return end
+        FinishActiveChannel("interrupted", GetNowMs())
+        return
+    end
+
+    if result ~= RESULT_BEGIN and result ~= RESULT_BEGIN_CHANNEL then return end
+    if not IsPlayerCombatSource(sourceName, sourceType) then return end
+    if IsFatecarverAbility(abilityId, abilityName) then return end
+
+    FinishActiveChannel("cancelled", GetNowMs())
+end
+
+function OnPlayerEffectChanged(_, changeType, _, effectName, unitTag, _, endTime, _, iconName, _, _, _, _, _, _, abilityId)
+    if unitTag ~= "player" or not IsEnabled() then return end
+    if not IsFatecarverAbility(abilityId, effectName) then return end
+
+    local nowMs = GetNowMs()
+    if changeType == EFFECT_RESULT_GAINED
+        or changeType == EFFECT_RESULT_UPDATED
+        or changeType == EFFECT_RESULT_FULL_REFRESH
+    then
+        activeEffectSeen = true
+        if iconName and iconName ~= "" then
+            slottedFatecarverIcon = iconName
+            if icon then icon:SetTexture(iconName) end
+        end
+        if active and endTime and startMs > 0 then
+            local endMs = (tonumber(endTime) or 0) * 1000
+            if endMs > nowMs then
+                durationMs = math.max(durationMs or 0, endMs - startMs)
+                remainingMs = math.max(0, endMs - nowMs)
+            end
+        end
+    elseif changeType == EFFECT_RESULT_FADED and active then
+        FinishActiveChannel("faded", nowMs)
     end
 end
 
@@ -729,14 +982,21 @@ function Tracker.Init()
         EVENT_MANAGER:RegisterForEvent(fadedEventName, EVENT_COMBAT_EVENT, OnCombatEvent)
         EVENT_MANAGER:AddFilterForEvent(fadedEventName, EVENT_COMBAT_EVENT, REGISTER_FILTER_ABILITY_ID, abilityId)
         EVENT_MANAGER:AddFilterForEvent(fadedEventName, EVENT_COMBAT_EVENT, REGISTER_FILTER_COMBAT_RESULT, RESULT_EFFECT_FADED)
+
+        local interruptEventName = ADDON_NAME .. "_AbilityTrackerCombatInterrupt" .. tostring(abilityId)
+        EVENT_MANAGER:RegisterForEvent(interruptEventName, EVENT_COMBAT_EVENT, OnCombatEvent)
+        EVENT_MANAGER:AddFilterForEvent(interruptEventName, EVENT_COMBAT_EVENT, REGISTER_FILTER_ABILITY_ID, abilityId)
+        EVENT_MANAGER:AddFilterForEvent(interruptEventName, EVENT_COMBAT_EVENT, REGISTER_FILTER_COMBAT_RESULT, RESULT_INTERRUPT)
         if REGISTER_FILTER_SOURCE_COMBAT_UNIT_TYPE and COMBAT_UNIT_TYPE_PLAYER then
-            EVENT_MANAGER:AddFilterForEvent(fadedEventName, EVENT_COMBAT_EVENT, REGISTER_FILTER_SOURCE_COMBAT_UNIT_TYPE, COMBAT_UNIT_TYPE_PLAYER)
+            EVENT_MANAGER:AddFilterForEvent(interruptEventName, EVENT_COMBAT_EVENT, REGISTER_FILTER_SOURCE_COMBAT_UNIT_TYPE, COMBAT_UNIT_TYPE_PLAYER)
         end
     end
     EVENT_MANAGER:RegisterForEvent(ADDON_NAME .. "_AbilityTrackerCombatState", EVENT_PLAYER_COMBAT_STATE, OnCombatState)
     EVENT_MANAGER:RegisterForEvent(ADDON_NAME .. "_AbilityTrackerSlots", EVENT_ACTION_SLOTS_ALL_HOTBARS_UPDATED, ScanFatecarverSlot)
     EVENT_MANAGER:RegisterForEvent(ADDON_NAME .. "_AbilityTrackerSlotUpdated", EVENT_ACTION_SLOT_UPDATED, ScanFatecarverSlot)
     EVENT_MANAGER:RegisterForEvent(ADDON_NAME .. "_AbilityTrackerActivated", EVENT_PLAYER_ACTIVATED, ScanFatecarverSlot)
+    EVENT_MANAGER:RegisterForEvent(ADDON_NAME .. "_AbilityTrackerPlayerEffects", EVENT_EFFECT_CHANGED, OnPlayerEffectChanged)
+    EVENT_MANAGER:AddFilterForEvent(ADDON_NAME .. "_AbilityTrackerPlayerEffects", EVENT_EFFECT_CHANGED, REGISTER_FILTER_UNIT_TAG, "player")
     if EVENT_ACTIVE_WEAPON_PAIR_CHANGED then
         EVENT_MANAGER:RegisterForEvent(ADDON_NAME .. "_AbilityTrackerWeaponPair", EVENT_ACTIVE_WEAPON_PAIR_CHANGED, OnWeaponPairChanged)
     end

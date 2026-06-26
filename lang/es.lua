@@ -9,6 +9,7 @@ EZOMETTER_STRINGS_ES = {
     EZOM_LAST_COMBAT_ALL_OK = "Todos los checks estuvieron activos al 100%.",
     EZOM_SUMMARY_DURATION = "Duracion",
     EZOM_SUMMARY_DROPS = "caidas",
+    EZOM_SUMMARY_NOT_APPLICABLE = "n/a",
     EZOM_REPORT_TITLE = "Informe EZOMetter",
     EZOM_REPORT_DATE = "Fecha",
     EZOM_REPORT_CHARACTER = "Personaje",

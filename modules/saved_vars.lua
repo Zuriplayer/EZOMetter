@@ -83,8 +83,9 @@ function EZOMetter.savedVars.Init()
         abilities = {
             fatecarverEnabled = true,
             fatecarverWarningMs = 800,
-            backgroundOpacity = 86,
-            showBorder = true,
+            backgroundOpacity = 22,
+            showBorder = false,
+            styleVersion = 2,
             x = 0,
             y = 445,
         },
@@ -211,10 +212,22 @@ function EZOMetter.savedVars.Init()
         EZOMetter.sv.abilities.fatecarverEnabled = defaults.abilities.fatecarverEnabled
     end
     EZOMetter.sv.abilities.fatecarverWarningMs = EZOMetter.sv.abilities.fatecarverWarningMs or defaults.abilities.fatecarverWarningMs
+
+    if EZOMetter.sv.abilities.styleVersion == nil then
+        if EZOMetter.sv.abilities.backgroundOpacity == nil or EZOMetter.sv.abilities.backgroundOpacity == 86 then
+            EZOMetter.sv.abilities.backgroundOpacity = defaults.abilities.backgroundOpacity
+        end
+        if EZOMetter.sv.abilities.showBorder == nil or EZOMetter.sv.abilities.showBorder == true then
+            EZOMetter.sv.abilities.showBorder = defaults.abilities.showBorder
+        end
+        EZOMetter.sv.abilities.styleVersion = defaults.abilities.styleVersion
+    end
+
     EZOMetter.sv.abilities.backgroundOpacity = EZOMetter.sv.abilities.backgroundOpacity or defaults.abilities.backgroundOpacity
     if EZOMetter.sv.abilities.showBorder == nil then
         EZOMetter.sv.abilities.showBorder = defaults.abilities.showBorder
     end
+    EZOMetter.sv.abilities.styleVersion = EZOMetter.sv.abilities.styleVersion or defaults.abilities.styleVersion
     EZOMetter.sv.abilities.x = EZOMetter.sv.abilities.x or defaults.abilities.x
     EZOMetter.sv.abilities.y = EZOMetter.sv.abilities.y or defaults.abilities.y
 end

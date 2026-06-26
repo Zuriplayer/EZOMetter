@@ -154,13 +154,17 @@ function Effects.IsSlotted(effect)
             local actionType = GetSlotType(slotIndex, hotbarCategory)
             local boundId = GetSlotBoundId(slotIndex, hotbarCategory)
             local trueAbilityId = boundId
+            local slotName = ""
+
+            if type(GetSlotName) == "function" then
+                slotName = GetSlotName(slotIndex, hotbarCategory) or ""
+            end
 
             if actionType == ACTION_TYPE_CRAFTED_ABILITY and type(GetAbilityIdForCraftedAbilityId) == "function" then
                 trueAbilityId = GetAbilityIdForCraftedAbilityId(boundId)
             end
 
-            local slotName = ""
-            if trueAbilityId and type(GetAbilityName) == "function" then
+            if slotName == "" and trueAbilityId and type(GetAbilityName) == "function" then
                 slotName = GetAbilityName(trueAbilityId)
             end
 

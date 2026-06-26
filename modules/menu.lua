@@ -865,22 +865,22 @@ function EZOMetter_Menu.Init()
                     max = 100,
                     step = 5,
                     getFunc = function()
-                        return EZOMetter.sv.abilities.backgroundOpacity or 86
+                        return EZOMetter.sv.abilities.backgroundOpacity or 22
                     end,
                     setFunc = function(value)
-                        EZOMetter.sv.abilities.backgroundOpacity = tonumber(value) or 86
+                        EZOMetter.sv.abilities.backgroundOpacity = tonumber(value) or 22
                         if EZOMetter_AbilityTracker and EZOMetter_AbilityTracker.ApplySettings then
                             EZOMetter_AbilityTracker.ApplySettings()
                         end
                     end,
-                    default = 86,
+                    default = 22,
                 },
                 {
                     type = "checkbox",
                     name = GetString(EZOM_OPTION_ABILITIES_SHOW_BORDER),
                     tooltip = GetString(EZOM_OPTION_ABILITIES_SHOW_BORDER_TOOLTIP),
                     getFunc = function()
-                        return EZOMetter.sv.abilities.showBorder ~= false
+                        return EZOMetter.sv.abilities.showBorder == true
                     end,
                     setFunc = function(value)
                         EZOMetter.sv.abilities.showBorder = value == true
@@ -888,7 +888,7 @@ function EZOMetter_Menu.Init()
                             EZOMetter_AbilityTracker.ApplySettings()
                         end
                     end,
-                    default = true,
+                    default = false,
                 },
             },
         },
