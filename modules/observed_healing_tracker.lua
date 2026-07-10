@@ -1,0 +1,31 @@
+-- Observed healing panel configured on the shared LibCombat metric panel.
+EZOMetter_ObservedHealing = EZOMetter_ObservedMetricPanel.Create({
+    callbackName = "EZOMetterObservedHealing",
+    controlName = "EZOMetterObservedHealingTracker",
+    settingsKey = "observedHealing",
+    roleOnlyKey = "healerOnly",
+    roleOnlyValue = "healer",
+    defaultY = 315,
+
+    rateKeys = "HPSOut",
+    groupRateKeys = "groupHPSOut",
+    totalKeys = "healingOutTotal",
+    activeTimeKeys = "hpstime",
+    durationMsKey = "hpsDurationMs",
+
+    rowInstantString = "EZOM_HEALING_ROW_INSTANT",
+    rowAverageString = "EZOM_HEALING_ROW_AVERAGE",
+    rowGroupString = "EZOM_HEALING_ROW_GROUP",
+    groupUnavailableString = "EZOM_HEALING_GROUP_UNAVAILABLE",
+    groupUnavailableShortString = "EZOM_HEALING_GROUP_UNAVAILABLE_SHORT",
+    libMissingString = "EZOM_HEALING_LIBCOMBAT_MISSING",
+    libShortString = "EZOM_HEALING_LIBCOMBAT_SHORT",
+    summaryCurrentString = "EZOM_HEALING_SUMMARY_CURRENT",
+    summaryLastString = "EZOM_HEALING_SUMMARY_LAST",
+    summaryTimeString = "EZOM_HEALING_SUMMARY_HPS_TIME",
+    summaryTotalString = "EZOM_HEALING_SUMMARY_HEALING",
+    summaryAverageString = "EZOM_HEALING_SUMMARY_HPS",
+    summaryGroupTotalString = "EZOM_HEALING_SUMMARY_GROUP_HEALING",
+    summaryGroupShareString = "EZOM_HEALING_SUMMARY_GROUP_SHARE",
+    summaryObservedNoteString = "EZOM_HEALING_SUMMARY_OBSERVED_NOTE",
+})

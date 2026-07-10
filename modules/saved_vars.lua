@@ -7,6 +7,7 @@ function EZOMetter.savedVars.Init()
         general = {
             language = EZOMetter.GetDefaultLanguage(),
             role = "dd",
+            roleMode = "manual",
             debugMode = false,
             unlockHud = false,
             combatReportEnabled = false,
@@ -80,6 +81,15 @@ function EZOMetter.savedVars.Init()
             x = 0,
             y = 315,
         },
+        observedHealing = {
+            enabled = true,
+            healerOnly = true,
+            onlyCombat = true,
+            backgroundOpacity = 86,
+            showBorder = true,
+            x = 0,
+            y = 315,
+        },
         abilities = {
             fatecarverEnabled = true,
             fatecarverWarningMs = 800,
@@ -98,9 +108,14 @@ function EZOMetter.savedVars.Init()
     EZOMetter.sv.coral = EZOMetter.sv.coral or defaults.coral
     EZOMetter.sv.ddStats = EZOMetter.sv.ddStats or defaults.ddStats
     EZOMetter.sv.observedDamage = EZOMetter.sv.observedDamage or defaults.observedDamage
+    EZOMetter.sv.observedHealing = EZOMetter.sv.observedHealing or defaults.observedHealing
     EZOMetter.sv.abilities = EZOMetter.sv.abilities or defaults.abilities
     EZOMetter.sv.general.language = EZOMetter.sv.general.language or defaults.general.language
     EZOMetter.sv.general.role = EZOMetter.sv.general.role or defaults.general.role
+    EZOMetter.sv.general.roleMode = EZOMetter.sv.general.roleMode or defaults.general.roleMode
+    if EZOMetter.sv.general.roleMode ~= "auto" then
+        EZOMetter.sv.general.roleMode = defaults.general.roleMode
+    end
     EZOMetter.sv.general.debugMode = EZOMetter.sv.general.debugMode or defaults.general.debugMode
     EZOMetter.sv.general.unlockHud = false
     if EZOMetter.sv.general.combatReportEnabled == nil then
@@ -119,24 +134,20 @@ function EZOMetter.savedVars.Init()
     if EZOMetter.sv.offBalance.enabled == nil then
         EZOMetter.sv.offBalance.enabled = defaults.offBalance.enabled
     end
-    if EZOMetter.sv.offBalance.ddOnly == nil then
-        EZOMetter.sv.offBalance.ddOnly = defaults.offBalance.ddOnly
-    end
+    EZOMetter.sv.offBalance.ddOnly = defaults.offBalance.ddOnly
     if EZOMetter.sv.offBalance.onlyCombat == nil then
         EZOMetter.sv.offBalance.onlyCombat = defaults.offBalance.onlyCombat
     end
-    if EZOMetter.sv.offBalance.bossFocus == nil then
-        EZOMetter.sv.offBalance.bossFocus = defaults.offBalance.bossFocus
+    EZOMetter.sv.offBalance.bossFocus = defaults.offBalance.bossFocus
+    if EZOMetter.sv.offBalance.onlyBosses == nil then
+        EZOMetter.sv.offBalance.onlyBosses = defaults.offBalance.onlyBosses
     end
-    EZOMetter.sv.offBalance.onlyBosses = EZOMetter.sv.offBalance.onlyBosses or defaults.offBalance.onlyBosses
     EZOMetter.sv.offBalance.unlock = false
     EZOMetter.sv.offBalance.backgroundOpacity = EZOMetter.sv.offBalance.backgroundOpacity or defaults.offBalance.backgroundOpacity
     if EZOMetter.sv.offBalance.showBorder == nil then
         EZOMetter.sv.offBalance.showBorder = defaults.offBalance.showBorder
     end
-    if EZOMetter.sv.offBalance.pulseOnActive == nil then
-        EZOMetter.sv.offBalance.pulseOnActive = defaults.offBalance.pulseOnActive
-    end
+    EZOMetter.sv.offBalance.pulseOnActive = defaults.offBalance.pulseOnActive
     if EZOMetter.sv.offBalance.debugEvents == nil then
         EZOMetter.sv.offBalance.debugEvents = defaults.offBalance.debugEvents
     end
@@ -208,6 +219,21 @@ function EZOMetter.savedVars.Init()
     end
     EZOMetter.sv.observedDamage.x = EZOMetter.sv.observedDamage.x or defaults.observedDamage.x
     EZOMetter.sv.observedDamage.y = EZOMetter.sv.observedDamage.y or defaults.observedDamage.y
+    if EZOMetter.sv.observedHealing.enabled == nil then
+        EZOMetter.sv.observedHealing.enabled = defaults.observedHealing.enabled
+    end
+    if EZOMetter.sv.observedHealing.healerOnly == nil then
+        EZOMetter.sv.observedHealing.healerOnly = defaults.observedHealing.healerOnly
+    end
+    if EZOMetter.sv.observedHealing.onlyCombat == nil then
+        EZOMetter.sv.observedHealing.onlyCombat = defaults.observedHealing.onlyCombat
+    end
+    EZOMetter.sv.observedHealing.backgroundOpacity = EZOMetter.sv.observedHealing.backgroundOpacity or defaults.observedHealing.backgroundOpacity
+    if EZOMetter.sv.observedHealing.showBorder == nil then
+        EZOMetter.sv.observedHealing.showBorder = defaults.observedHealing.showBorder
+    end
+    EZOMetter.sv.observedHealing.x = EZOMetter.sv.observedHealing.x or defaults.observedHealing.x
+    EZOMetter.sv.observedHealing.y = EZOMetter.sv.observedHealing.y or defaults.observedHealing.y
     if EZOMetter.sv.abilities.fatecarverEnabled == nil then
         EZOMetter.sv.abilities.fatecarverEnabled = defaults.abilities.fatecarverEnabled
     end

@@ -24,6 +24,7 @@ local providers = {
     function() return EZOMetter_Coral end,
     function() return EZOMetter_DDStats end,
     function() return EZOMetter_ObservedDamage end,
+    function() return EZOMetter_ObservedHealing end,
     function() return EZOMetter_AbilityTracker end,
 }
 

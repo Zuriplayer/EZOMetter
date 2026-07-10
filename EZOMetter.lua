@@ -68,6 +68,10 @@ function EZOM:Initialize()
         EZOMetter_BuffAlert.Init()
     end
 
+    if EZOMetter_ChampionPoints and EZOMetter_ChampionPoints.Init then
+        EZOMetter_ChampionPoints.Init()
+    end
+
     if EZOMetter_OffBalance and EZOMetter_OffBalance.Init then
         EZOMetter_OffBalance.Init()
     end
@@ -84,12 +88,20 @@ function EZOM:Initialize()
         EZOMetter_ObservedDamage.Init()
     end
 
+    if EZOMetter_ObservedHealing and EZOMetter_ObservedHealing.Init then
+        EZOMetter_ObservedHealing.Init()
+    end
+
     if EZOMetter_AbilityTracker and EZOMetter_AbilityTracker.Init then
         EZOMetter_AbilityTracker.Init()
     end
 
     if EZOMetter_CombatReporter and EZOMetter_CombatReporter.Init then
         EZOMetter_CombatReporter.Init()
+    end
+
+    if EZOMetter_RoleDetector and EZOMetter_RoleDetector.Init then
+        EZOMetter_RoleDetector.Init()
     end
 
     Print(GetString(EZOM_MSG_INIT))

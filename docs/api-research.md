@@ -73,6 +73,30 @@ Fuentes revisadas:
 - Combat Metrics, codigo fuente GitHub, para entender el calculo de uptime por unidades seleccionadas.
 - Discusiones publicas de ZOS/ESO sobre el cambio a 7 segundos activo y 15 segundos de no reaplicacion por target.
 
+### Exploiter
+
+Investigacion adicional hecha el 2026-07-07.
+
+Conclusiones actuales:
+
+- `Exploiter` es una estrella slottable de Warfare que aumenta el dano contra enemigos realmente `Off Balance` en 2% por etapa, maximo 10% con 50 puntos.
+- El cooldown/no reaplicacion de `Off Balance` no aporta valor directo a `Exploiter`; solo sirve para medir cadencia de aplicacion del grupo.
+- No se ha encontrado una lectura nativa separada de "dano aportado por Exploiter". El evento de dano entrega el valor final ya modificado.
+- La medicion viable es estimada:
+  - detectar si `Exploiter` esta slottado con `GetSlotBoundId(slot, HOTBAR_CATEGORY_CHAMPION)`;
+  - leer puntos con `GetNumPointsSpentOnChampionSkill(starId)`;
+  - medir dano saliente mientras el target seguido esta en `Off Balance` real;
+  - calcular valor ponderado por dano: proporcion de dano durante OB real por bonus de Exploiter;
+  - calcular dano extra estimado desde dano final: `danoDuranteOB * bonus / (100 + bonus)`.
+- El patron de deteccion de CP se apoya en LibCombat, WizardsWardrobe y Bandits UI, que usan `GetSlotBoundId`/`GetNumPointsSpentOnChampionSkill` para leer CP slottados sin abrir la escena de Champion Points.
+
+Fuentes revisadas:
+
+- ESO-Hub `Exploiter`.
+- UESP `Online:Exploiter` y `Online:Off Balance`.
+- ESOUI forum `PTS Get equipped champion skill ID`.
+- LibCombat, WizardsWardrobe, Bandits UI y Combat Metrics instalados localmente.
+
 ## Coral Riptide
 
 Investigacion adicional hecha el 2026-06-13.

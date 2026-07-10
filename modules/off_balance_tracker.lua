@@ -19,6 +19,7 @@ local PULSE_SCALE = 1.18
 local DEBUG_THROTTLE_MS = 750
 local COMBAT_SAMPLE_INTERVAL_MS = 250
 local SUMMARY_TOLERANCE_MS = 250
+local DAMAGE_CALLBACK_NAME = ADDON_NAME .. "OffBalanceDamage"
 
 local STATE_FREE = 0
 local STATE_ACTIVE = 1
@@ -70,7 +71,9 @@ local currentState = STATE_FREE
 local pulseUntilMs = 0
 local lastDebugByKey = {}
 local statsUpdateRegistered = false
+local damageCallbackRegistered = false
 local statsTracker
+local damageTracker
 local lastCombatSummary
 local IsHudUnlocked
 
@@ -128,6 +131,12 @@ local function NormalizeName(name)
         return zo_strlower(name)
     end
     return string.lower(name)
+end
+
+local function SameUnitName(left, right)
+    local leftName = NormalizeName(left)
+    local rightName = NormalizeName(right)
+    return leftName ~= "" and leftName == rightName
 end
 
 local function AddName(names, state, name)
@@ -198,6 +207,37 @@ local function GetSourceName(source)
     return ""
 end
 
+local function FormatNumber(value)
+    value = tonumber(value) or 0
+    if ZO_CommaDelimitNumber then
+        return ZO_CommaDelimitNumber(math.floor(value + 0.5))
+    end
+    return tostring(math.floor(value + 0.5))
+end
+
+local function FormatPercentValue(value)
+    if EZOMetter_CombatSummary then
+        return EZOMetter_CombatSummary.FormatPercent(value)
+    end
+    return string.format("%.1f%%", math.max(0, math.min(100, tonumber(value) or 0)))
+end
+
+local function FormatExploiterStatus(exploiter)
+    exploiter = exploiter or {}
+    if exploiter.slotted == true then
+        return string.format(
+            "%s %d (%s)",
+            GetString(EZOM_EXPLOITER_SLOTTED),
+            tonumber(exploiter.points) or 0,
+            FormatPercentValue(tonumber(exploiter.bonusPct) or 0)
+        )
+    end
+    if exploiter.found == false then
+        return GetString(EZOM_EXPLOITER_UNKNOWN)
+    end
+    return GetString(EZOM_EXPLOITER_NOT_SLOTTED)
+end
+
 local function BuildTooltipText()
     if not lastCombatSummary then
         return GetString(EZOM_LAST_COMBAT_NO_DATA)
@@ -231,7 +271,32 @@ local function BuildTooltipText()
             EZOMetter_CombatSummary.FormatSeconds(cycle.activeMs)
         ))
     else
-        table.insert(lines, GetString(EZOM_OFF_BALANCE_SUMMARY_CYCLE) .. ": " .. EZOMetter_CombatSummary.FormatPercent(100))
+        table.insert(lines, GetString(EZOM_OFF_BALANCE_SUMMARY_CYCLE) .. ": " .. GetString(EZOM_SUMMARY_NOT_APPLICABLE))
+    end
+
+    local exploiterSummary = lastCombatSummary.exploiter
+    if exploiterSummary then
+        local exploiter = exploiterSummary.exploiter or {}
+        table.insert(lines, "")
+        table.insert(lines, GetString(EZOM_EXPLOITER_LABEL) .. ": " .. FormatExploiterStatus(exploiter))
+        table.insert(lines, string.format(
+            "%s: %s | %s",
+            GetString(EZOM_EXPLOITER_DAMAGE_DURING_OB),
+            FormatPercentValue(exploiterSummary.damageSharePct),
+            FormatNumber(exploiterSummary.offBalanceDamage)
+        ))
+
+        if exploiter.slotted == true then
+            local timeValue = 0
+            if active then
+                timeValue = ((tonumber(active.uptime) or 0) / 100) * (tonumber(exploiter.bonusPct) or 0)
+            end
+            table.insert(lines, GetString(EZOM_EXPLOITER_TIME_VALUE) .. ": " .. FormatPercentValue(timeValue))
+            table.insert(lines, GetString(EZOM_EXPLOITER_DAMAGE_VALUE) .. ": " .. FormatPercentValue(exploiterSummary.damageWeightedValuePct))
+            table.insert(lines, GetString(EZOM_EXPLOITER_ESTIMATED_EXTRA) .. ": " .. FormatNumber(exploiterSummary.estimatedExtraDamage))
+        else
+            table.insert(lines, GetString(EZOM_EXPLOITER_POTENTIAL_MAX) .. ": " .. FormatPercentValue(exploiterSummary.potentialMaxValuePct))
+        end
     end
 
     return table.concat(lines, "\n")
@@ -317,6 +382,151 @@ function FormatSeconds(ms)
         return string.format("%.0f", seconds)
     end
     return string.format("%.1f", seconds)
+end
+
+local function FormatPercent(value)
+    if EZOMetter_CombatSummary then
+        return EZOMetter_CombatSummary.FormatPercent(value)
+    end
+    return string.format("%.1f%%", math.max(0, math.min(100, tonumber(value) or 0)))
+end
+
+local function HasLibCombatDamage()
+    return LibCombat ~= nil
+        and LIBCOMBAT_EVENT_DAMAGE_OUT ~= nil
+        and type(LibCombat.RegisterCallbackType) == "function"
+end
+
+local function CopyExploiterState()
+    local data = EZOMetter_ChampionPoints and EZOMetter_ChampionPoints.Refresh and EZOMetter_ChampionPoints.Refresh() or nil
+    if not data then
+        return {
+            found = false,
+            slotted = false,
+            points = 0,
+            bonusPct = 0,
+            maxBonusPct = 10,
+            name = "Exploiter",
+        }
+    end
+
+    return {
+        id = data.id,
+        name = data.name,
+        found = data.found == true,
+        slotted = data.slotted == true,
+        points = tonumber(data.points) or 0,
+        bonusPct = tonumber(data.bonusPct) or 0,
+        maxBonusPct = tonumber(data.maxBonusPct) or 10,
+    }
+end
+
+local function CreateDamageTracker()
+    local tracker = {
+        started = false,
+        totalDamage = 0,
+        offBalanceDamage = 0,
+        exploiter = nil,
+        lastSummary = nil,
+    }
+
+    function tracker:Start()
+        self.started = true
+        self.totalDamage = 0
+        self.offBalanceDamage = 0
+        self.exploiter = CopyExploiterState()
+        self.lastSummary = nil
+    end
+
+    function tracker:AddDamage(hitValue, targetUnitId)
+        if not self.started then return end
+
+        local damage = tonumber(hitValue) or 0
+        if damage <= 0 then return end
+
+        self.totalDamage = self.totalDamage + damage
+        if Tracker.IsUnitOffBalance(targetUnitId) then
+            self.offBalanceDamage = self.offBalanceDamage + damage
+        end
+    end
+
+    function tracker:Finish()
+        if not self.started then return self.lastSummary end
+
+        local totalDamage = self.totalDamage
+        local offBalanceDamage = self.offBalanceDamage
+        local damageSharePct = 0
+        if totalDamage > 0 then
+            damageSharePct = (offBalanceDamage / totalDamage) * 100
+        end
+
+        local exploiter = self.exploiter or CopyExploiterState()
+        local bonusPct = tonumber(exploiter.bonusPct) or 0
+        local maxBonusPct = tonumber(exploiter.maxBonusPct) or 10
+        local damageWeightedValuePct = (damageSharePct / 100) * bonusPct
+        local potentialMaxValuePct = (damageSharePct / 100) * maxBonusPct
+        local estimatedExtraDamage = 0
+        if bonusPct > 0 then
+            estimatedExtraDamage = offBalanceDamage * (bonusPct / (100 + bonusPct))
+        end
+
+        self.lastSummary = {
+            totalDamage = totalDamage,
+            offBalanceDamage = offBalanceDamage,
+            damageSharePct = damageSharePct,
+            exploiter = exploiter,
+            damageWeightedValuePct = damageWeightedValuePct,
+            potentialMaxValuePct = potentialMaxValuePct,
+            estimatedExtraDamage = estimatedExtraDamage,
+        }
+        self.started = false
+        return self.lastSummary
+    end
+
+    return tracker
+end
+
+local function BuildRowFromStat(stat)
+    if not stat or not stat.requiredMs or stat.requiredMs <= 0 then return nil end
+    return {
+        key = stat.key,
+        activeMs = stat.activeMs or 0,
+        requiredMs = stat.requiredMs,
+        uptime = ((stat.activeMs or 0) / stat.requiredMs) * 100,
+    }
+end
+
+local function BuildCurrentCombatSummary()
+    if not statsTracker or not statsTracker.started then return nil end
+
+    statsTracker:Sample(SummaryNowMs())
+    return {
+        durationMs = statsTracker.durationMs or 0,
+        allByKey = {
+            active = BuildRowFromStat(statsTracker.byKey and statsTracker.byKey.active),
+            cycle = BuildRowFromStat(statsTracker.byKey and statsTracker.byKey.cycle),
+        },
+    }
+end
+
+local function FormatSummaryRowPercent(row)
+    if not row then return "--" end
+    return FormatPercent(row.uptime)
+end
+
+local function BuildPanelCounterText()
+    local summary = isCombat and BuildCurrentCombatSummary() or lastCombatSummary
+    if not summary then return nil end
+
+    local summaryByKey = summary.allByKey or summary.byKey or {}
+    local prefix = isCombat and GetString(EZOM_OFF_BALANCE_PANEL_CURRENT) or GetString(EZOM_OFF_BALANCE_PANEL_LAST)
+    return string.format(
+        "%s %s | %s %s",
+        prefix,
+        FormatSummaryRowPercent(summaryByKey.active),
+        GetString(EZOM_OFF_BALANCE_PANEL_CYCLE),
+        FormatSummaryRowPercent(summaryByKey.cycle)
+    )
 end
 
 local function SavePosition()
@@ -457,6 +667,7 @@ local function UpdateVisibility()
     EnsureControl()
 
     local settings = GetSettings() or {}
+    local allowIdle = settings.onlyCombat == false and settings.onlyBosses ~= true
     local hidden = false
     if not CanShowHud() then
         hidden = true
@@ -470,7 +681,7 @@ local function UpdateVisibility()
         hidden = true
     elseif settings.onlyBosses == true and not isTrackingBoss and not (lastCombatSummary and lastCombatSummary.durationMs and lastCombatSummary.durationMs > 0) then
         hidden = true
-    elseif not hasVisibleData then
+    elseif not hasVisibleData and not allowIdle then
         hidden = true
     end
 
@@ -500,7 +711,10 @@ local function UpdateVisuals(state, remainingMs, targetName, targetIsBoss, sourc
         timerLabel:SetText(FormatSeconds(remainingMs))
     end
 
-    if targetName and targetName ~= "" then
+    local panelCounterText = BuildPanelCounterText()
+    if panelCounterText then
+        targetLabel:SetText(panelCounterText)
+    elseif targetName and targetName ~= "" then
         targetLabel:SetText(targetName)
     else
         targetLabel:SetText(GetString(EZOM_OFF_BALANCE_NO_TARGET))
@@ -607,6 +821,24 @@ local function GetBossFocusState(nowMs)
     return activeState, activeEndTime, activeName, activeState ~= STATE_FREE, activeSource
 end
 
+function Tracker.IsUnitOffBalance(targetUnitId)
+    if targetUnitId and bossTimers[targetUnitId] and bossTimers[targetUnitId].state == STATE_ACTIVE then
+        return true
+    end
+    return currentState == STATE_ACTIVE
+end
+
+local function OnLibCombatDamageOut(_, _timems, _result, _sourceUnitId, targetUnitId, _abilityId, hitValue)
+    if not isCombat or not damageTracker then return end
+    damageTracker:AddDamage(hitValue, targetUnitId)
+end
+
+local function RegisterLibCombatDamage()
+    if damageCallbackRegistered or not HasLibCombatDamage() then return end
+    LibCombat:RegisterCallbackType(LIBCOMBAT_EVENT_DAMAGE_OUT, OnLibCombatDamageOut, DAMAGE_CALLBACK_NAME)
+    damageCallbackRegistered = true
+end
+
 local function OnUpdate()
     local settings = GetSettings() or {}
     local nowMs = GetNowMs()
@@ -624,7 +856,19 @@ local function OnUpdate()
         targetIsBoss = IsTargetBossOrDummy("reticleover", targetName)
         state, endTime = ScanUnit("reticleover")
         source = SOURCE_DIRECT
-        SetMemory(state, endTime, targetName, targetIsBoss, source)
+
+        if state == STATE_FREE then
+            AdvanceSyntheticState(memory, nowMs)
+            if memory.state ~= STATE_FREE and SameUnitName(memory.targetName, targetName) then
+                state = memory.state
+                endTime = memory.endTime
+                source = memory.source or SOURCE_MEMORY
+            else
+                SetMemory(STATE_FREE, 0, targetName, targetIsBoss, SOURCE_DIRECT)
+            end
+        else
+            SetMemory(state, endTime, targetName, targetIsBoss, source)
+        end
     else
         AdvanceSyntheticState(memory, nowMs)
         source = memory.source or SOURCE_NONE
@@ -632,7 +876,16 @@ local function OnUpdate()
 
     if settings.bossFocus == true then
         if reticleActive and targetIsBoss then
-            -- Reticle boss has priority.
+            if state == STATE_FREE then
+                local bossState, bossEndTime, bossName, hasBossState, bossSource = GetBossFocusState(nowMs)
+                if hasBossState then
+                    state = bossState
+                    endTime = bossEndTime
+                    targetName = bossName ~= "" and bossName or targetName
+                    targetIsBoss = true
+                    source = bossSource
+                end
+            end
         else
             local bossState, bossEndTime, bossName, hasBossState, bossSource = GetBossFocusState(nowMs)
             if hasBossState then
@@ -657,7 +910,7 @@ local function OnUpdate()
     end
 
     isTrackingBoss = targetIsBoss
-    hasVisibleData = reticleActive or targetIsBoss or state ~= STATE_FREE
+    hasVisibleData = reticleActive or targetIsBoss or state ~= STATE_FREE or (settings.onlyCombat == false and settings.onlyBosses ~= true)
     currentState = state
     UpdateVisuals(state, math.max(0, endTime - nowMs), targetName, targetIsBoss, source)
     UpdateVisibility()
@@ -695,10 +948,15 @@ local function RefreshUpdateRegistration()
     local settings = GetSettings() or {}
     if IsHudUnlocked() or forceShow or (IsEnabled() and (settings.onlyCombat == false or isCombat)) then
         RegisterUpdate()
+        if forceShow then
+            UpdateVisibility()
+        else
+            OnUpdate()
+        end
     else
         UnregisterUpdate()
+        UpdateVisibility()
     end
-    UpdateVisibility()
 end
 
 local function OnCombatState(_, inCombat)
@@ -714,9 +972,19 @@ local function OnCombatState(_, inCombat)
             statsTracker:Start(SummaryNowMs())
             RegisterStatsUpdate()
         end
+        if damageTracker then
+            damageTracker:Start()
+        end
     else
+        local exploiterSummary
+        if damageTracker then
+            exploiterSummary = damageTracker:Finish()
+        end
         if statsTracker then
             lastCombatSummary = statsTracker:Finish(SummaryNowMs())
+            if lastCombatSummary then
+                lastCombatSummary.exploiter = exploiterSummary
+            end
         end
         UnregisterStatsUpdate()
         bossTimers = {}
@@ -746,6 +1014,9 @@ local function OnEffectChanged(_, changeType, _, effectName, unitTag, _, endTime
 
     local endTimeMs = (endTime or 0) * 1000
     local cleanName = CleanUnitName(unitName)
+    if cleanName == "" and unitTag and type(DoesUnitExist) == "function" and DoesUnitExist(unitTag) then
+        cleanName = CleanUnitName(GetUnitName(unitTag))
+    end
     DebugEffect("effect-event", unitTag, cleanName, state, effectName, abilityId, endTimeMs, changeType)
 
     if isBossEvent and unitId then
@@ -845,11 +1116,13 @@ function Tracker.ApplySettings()
     ApplyPosition()
     SetMoveMode(IsHudUnlocked())
     ApplyStyle()
+    RegisterLibCombatDamage()
     RefreshUpdateRegistration()
 end
 
 function Tracker.Init()
     EnsureControl()
+    RegisterLibCombatDamage()
     if EZOMetter_CombatSummary then
         statsTracker = EZOMetter_CombatSummary.CreateUptimeTracker({
             toleranceMs = SUMMARY_TOLERANCE_MS,
@@ -880,6 +1153,7 @@ function Tracker.Init()
             end,
         })
     end
+    damageTracker = CreateDamageTracker()
 
     if EZOMetter_VisualContext and EZOMetter_VisualContext.RegisterRefresh then
         EZOMetter_VisualContext.RegisterRefresh(UpdateVisibility)

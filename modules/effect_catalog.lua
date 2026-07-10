@@ -8,62 +8,104 @@ Effects.ROLE_DD = "dd"
 Effects.ROLE_HEALER = "healer"
 Effects.ROLE_TANK = "tank"
 
-Effects.RequiredByRole = {
-    dd = {
-        {
-            key = "major_brutality",
-            nameString = "EZOM_EFFECT_MAJOR_BRUTALITY",
-            abilityIds = { 61665 },
+Effects.Definitions = {
+    major_brutality = {
+        key = "major_brutality",
+        nameString = "EZOM_EFFECT_MAJOR_BRUTALITY",
+        abilityIds = { 61665 },
+    },
+    major_sorcery = {
+        key = "major_sorcery",
+        nameString = "EZOM_EFFECT_MAJOR_SORCERY",
+        abilityIds = { 61687 },
+    },
+    major_savagery = {
+        key = "major_savagery",
+        nameString = "EZOM_EFFECT_MAJOR_SAVAGERY",
+        abilityIds = { 61667 },
+    },
+    major_prophecy = {
+        key = "major_prophecy",
+        nameString = "EZOM_EFFECT_MAJOR_PROPHECY",
+        abilityIds = { 61689 },
+    },
+    banner_bearer = {
+        key = "banner_bearer",
+        nameString = "EZOM_EFFECT_BANNER_BEARER",
+        abilityIds = { 217699, 230289 },
+        buffAbilityIds = {
+            227066,
+            227067,
+            227069,
+            227003,
+            227004,
+            227007,
+            227008,
+            227009,
+            227070,
+            227071,
+            227073,
+            227075,
+            227082,
+            227085,
+            227086,
+            227087,
+            227088,
+            227089,
+            217704,
+            217705,
+            217706,
         },
-        {
-            key = "major_sorcery",
-            nameString = "EZOM_EFFECT_MAJOR_SORCERY",
-            abilityIds = { 61687 },
-        },
-        {
-            key = "major_savagery",
-            nameString = "EZOM_EFFECT_MAJOR_SAVAGERY",
-            abilityIds = { 61667 },
-        },
-        {
-            key = "major_prophecy",
-            nameString = "EZOM_EFFECT_MAJOR_PROPHECY",
-            abilityIds = { 61689 },
-        },
-        {
-            key = "banner_bearer",
-            nameString = "EZOM_EFFECT_BANNER_BEARER",
-            abilityIds = { 217699 },
-            requiresSlotted = true,
-            aliases = {
-                "Banner Bearer",
-                "Binding Banner",
-                "Fiery Banner",
-                "Fortifying Banner",
-                "Magical Banner",
-                "Restorative Banner",
-                "Shattering Banner",
-                "Shocking Banner",
-                "Sundering Banner",
-                "Portaestandarte",
-                "Estandarte ardiente",
-                "Estandarte demoledor",
-                "Estandarte electrizante",
-                "Estandarte escindidor",
-                "Estandarte fortalecedor",
-                "Estandarte magico",
-                "Estandarte mágico",
-                "Estandarte restaurador",
-                "Estandarte vinculante",
-            },
+        requiresSlotted = true,
+        requiresCastByPlayer = true,
+        aliases = {
+            "Banner Bearer",
+            "Binding Banner",
+            "Fiery Banner",
+            "Fortifying Banner",
+            "Magical Banner",
+            "Restorative Banner",
+            "Shattering Banner",
+            "Shocking Banner",
+            "Sundering Banner",
+            "Portaestandarte",
+            "Estandarte ardiente",
+            "Estandarte demoledor",
+            "Estandarte electrizante",
+            "Estandarte escindidor",
+            "Estandarte fortalecedor",
+            "Estandarte magico",
+            "Estandarte mágico",
+            "Estandarte restaurador",
+            "Estandarte vinculante",
         },
     },
-    healer = {},
+}
+
+Effects.RequiredKeysByRole = {
+    dd = {
+        "major_brutality",
+        "major_sorcery",
+        "major_savagery",
+        "major_prophecy",
+        "banner_bearer",
+    },
+    healer = {
+        "major_sorcery",
+        "major_prophecy",
+    },
     tank = {},
 }
 
 function Effects.GetRequiredForRole(role)
-    return Effects.RequiredByRole[tostring(role or Effects.ROLE_DD)] or {}
+    local keys = Effects.RequiredKeysByRole[tostring(role or Effects.ROLE_DD)] or {}
+    local effects = {}
+    for _, key in ipairs(keys) do
+        if Effects.Definitions[key] then
+            table.insert(effects, Effects.Definitions[key])
+        end
+    end
+    return effects
 end
 
 function Effects.GetPrimaryAbilityId(effect)
@@ -128,6 +170,29 @@ function Effects.Matches(effect, abilityId, effectName)
     if normalizedName == "" then return false end
 
     return GetLocalizedNames(effect)[normalizedName] == true
+end
+
+function Effects.MatchesBuffAbility(effect, abilityId, effectName)
+    if not effect then return false end
+
+    if abilityId and effect.buffAbilityIds then
+        for _, effectAbilityId in ipairs(effect.buffAbilityIds) do
+            if effectAbilityId == abilityId then
+                return true
+            end
+        end
+    end
+
+    return Effects.Matches(effect, abilityId, effectName)
+end
+
+function Effects.MatchesBuff(effect, abilityId, effectName, castByPlayer)
+    if not effect then return false end
+    if effect.requiresCastByPlayer == true and castByPlayer ~= true then
+        return false
+    end
+
+    return Effects.MatchesBuffAbility(effect, abilityId, effectName)
 end
 
 local function GetHotbarCategories()

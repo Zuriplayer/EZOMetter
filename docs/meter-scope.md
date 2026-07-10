@@ -9,7 +9,8 @@ La primera iteracion debe orientarse a DD y empezar por senales locales seguras:
 - avisar cuando falten buffs propios basicos de DD;
 - mostrar Off Balance en un tracker separado de objetivo/boss, sin mezclarlo con buffs propios;
 - preparar perfiles de rol para `DD`, `Healer` y `Tank`;
-- dejar `Healer` y `Tank` sin checklist activo hasta definir sus metricas.
+- mantener `Tank` sin checklist activo hasta definir sus metricas;
+- iniciar `Healer` con imprescindibles propios basicos y una lectura HPS observada mediante LibCombat.
 
 La primera iteracion de medidor de combate debe ser un medidor local ligero:
 
@@ -20,6 +21,46 @@ La primera iteracion de medidor de combate debe ser un medidor local ligero:
 - conservar el addon funcional aunque no haya otros addons EZO instalados.
 
 El MVP no debe intentar resolver todavia comparativas completas de grupo, rankings, historial profundo ni UI persistente compleja.
+
+## Alcance soporte Tank/Healer y Minors
+
+La siguiente iteracion de soporte debe ampliar el addon sin mezclar responsabilidades:
+
+- revisar tambien el flujo DD si se detecta que falta algun imprescindible;
+- anadir catalogo y UI para buffs/debuffs relevantes de `Tank`;
+- anadir catalogo y UI para buffs relevantes de `Healer`, separando los propios imprescindibles de la cobertura de grupo;
+- anadir un panel vertical independiente de `Minor` configurables;
+- conservar todos los paneles como HUD/HUD_UI, movibles con el desbloqueo global;
+- reutilizar `modules/combat_summary.lua` para resumenes y tooltips.
+
+La ventana principal especifica de cada rol debe contener solo imprescindibles de ese rol y, especialmente, efectos que dependen del propio jugador. No debe llenarse con buffs que normalmente aporta el grupo. Si un efecto es importante pero lo aporta otro jugador, debe vivir en un panel de grupo/minors/target o quedar como opcion configurada, no como falta principal del rol.
+
+La implementacion debe separar el origen de cada senal:
+
+- `player`: buffs propios del jugador;
+- `group`: cobertura sobre `player` y `group1..groupN`;
+- `target/boss`: debuffs o estados aplicados al objetivo/boss;
+- `configured`: efectos opcionales que solo se evaluan si el usuario los activa en LAM.
+
+Para `Tank`, esta iteracion se centra en efectos propios defensivos y debuffs de boss ligados a su labor directa. No debe exigir sets unicos, buffs de healer ni buffs genericos que normalmente aporta el grupo. Los debuffs de boss no se deben tratar como buffs propios.
+
+Para `Healer`, esta iteracion se centra en imprescindibles que el healer debe aportar o mantener directamente y en HPS observado. La cobertura de grupo puede mostrarse en panel separado o tooltip, pero la alerta principal no debe convertirse en una lista de todos los buffs buenos que pueda recibir el grupo. No debe exigir sets unicos ni ultimates puntuales.
+
+El panel vertical de `Minor` debe ser discreto y configurable:
+
+- ventana propia, movible, por defecto alineada al lado derecho;
+- visibilidad individual por efecto en LAM;
+- pocos efectos visibles por defecto;
+- lectura actual compacta y resumen al pasar el cursor si hay datos de combate.
+
+Quedan fuera de esta iteracion:
+
+- sets unicos de soporte como Pillager's Profit, Powerful Assault, Roaring Opportunist, Alkosh, Crimson Oath o Turning Tide;
+- `Aggressive Horn`, `War Horn` y otros ultimates puntuales de raid timing;
+- rankings, comparativas completas de grupo o sincronizacion entre clientes;
+- automatizar recomendaciones de gear, CP o rotacion.
+
+Los sets unicos de soporte se implementaran mas adelante en un panel independiente del rol. Ese panel debe detectar si el set esta equipado y solo entonces mostrar estado, uptime, cooldown o proc.
 
 ## Fuera de alcance inicial
 

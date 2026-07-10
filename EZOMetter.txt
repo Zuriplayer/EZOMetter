@@ -19,12 +19,16 @@ modules/meter_session.lua
 modules/visual_context.lua
 modules/combat_summary.lua
 modules/equipment_sets.lua
+modules/role_detector.lua
+modules/champion_points.lua
 modules/dd_effective_stats.lua
 modules/buff_alert.lua
 modules/off_balance_tracker.lua
 modules/coral_tracker.lua
 modules/dd_stats_tracker.lua
+modules/observed_metric_panel.lua
 modules/observed_damage_tracker.lua
+modules/observed_healing_tracker.lua
 modules/ability_tracker.lua
 modules/combat_reporter.lua
 modules/saved_vars.lua

@@ -1,55 +1,66 @@
 # EZOMetter
 
-Addon independiente de la familia EZO preparado como base para un futuro medidor.
+EZOMetter is a beta ESO addon in the EZO family focused on practical combat visibility for PvE players, especially DD-oriented self checks and target-state tracking.
 
-El objetivo de este repositorio inicial es dejar estructura, versionado, idiomas, empaquetado, GitHub Actions y publicacion Discord en modo controlado, sin implementar todavia logica de medicion que dependa de APIs de ESO no verificadas.
+## Status
 
-## Filosofia
+Public beta. The addon is usable, but combat APIs and derived statistics are still being validated in real encounters. Reports should be treated as helper data, not as a replacement for full combat log analysis.
 
-- Addon pequeno y revisable.
-- Sin input global.
-- Sin keybindings iniciales.
-- Sin dependencia directa de otros addons EZO.
-- Textos visibles localizados en ingles y espanol.
-- Scripts de empaquetado y publicacion compatibles con la familia EZO.
-- Publicacion a Discord solo bajo orden explicita.
+## Requirements
 
-## Estructura
+- The Elder Scrolls Online current live client.
+- `LibAddonMenu-2.0` is required for settings.
+- Optional libraries:
+  - `LibCombat` enables observed damage/healing panels and damage-weighted summaries.
+  - `LibChatMessage`, `LibDebugLogger`, and `DebugLogViewer` improve chat/debug output.
 
-- `EZOMetter.txt`: manifest del addon.
-- `EZOMetter.lua`: inicializacion.
-- `modules/core.lua`: constantes publicas.
-- `modules/effect_catalog.lua`: catalogo inicial de efectos por rol.
-- `modules/meter_session.lua`: estado y calculos puros de una sesion local.
-- `modules/visual_context.lua`: guard compartido para mostrar HUDs solo en HUD/HUD_UI.
-- `modules/combat_summary.lua`: utilidades compartidas para resumenes del ultimo combate y tooltips HUD.
-- `modules/equipment_sets.lua`: lectura compartida de sets equipados.
-- `modules/buff_alert.lua`: aviso movible para buffs propios requeridos.
-- `modules/off_balance_tracker.lua`: tracker separado de Off Balance en target/boss, con auditoria opcional en Debug Viewer.
-- `modules/coral_tracker.lua`: tracker separado para el bonus estimado de Coral Riptide.
-- `modules/dd_stats_tracker.lua`: tracker separado para stats ofensivos DD dinamicos y resumen min/media/max de combate.
-- `modules/saved_vars.lua`: defaults y SavedVariables.
-- `modules/i18n.lua`: aplicacion de idiomas.
-- `modules/debug.lua`: salida tecnica opcional.
-- `modules/menu.lua`: panel LibAddonMenu.
-- `lang/en.lua`: textos en ingles.
-- `lang/es.lua`: textos en espanol.
-- `docs/architecture.md`: decisiones tecnicas iniciales.
-- `docs/meter-scope.md`: propuesta de alcance para la primera iteracion del medidor.
-- `docs/api-research.md`: verificacion pendiente de APIs ESO para el medidor.
-- `docs/discord.md`: politica de Discord.
-- `docs/integration-with-ezotools.md`: integracion futura opcional.
+## Installation
 
-## Desarrollo
+1. Download or clone the repository.
+2. Copy the `EZOMetter` folder into:
+
+```text
+Documents/Elder Scrolls Online/live/AddOns/
+```
+
+3. Enable `EZOMetter` and required libraries from the ESO Add-Ons screen.
+4. Configure panels from Settings > Addons > EZOMetter.
+
+For development builds, the package script creates `dist/EZOMetter_v0.1.18.zip`.
+
+## Main Features
+
+- Movable HUD alerts for missing role/self buffs.
+- Separate Off Balance tracker with real uptime and cooldown/cycle reporting.
+- Exploiter CP detection and estimated value from damage done during real Off Balance.
+- Coral Riptide bonus panel and last-combat summary.
+- DD stats panel for damage, critical chance, penetration, and critical damage with own/effective/max calculated values.
+- Observed DPS/HPS panels through optional `LibCombat`.
+- Fatecarver channel timing helper.
+- One optional informational report after combat.
+
+## Safety Limits
+
+- The addon does not automate combat, rotations, inputs, movement, targeting, or keybinds.
+- HUD controls are intended to appear only in normal HUD/HUD UI scenes.
+- Group damage/healing values are client-observed and depend on events received by the local client.
+- Exploiter value is estimated; ESO does not expose a separate native event for damage added by that CP star.
+- Discord publication scripts are present for project workflows, but they must not be run without explicit authorization.
+
+## Test Notes
+
+Before publishing a beta build, run:
 
 ```powershell
 .\tools\bump-version.ps1 -Check
-.\scripts\ezo\build-addon-package.ps1 -Force
 git diff --check
+pwsh -NoProfile -File .\scripts\ezo\build-addon-package.ps1 -Force
 ```
 
-El remoto previsto es:
+Recommended in-game checks:
 
-```text
-https://github.com/Zuriplayer/EZOMetter.git
-```
+- `/reloadui` with all panels locked and unlocked.
+- HUD visibility in combat, out of combat, menus, map, crafting, Champion Points, and Tales of Tribute.
+- Dummy parse with and without Off Balance/Exploiter.
+- DD role buff alerts, Coral Riptide equipped/not equipped, and Fatecarver channel behavior.
+- `LibCombat` installed and missing.
