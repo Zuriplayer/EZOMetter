@@ -1,66 +1,157 @@
 # EZOMetter
 
-EZOMetter is a beta ESO addon in the EZO family focused on practical combat visibility for PvE players, especially DD-oriented self checks and target-state tracking.
+Combat visibility HUD for *The Elder Scrolls Online*, focused on role self-checks, DD-oriented target state tracking, and lightweight post-combat summaries.
+
+Prefer Spanish? Read the [Spanish README](README.es.md).
+
+For support, bug reports, and suggestions, join Discord: https://discord.gg/ekw8zUAcRm
 
 ## Status
 
-Public beta. The addon is usable, but combat APIs and derived statistics are still being validated in real encounters. Reports should be treated as helper data, not as a replacement for full combat log analysis.
+EZOMetter is in public beta. The addon is usable, but several combat metrics depend on ESO client events, visible target state, and optional libraries. Treat the numbers as practical helper information, not as a full replacement for dedicated combat log analysis.
+
+Current version: **0.1.18**.
 
 ## Requirements
 
-- The Elder Scrolls Online current live client.
-- `LibAddonMenu-2.0` is required for settings.
+- *The Elder Scrolls Online* for PC.
+- [LibAddonMenu-2.0](https://www.esoui.com/downloads/info7-LibAddonMenu.html) is required for the settings panel.
 - Optional libraries:
-  - `LibCombat` enables observed damage/healing panels and damage-weighted summaries.
-  - `LibChatMessage`, `LibDebugLogger`, and `DebugLogViewer` improve chat/debug output.
+  - `LibCombat` enables observed damage/healing panels, damage-weighted DD stat summaries, and Off Balance damage attribution.
+  - `LibChatMessage` improves addon chat output.
+  - `LibDebugLogger` and `DebugLogViewer` are used for technical debug logs and the optional post-combat report output.
 
 ## Installation
 
-1. Download or clone the repository.
-2. Copy the `EZOMetter` folder into:
+1. Download the latest beta from GitHub or clone this repository.
+2. Copy the `EZOMetter` folder into your ESO AddOns folder:
 
 ```text
 Documents/Elder Scrolls Online/live/AddOns/
 ```
 
-3. Enable `EZOMetter` and required libraries from the ESO Add-Ons screen.
-4. Configure panels from Settings > Addons > EZOMetter.
-
-For development builds, the package script creates `dist/EZOMetter_v0.1.18.zip`.
+3. Install and enable `LibAddonMenu-2.0`.
+4. Enable `EZOMetter` from the in-game Add-Ons screen.
+5. Configure the addon from Settings > Addons > EZOMetter.
 
 ## Main Features
 
-- Movable HUD alerts for missing role/self buffs.
-- Separate Off Balance tracker with real uptime and cooldown/cycle reporting.
-- Exploiter CP detection and estimated value from damage done during real Off Balance.
-- Coral Riptide bonus panel and last-combat summary.
-- DD stats panel for damage, critical chance, penetration, and critical damage with own/effective/max calculated values.
-- Observed DPS/HPS panels through optional `LibCombat`.
-- Fatecarver channel timing helper.
-- One optional informational report after combat.
+### General Settings
+
+- English and Spanish localization, with automatic client-language detection or manual language selection.
+- Manual role profile selection for DD, Healer, or Tank.
+- Optional automatic role detection based on equipped weapons and slotted skills. It uses conservative tank/healer scoring and falls back to DD.
+- One global HUD unlock option that shows movable EZOMetter panels in normal HUD/HUD UI scenes.
+- Optional post-combat report with date, character, content type, zone, boss/trash context, difficulty when available, and sections from active trackers.
+- Debug mode for technical output through `LibDebugLogger`/`DebugLogViewer` when installed.
+
+### Role Buff Alerts
+
+- Movable alert for missing required self buffs for the selected role.
+- DD currently checks Major Brutality, Major Sorcery, Major Savagery, Major Prophecy, and Banner Bearer when a Banner skill is slotted.
+- Healer currently checks Major Sorcery and Major Prophecy.
+- Tank currently has no required self-buff list.
+- Configurable alert background opacity and border.
+- The alert records last-combat uptime for required checks when combat reporting is enabled.
+
+### Off Balance Tracker
+
+- Separate movable Off Balance HUD for the current target or tracked boss.
+- Tracks real Off Balance separately from the estimated Off Balance cooldown/cycle.
+- Boss focus can keep tracking known boss state when you briefly look away.
+- Optional boss-only and combat-only visibility.
+- Configurable background opacity, border, and colors for ready, active, and cooldown states.
+- Optional pulse when Off Balance starts.
+- Debug scan for current target buffs and Off Balance events.
+- Detects the Exploiter Champion Point star when available, checks whether it is slotted, reads points spent, and estimates its value from damage done during real Off Balance.
+- The Exploiter estimate is damage-based; ESO does not expose a separate native event for "damage added by Exploiter".
+
+### Coral Riptide Tracker
+
+- Separate movable Coral Riptide panel.
+- Detects worn Coral Riptide or Perfected Coral Riptide pieces by set name matching and treats the bonus as active at 5 pieces.
+- Estimates the damage bonus from missing stamina, up to +600 at or below 50% stamina.
+- Shows state bands for cap, OK, medium, low, bad, and inactive.
+- Configurable size, background opacity, border, DD-only visibility, and combat-only visibility.
+- Optional equipment debug scan for set names and IDs.
+- Last-combat summary includes estimated average bonus and time in useful/bad/inactive bands.
+
+### DD Stats
+
+- Separate movable DD stats panel for:
+  - highest Weapon/Spell Damage,
+  - Critical Chance,
+  - Penetration,
+  - Critical Damage.
+- Shows own, effective, and max calculated values where applicable.
+- Effective penetration and critical damage include supported assumptions and detected target debuffs.
+- Configurable thresholds for offensive damage, critical chance, self penetration, critical damage, target resistance, Crusher, Alkosh, and Tremorscale.
+- Configurable background opacity, border, DD-only visibility, and combat-only visibility.
+- Last-combat tooltip/report includes time-based and damage-weighted summaries when data is available.
+
+### Observed Damage and Healing
+
+- Optional `LibCombat` panels for observed outgoing damage and healing.
+- Observed Damage shows current DPS, average DPS, observed group share, and boss damage/share when available.
+- Observed Healing shows current HPS, average HPS, and observed group healing share when available.
+- Both panels support combat-only visibility, background opacity, border, and role-based visibility.
+- Group totals are client-observed values and depend on events received by the local client.
+
+### Fatecarver Helper
+
+- Horizontal Fatecarver channel bar for Arcanist Fatecarver, Exhausting Fatecarver, and Pragmatic Fatecarver.
+- Detects Fatecarver on either action bar.
+- Tracks active channel timing from combat events and player effects.
+- Configurable cancel-window warning in milliseconds, background opacity, and border.
+- Last-combat summary reports casts, completed channels, OK cancels, early stops, and early-stop timing.
 
 ## Safety Limits
 
-- The addon does not automate combat, rotations, inputs, movement, targeting, or keybinds.
-- HUD controls are intended to appear only in normal HUD/HUD UI scenes.
-- Group damage/healing values are client-observed and depend on events received by the local client.
-- Exploiter value is estimated; ESO does not expose a separate native event for damage added by that CP star.
-- Discord publication scripts are present for project workflows, but they must not be run without explicit authorization.
+- EZOMetter does not automate combat, rotations, ability use, movement, targeting, blocking, equipment changes, Champion Point changes, or keybinds.
+- It does not intercept global input.
+- It does not replace vanilla UI elements.
+- HUD elements are designed to appear only in normal HUD/HUD UI scenes and not in menus such as inventory, map, crafting, Champion Points, or Tales of Tribute.
+- Observed group damage/healing and Exploiter value are estimates based on events available to the client.
+- The addon includes Discord publication scripts for project maintenance, but nothing is posted to Discord without explicit authorization.
 
-## Test Notes
+## Recommended Testing
 
-Before publishing a beta build, run:
+Before committing code changes:
 
 ```powershell
 .\tools\bump-version.ps1 -Check
 git diff --check
-pwsh -NoProfile -File .\scripts\ezo\build-addon-package.ps1 -Force
 ```
 
 Recommended in-game checks:
 
-- `/reloadui` with all panels locked and unlocked.
-- HUD visibility in combat, out of combat, menus, map, crafting, Champion Points, and Tales of Tribute.
-- Dummy parse with and without Off Balance/Exploiter.
-- DD role buff alerts, Coral Riptide equipped/not equipped, and Fatecarver channel behavior.
-- `LibCombat` installed and missing.
+- `/reloadui` with panels locked and unlocked.
+- Settings panel opens through LibAddonMenu.
+- English/Spanish language selection and automatic language mode.
+- HUD visibility in combat, out of combat, inventory, map, crafting, Champion Points, Tales of Tribute, and addon settings.
+- DD role buff alerts with and without required buffs.
+- Banner Bearer alert when a Banner skill is slotted and when no Banner skill is slotted.
+- Off Balance on dummy/boss, including real active time, cooldown/cycle, and Exploiter reporting.
+- Coral Riptide with fewer than 5 pieces, 5 pieces, and different stamina levels.
+- DD Stats own/effective/max values and tooltip after combat.
+- Observed Damage/Healing with `LibCombat` installed and with `LibCombat` missing.
+- Fatecarver channel start, completion, early stop, and warning color.
+
+## Reporting Issues
+
+Please include:
+
+- EZOMetter version.
+- ESO client language.
+- Installed optional libraries.
+- Character role/profile.
+- Steps to reproduce the issue.
+- Screenshots or DebugLogViewer output when relevant.
+
+Support, bug reports, and suggestions: https://discord.gg/ekw8zUAcRm
+
+## License
+
+MIT. See [LICENSE](LICENSE).
+
+Developed and maintained by Zuriplayer.
