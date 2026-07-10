@@ -2,6 +2,7 @@
 param(
     [string] $ConfigPath,
     [string] $WebhookUrl = $env:EZO_CODEX_DOWNLOADS,
+    [string] $ExpectedChannelId = $env:EZO_CODEX_DOWNLOADS_CHANNEL_ID,
     [string] $Note = "Clean addon ZIP attached.",
     [switch] $DryRun,
     [switch] $Force
@@ -37,4 +38,6 @@ $description = @(
     -Description $description `
     -Color 3066993 `
     -FilePath $zipPath `
+    -ExpectedChannelId $ExpectedChannelId `
+    -ChannelName "downloads" `
     -DryRun:$DryRun

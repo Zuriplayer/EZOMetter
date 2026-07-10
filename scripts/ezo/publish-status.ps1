@@ -3,6 +3,8 @@ param(
     [string] $ConfigPath,
     [string] $WebhookUrl = $env:EZO_CODEX_STATUS,
     [string] $CodexLogWebhookUrl = $env:CODEX_LOG,
+    [string] $ExpectedChannelId = $env:EZO_CODEX_STATUS_CHANNEL_ID,
+    [string] $CodexLogExpectedChannelId = $env:CODEX_LOG_CHANNEL_ID,
     [switch] $PublishCodexLog,
     [switch] $DryRun
 )
@@ -32,6 +34,8 @@ $description = @(
     -Title "EZO addon status: $($addon.name)" `
     -Description $description `
     -Color 3447295 `
+    -ExpectedChannelId $ExpectedChannelId `
+    -ChannelName "addons-status" `
     -DryRun:$DryRun
 
 if ($PublishCodexLog) {
@@ -40,5 +44,7 @@ if ($PublishCodexLog) {
         -Title "Codex log: status published for $($addon.name)" `
         -Description $description `
         -Color 10181046 `
+        -ExpectedChannelId $CodexLogExpectedChannelId `
+        -ChannelName "codex-log" `
         -DryRun:$DryRun
 }

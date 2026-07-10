@@ -48,9 +48,13 @@ jobs:
         shell: pwsh
         env:
           EZO_CODEX_RELEASES: ${{ secrets.EZO_CODEX_RELEASES }}
+          EZO_CODEX_RELEASES_CHANNEL_ID: ${{ vars.EZO_CODEX_RELEASES_CHANNEL_ID }}
           EZO_CODEX_DOWNLOADS: ${{ secrets.EZO_CODEX_DOWNLOADS }}
+          EZO_CODEX_DOWNLOADS_CHANNEL_ID: ${{ vars.EZO_CODEX_DOWNLOADS_CHANNEL_ID }}
           EZO_CODEX_ANNOUNCER: ${{ secrets.EZO_CODEX_ANNOUNCER }}
+          EZO_CODEX_ANNOUNCER_CHANNEL_ID: ${{ vars.EZO_CODEX_ANNOUNCER_CHANNEL_ID }}
           CODEX_LOG: ${{ secrets.CODEX_LOG }}
+          CODEX_LOG_CHANNEL_ID: ${{ vars.CODEX_LOG_CHANNEL_ID }}
           EZO_RELEASE_NOTE: ${{ inputs.note }}
           EZO_ANNOUNCEMENT_NOTE: ${{ inputs.announcement_note }}
           EZO_PUBLISH_DOWNLOAD: ${{ inputs.publish_download }}

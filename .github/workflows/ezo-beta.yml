@@ -34,7 +34,9 @@ jobs:
         shell: pwsh
         env:
           EZO_CODEX_BETA_BUILDS: ${{ secrets.EZO_CODEX_BETA_BUILDS }}
+          EZO_CODEX_BETA_BUILDS_CHANNEL_ID: ${{ vars.EZO_CODEX_BETA_BUILDS_CHANNEL_ID }}
           CODEX_LOG: ${{ secrets.CODEX_LOG }}
+          CODEX_LOG_CHANNEL_ID: ${{ vars.CODEX_LOG_CHANNEL_ID }}
           EZO_BETA_NOTE: ${{ inputs.note }}
           EZO_CONFIRM_PUBLISH: ${{ inputs.confirm_publish }}
         run: |
@@ -45,6 +47,7 @@ jobs:
         shell: pwsh
         env:
           CODEX_LOG: ${{ secrets.CODEX_LOG }}
+          CODEX_LOG_CHANNEL_ID: ${{ vars.CODEX_LOG_CHANNEL_ID }}
           EZO_BETA_NOTE: ${{ inputs.note }}
           EZO_CONFIRM_PUBLISH: ${{ inputs.confirm_publish }}
         run: |

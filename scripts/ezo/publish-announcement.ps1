@@ -2,6 +2,7 @@
 param(
     [string] $ConfigPath,
     [string] $WebhookUrl = $env:EZO_CODEX_ANNOUNCER,
+    [string] $ExpectedChannelId = $env:EZO_CODEX_ANNOUNCER_CHANNEL_ID,
     [string] $Note = "Addon update available.",
     [switch] $DryRun
 )
@@ -30,4 +31,6 @@ $description = @(
     -Title "Announcement: $($addon.name) v$($addon.version)" `
     -Description $description `
     -Color 15844367 `
+    -ExpectedChannelId $ExpectedChannelId `
+    -ChannelName "announcements" `
     -DryRun:$DryRun

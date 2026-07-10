@@ -2,6 +2,7 @@
 param(
     [string] $ConfigPath,
     [string] $WebhookUrl = $env:EZO_CODEX_BETA_BUILDS,
+    [string] $ExpectedChannelId = $env:EZO_CODEX_BETA_BUILDS_CHANNEL_ID,
     [string] $Note = "Clean beta build generated from GitHub Actions.",
     [switch] $DryRun,
     [switch] $Force
@@ -37,4 +38,6 @@ $description = @(
     -Description $description `
     -Color 16753920 `
     -FilePath $zipPath `
+    -ExpectedChannelId $ExpectedChannelId `
+    -ChannelName "beta-builds" `
     -DryRun:$DryRun

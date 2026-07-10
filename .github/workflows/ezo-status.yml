@@ -19,7 +19,9 @@ jobs:
         shell: pwsh
         env:
           EZO_CODEX_STATUS: ${{ secrets.EZO_CODEX_STATUS }}
+          EZO_CODEX_STATUS_CHANNEL_ID: ${{ vars.EZO_CODEX_STATUS_CHANNEL_ID }}
           CODEX_LOG: ${{ secrets.CODEX_LOG }}
+          CODEX_LOG_CHANNEL_ID: ${{ vars.CODEX_LOG_CHANNEL_ID }}
           EZO_CONFIRM_PUBLISH: ${{ inputs.confirm_publish }}
         run: |
           $publish = "$env:EZO_CONFIRM_PUBLISH" -eq "PUBLISH"

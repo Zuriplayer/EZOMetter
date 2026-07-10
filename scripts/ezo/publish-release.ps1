@@ -5,6 +5,10 @@ param(
     [string] $DownloadWebhookUrl = $env:EZO_CODEX_DOWNLOADS,
     [string] $AnnouncementWebhookUrl = $env:EZO_CODEX_ANNOUNCER,
     [string] $CodexLogWebhookUrl = $env:CODEX_LOG,
+    [string] $ReleaseExpectedChannelId = $env:EZO_CODEX_RELEASES_CHANNEL_ID,
+    [string] $DownloadExpectedChannelId = $env:EZO_CODEX_DOWNLOADS_CHANNEL_ID,
+    [string] $AnnouncementExpectedChannelId = $env:EZO_CODEX_ANNOUNCER_CHANNEL_ID,
+    [string] $CodexLogExpectedChannelId = $env:CODEX_LOG_CHANNEL_ID,
     [string] $Note = "Release prepared from GitHub Actions.",
     [string] $AnnouncementNote,
     [switch] $PublishDownload,
@@ -47,20 +51,22 @@ $description = @(
     -Description $description `
     -Color 5763719 `
     -FilePath $zipPath `
+    -ExpectedChannelId $ReleaseExpectedChannelId `
+    -ChannelName "releases" `
     -DryRun:$DryRun
 
 if ($PublishDownload) {
     $downloadScript = Join-Path $PSScriptRoot "publish-download.ps1"
-    & $downloadScript -ConfigPath $ConfigPath -WebhookUrl $DownloadWebhookUrl -Note $Note -DryRun:$DryRun -Force:$Force
+    & $downloadScript -ConfigPath $ConfigPath -WebhookUrl $DownloadWebhookUrl -ExpectedChannelId $DownloadExpectedChannelId -Note $Note -DryRun:$DryRun -Force:$Force
 }
 
 if ($PublishAnnouncement) {
     $announcementScript = Join-Path $PSScriptRoot "publish-announcement.ps1"
     $effectiveAnnouncementNote = if ([string]::IsNullOrWhiteSpace($AnnouncementNote)) { $Note } else { $AnnouncementNote }
-    & $announcementScript -ConfigPath $ConfigPath -WebhookUrl $AnnouncementWebhookUrl -Note $effectiveAnnouncementNote -DryRun:$DryRun
+    & $announcementScript -ConfigPath $ConfigPath -WebhookUrl $AnnouncementWebhookUrl -ExpectedChannelId $AnnouncementExpectedChannelId -Note $effectiveAnnouncementNote -DryRun:$DryRun
 }
 
 if ($PublishCodexLog) {
     $codexLogScript = Join-Path $PSScriptRoot "publish-codex-log.ps1"
-    & $codexLogScript -ConfigPath $ConfigPath -WebhookUrl $CodexLogWebhookUrl -Action "Release workflow completed" -Note $Note -DryRun:$DryRun
+    & $codexLogScript -ConfigPath $ConfigPath -WebhookUrl $CodexLogWebhookUrl -ExpectedChannelId $CodexLogExpectedChannelId -Action "Release workflow completed" -Note $Note -DryRun:$DryRun
 }

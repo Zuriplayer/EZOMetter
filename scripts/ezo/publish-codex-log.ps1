@@ -2,6 +2,7 @@
 param(
     [string] $ConfigPath,
     [string] $WebhookUrl = $env:CODEX_LOG,
+    [string] $ExpectedChannelId = $env:CODEX_LOG_CHANNEL_ID,
     [string] $Action = "Automation event",
     [string] $Note = "",
     [switch] $DryRun
@@ -32,4 +33,6 @@ $description = @(
     -Title "Codex log: $($addon.name)" `
     -Description $description `
     -Color 10181046 `
+    -ExpectedChannelId $ExpectedChannelId `
+    -ChannelName "codex-log" `
     -DryRun:$DryRun
