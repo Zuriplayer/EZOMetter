@@ -2,9 +2,10 @@
 
 Combat visibility HUD for *The Elder Scrolls Online*, focused on role self-checks, DD-oriented target state tracking, and lightweight post-combat summaries.
 
-Prefer Spanish? Read the [Spanish README](README.es.md).
+¿Prefieres español? Lee el [README en español](README.es.md).
 
 For support, bug reports, and suggestions, join Discord: https://discord.gg/hV4nxtfP3a
+
 
 ## Status
 

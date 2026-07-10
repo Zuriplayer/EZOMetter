@@ -2,9 +2,10 @@
 
 HUD de visibilidad de combate para *The Elder Scrolls Online*, centrado en comprobaciones propias por rol, seguimiento de estados relevantes para DD y resúmenes ligeros post-combate.
 
-¿Prefieres inglés? Lee el [README en inglés](README.md).
+Prefer English? Read the [README in English](README.md).
 
 Para soporte, errores y sugerencias, únete a Discord: https://discord.gg/hV4nxtfP3a
+
 
 ## Estado
 
