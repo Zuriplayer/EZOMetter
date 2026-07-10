@@ -21,6 +21,10 @@ on:
         required: true
         type: boolean
         default: false
+      announcement_note:
+        description: Announcement note for Discord
+        required: false
+        default: ""
 
 jobs:
   publish-release:
@@ -48,6 +52,7 @@ jobs:
           EZO_CODEX_ANNOUNCER: ${{ secrets.EZO_CODEX_ANNOUNCER }}
           CODEX_LOG: ${{ secrets.CODEX_LOG }}
           EZO_RELEASE_NOTE: ${{ inputs.note }}
+          EZO_ANNOUNCEMENT_NOTE: ${{ inputs.announcement_note }}
           EZO_PUBLISH_DOWNLOAD: ${{ inputs.publish_download }}
           EZO_PUBLISH_ANNOUNCEMENT: ${{ inputs.publish_announcement }}
           EZO_CONFIRM_PUBLISH: ${{ inputs.confirm_publish }}
@@ -55,4 +60,4 @@ jobs:
           $publish = "$env:EZO_CONFIRM_PUBLISH" -eq "PUBLISH"
           $publishDownload = "$env:EZO_PUBLISH_DOWNLOAD" -eq "true"
           $publishAnnouncement = "$env:EZO_PUBLISH_ANNOUNCEMENT" -eq "true"
-          .\scripts\ezo\publish-release.ps1 -Force -Note $env:EZO_RELEASE_NOTE -PublishDownload:$publishDownload -PublishAnnouncement:$publishAnnouncement -PublishCodexLog -DryRun:(!$publish)
+          .\scripts\ezo\publish-release.ps1 -Force -Note $env:EZO_RELEASE_NOTE -AnnouncementNote $env:EZO_ANNOUNCEMENT_NOTE -PublishDownload:$publishDownload -PublishAnnouncement:$publishAnnouncement -PublishCodexLog -DryRun:(!$publish)

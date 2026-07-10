@@ -6,6 +6,7 @@ param(
     [string] $AnnouncementWebhookUrl = $env:EZO_CODEX_ANNOUNCER,
     [string] $CodexLogWebhookUrl = $env:CODEX_LOG,
     [string] $Note = "Release prepared from GitHub Actions.",
+    [string] $AnnouncementNote,
     [switch] $PublishDownload,
     [switch] $PublishAnnouncement,
     [switch] $PublishCodexLog,
@@ -55,7 +56,8 @@ if ($PublishDownload) {
 
 if ($PublishAnnouncement) {
     $announcementScript = Join-Path $PSScriptRoot "publish-announcement.ps1"
-    & $announcementScript -ConfigPath $ConfigPath -WebhookUrl $AnnouncementWebhookUrl -Note $Note -DryRun:$DryRun
+    $effectiveAnnouncementNote = if ([string]::IsNullOrWhiteSpace($AnnouncementNote)) { $Note } else { $AnnouncementNote }
+    & $announcementScript -ConfigPath $ConfigPath -WebhookUrl $AnnouncementWebhookUrl -Note $effectiveAnnouncementNote -DryRun:$DryRun
 }
 
 if ($PublishCodexLog) {
