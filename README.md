@@ -23,7 +23,7 @@ Current version: **0.1.18**.
 
 ## Installation
 
-1. Download the latest beta from GitHub or clone this repository.
+1. Clone this repository, or use a published ZIP package when one is available.
 2. Copy the `EZOMetter` folder into your ESO AddOns folder:
 
 ```text
