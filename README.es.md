@@ -4,7 +4,7 @@ HUD de visibilidad de combate para *The Elder Scrolls Online*, centrado en compr
 
 Prefer English? Read the [README in English](README.md).
 
-Para soporte, errores y sugerencias, únete a Discord: https://discord.gg/hV4nxtfP3a
+Para soporte, errores y sugerencias, únete a Discord: https://discord.gg/ekw8zUAcRm
 
 
 ## Estado
@@ -149,7 +149,7 @@ Incluye si es posible:
 - Pasos para reproducir el problema.
 - Capturas o salida de DebugLogViewer cuando sea relevante.
 
-Soporte, errores y sugerencias: https://discord.gg/hV4nxtfP3a
+Soporte, errores y sugerencias: https://discord.gg/ekw8zUAcRm
 ## Licencia
 
 MIT. Ver [LICENSE](LICENSE).

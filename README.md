@@ -4,7 +4,7 @@ Combat visibility HUD for *The Elder Scrolls Online*, focused on role self-check
 
 ¿Prefieres español? Lee el [README en español](README.es.md).
 
-For support, bug reports, and suggestions, join Discord: https://discord.gg/hV4nxtfP3a
+For support, bug reports, and suggestions, join Discord: https://discord.gg/ekw8zUAcRm
 
 
 ## Status
@@ -149,7 +149,7 @@ Please include:
 - Steps to reproduce the issue.
 - Screenshots or DebugLogViewer output when relevant.
 
-Support, bug reports, and suggestions: https://discord.gg/hV4nxtfP3a
+Support, bug reports, and suggestions: https://discord.gg/ekw8zUAcRm
 
 ## License
 
