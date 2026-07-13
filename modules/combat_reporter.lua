@@ -169,20 +169,22 @@ local function RefreshContextBoss(context)
 end
 
 local function LogInfo(message)
-    if LibDebugLogger then
-        local logger = LibDebugLogger(ADDON_NAME)
-        if logger and logger.Info then
+    local logger = nil
+    if EZOMetter and type(EZOMetter.GetDebugLogger) == "function" then
+        logger = EZOMetter.GetDebugLogger()
+    end
+
+    if logger and type(logger.Info) == "function" then
+        local ok = pcall(function()
             if logger.SetLogTracesOverride then
                 logger:SetLogTracesOverride(false)
             end
             logger:Info("%s", tostring(message))
-            return
-        end
+        end)
+        return ok == true
     end
 
-    if EZOMetter.Print then
-        EZOMetter.Print("|cFFFF75" .. tostring(message) .. "|r")
-    end
+    return false
 end
 
 local function CollectSections()
