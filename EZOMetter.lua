@@ -9,6 +9,7 @@ EZOM.LANGUAGE_INHERIT = LANGUAGE_INHERIT
 EZOM.LANGUAGE_AUTO = LANGUAGE_AUTO
 
 local languageCallbackRegistered = false
+local ezocoreRegistered = false
 
 local function Print(message)
     if LibChatMessage then
@@ -103,6 +104,32 @@ function EZOM.RegisterEZOCoreLanguageCallback()
     return languageCallbackRegistered
 end
 
+function EZOM.RegisterWithEZOCore()
+    if ezocoreRegistered
+        or not (EZOCore and type(EZOCore.RegisterAddon) == "function") then
+        return false
+    end
+
+    local ok, result = pcall(function()
+        return EZOCore:RegisterAddon({
+            id = "ezometter",
+            name = EZOM.ADDON_NAME or ADDON_NAME,
+            version = EZOM.ADDON_VERSION or "0.0.0",
+            addOnVersion = 10019,
+            apiVersion = 1,
+            capabilities = {
+                "combat.metrics",
+                "combat.observedPanels",
+                "family.language.consumer",
+                "family.settings.consumer",
+            },
+        })
+    end)
+
+    ezocoreRegistered = ok and result == true
+    return ezocoreRegistered
+end
+
 function EZOM:Initialize()
     if self.savedVars and self.savedVars.Init then
         self.savedVars.Init()
@@ -111,6 +138,7 @@ function EZOM:Initialize()
     local language = self.sv and self.sv.general and self.sv.general.language or EZOM.GetDefaultLanguage()
     EZOM.ApplyLanguagePreference(language)
     EZOM.RegisterEZOCoreLanguageCallback()
+    EZOM.RegisterWithEZOCore()
 
     if self.DebugLog then
         self.DebugLog(GetString(EZOM_DEBUG_SAVED_VARIABLES_LOADED))
