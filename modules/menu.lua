@@ -76,23 +76,27 @@ function EZOMetter_Menu.Init()
                     name = GetString(EZOM_OPTION_LANGUAGE),
                     tooltip = GetString(EZOM_OPTION_LANGUAGE_TOOLTIP),
                     choices = {
-                        GetString(EZOM_OPTION_LANGUAGE_INHERIT),
                         GetString(EZOM_OPTION_LANGUAGE_AUTO),
                         "English",
                         "Espanol",
                     },
                     choicesValues = {
-                        "inherit",
                         "auto",
                         "en",
                         "es",
                     },
                     getFunc = function()
-                        return EZOMetter.sv.general.language or EZOMetter.GetDefaultLanguage()
+                        local value = EZOMetter.sv.general.language or EZOMetter.GetDefaultLanguage()
+                        if value == "inherit" then value = "auto" end
+                        return value
                     end,
                     setFunc = function(value)
+                        if value == "inherit" then value = "auto" end
                         EZOMetter.sv.general.language = value
                         RefreshLanguage()
+                    end,
+                    disabled = function()
+                        return EZOMetter.IsLanguageManagedByEZOCore and EZOMetter.IsLanguageManagedByEZOCore()
                     end,
                     default = EZOMetter.GetDefaultLanguage(),
                 },

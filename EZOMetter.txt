@@ -5,7 +5,7 @@
 ## AddOnVersion: 10019
 ## APIVersion: 101049 101050
 ## DependsOn: LibAddonMenu-2.0
-## OptionalDependsOn: LibChatMessage LibDebugLogger DebugLogViewer LibCombat
+## OptionalDependsOn: LibChatMessage LibDebugLogger DebugLogViewer LibCombat EZOCore
 ## SavedVariables: EZOMetter_Saved
 
 lang/en.lua

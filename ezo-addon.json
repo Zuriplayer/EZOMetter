@@ -4,6 +4,7 @@
     "id": "ezometter",
     "name": "EZOMetter",
     "version": "0.1.19",
+    "stage": "beta",
     "status": "beta",
     "phase": "public-beta",
     "visibility": "public",

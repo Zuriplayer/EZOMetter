@@ -3,7 +3,12 @@ EZOMetter = EZOMetter or {}
 local EZOM = EZOMetter
 
 local ADDON_NAME = "EZOMetter"
+local LANGUAGE_INHERIT = "inherit"
 local LANGUAGE_AUTO = "auto"
+EZOM.LANGUAGE_INHERIT = LANGUAGE_INHERIT
+EZOM.LANGUAGE_AUTO = LANGUAGE_AUTO
+
+local languageCallbackRegistered = false
 
 local function Print(message)
     if LibChatMessage then
@@ -34,7 +39,18 @@ function EZOM.GetClientLanguage()
 end
 
 function EZOM.GetEffectiveLanguage(language)
-    language = tostring(language or LANGUAGE_AUTO)
+    language = tostring(language or EZOM.GetDefaultLanguage())
+    if EZOM.IsLanguageManagedByEZOCore and EZOM.IsLanguageManagedByEZOCore() then
+        local ok, inherited = pcall(function()
+            return EZOCore:GetLanguage()
+        end)
+        if ok and (inherited == "es" or inherited == "en") then
+            return inherited
+        end
+    end
+    if language == LANGUAGE_INHERIT then
+        language = LANGUAGE_AUTO
+    end
     if language == "es" or language == "en" then
         return language
     end
@@ -42,8 +58,49 @@ function EZOM.GetEffectiveLanguage(language)
 end
 
 function EZOM.IsForcedLanguage(language)
-    language = tostring(language or LANGUAGE_AUTO)
+    language = tostring(language or EZOM.GetDefaultLanguage())
+    if EZOM.IsLanguageManagedByEZOCore and EZOM.IsLanguageManagedByEZOCore() then
+        return false
+    end
     return language == "es" or language == "en"
+end
+
+function EZOM.IsLanguageManagedByEZOCore()
+    if not (EZOCore and type(EZOCore.IsLanguageGloballyManaged) == "function") then
+        return false
+    end
+    local ok, managed = pcall(function()
+        return EZOCore:IsLanguageGloballyManaged()
+    end)
+    return ok and managed == true
+end
+
+function EZOM.ApplyLanguagePreference(language)
+    local configuredLanguage = tostring(language or EZOM.GetDefaultLanguage())
+    if EZOMetter_Lang and EZOMetter_Lang.Apply then
+        EZOMetter_Lang.Apply(configuredLanguage)
+    end
+end
+
+function EZOM.RegisterEZOCoreLanguageCallback()
+    if languageCallbackRegistered
+        or not (EZOCore and type(EZOCore.RegisterCallback) == "function") then
+        return false
+    end
+
+    local eventName = EZOCore.EVENT_LANGUAGE_CHANGED or "EZO_CORE_LANGUAGE_CHANGED"
+    local ok, result = pcall(function()
+        return EZOCore:RegisterCallback(eventName, function()
+            if EZOM.sv and EZOM.sv.general then
+                EZOM.ApplyLanguagePreference(EZOM.sv.general.language or EZOM.GetDefaultLanguage())
+                if EZOMetter_ObservedMetricPanel and EZOMetter_ObservedMetricPanel.Refresh then
+                    EZOMetter_ObservedMetricPanel.Refresh()
+                end
+            end
+        end)
+    end)
+    languageCallbackRegistered = ok and result == true
+    return languageCallbackRegistered
 end
 
 function EZOM:Initialize()
@@ -51,10 +108,9 @@ function EZOM:Initialize()
         self.savedVars.Init()
     end
 
-    if EZOMetter_Lang and EZOMetter_Lang.Apply then
-        local language = self.sv and self.sv.general and self.sv.general.language or LANGUAGE_AUTO
-        EZOMetter_Lang.Apply(language)
-    end
+    local language = self.sv and self.sv.general and self.sv.general.language or EZOM.GetDefaultLanguage()
+    EZOM.ApplyLanguagePreference(language)
+    EZOM.RegisterEZOCoreLanguageCallback()
 
     if self.DebugLog then
         self.DebugLog(GetString(EZOM_DEBUG_SAVED_VARIABLES_LOADED))
