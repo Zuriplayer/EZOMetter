@@ -2,6 +2,7 @@
 EZOMetter_Menu = EZOMetter_Menu or {}
 
 local ADDON_NAME = "EZOMetter"
+local PANEL_ID = ADDON_NAME .. "_Options"
 local INFO_HEADER_TEXTURE = "EsoUI/Art/Miscellaneous/help_icon.dds"
 
 local function CreateInfoHeader(name, tooltip)
@@ -35,11 +36,10 @@ function EZOMetter_Menu.Init()
         displayName = "E|cB040FFZ|rOMetter",
         author = EZOMetter.AUTHOR,
         version = EZOMetter.ADDON_VERSION,
+        ezoStage = "development",
         registerForRefresh = true,
         registerForDefaults = true,
     }
-
-    LibAddonMenu2:RegisterAddonPanel(ADDON_NAME .. "_Options", panelData)
 
     local function RefreshVisualModules()
         if EZOMetter_BuffAlert and EZOMetter_BuffAlert.ApplySettings then
@@ -964,5 +964,14 @@ function EZOMetter_Menu.Init()
         },
     }
 
-    LibAddonMenu2:RegisterOptionControls(ADDON_NAME .. "_Options", options)
+    if EZOCore and type(EZOCore.RegisterSettingsPanel) == "function" then
+        local registered = EZOCore:RegisterSettingsPanel(ADDON_NAME, PANEL_ID, panelData, options)
+        if registered then
+            EZOMetter.ezoSettingsRegistered = true
+            return
+        end
+    end
+
+    EZOMetter._lamPanel = LibAddonMenu2:RegisterAddonPanel(PANEL_ID, panelData)
+    LibAddonMenu2:RegisterOptionControls(PANEL_ID, options)
 end

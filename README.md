@@ -11,7 +11,7 @@ For support, bug reports, and suggestions, join Discord: https://discord.gg/ekw8
 
 EZOMetter is in public beta. The addon is usable, but several combat metrics depend on ESO client events, visible target state, and optional libraries. Treat the numbers as practical helper information, not as a full replacement for dedicated combat log analysis.
 
-Current version: **0.1.19**.
+Current version: **0.1.20**.
 
 ## Requirements
 
@@ -21,6 +21,7 @@ Current version: **0.1.19**.
   - `LibCombat` enables observed damage/healing panels, damage-weighted DD stat summaries, and Off Balance damage attribution.
   - `LibChatMessage` improves addon chat output.
   - `LibDebugLogger` and `DebugLogViewer` are used for technical debug logs and the optional post-combat report output.
+  - `EZOCore` provides central access through Settings > EZO.
 
 ## Installation
 
@@ -33,7 +34,7 @@ Documents/Elder Scrolls Online/live/AddOns/
 
 3. Install and enable `LibAddonMenu-2.0`.
 4. Enable `EZOMetter` from the in-game Add-Ons screen.
-5. Configure the addon from Settings > Addons > EZOMetter.
+5. With EZOCore enabled, configure the addon from Settings > EZO > EZOMetter. Without EZOCore, use Settings > Addons > EZOMetter.
 
 ## Main Features
 
@@ -128,7 +129,8 @@ git diff --check
 Recommended in-game checks:
 
 - `/reloadui` with panels locked and unlocked.
-- Settings panel opens through LibAddonMenu.
+- Settings panel opens under Settings > EZO when EZOCore is enabled, without a duplicate standard Addons entry.
+- Standalone LibAddonMenu fallback opens when EZOCore is unavailable.
 - Section-level and field-level help tooltips in the settings panel.
 - English/Spanish language selection and automatic language mode.
 - HUD visibility in combat, out of combat, inventory, map, crafting, Champion Points, Tales of Tribute, and addon settings.

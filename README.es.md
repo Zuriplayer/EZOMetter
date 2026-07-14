@@ -11,7 +11,7 @@ Para soporte, errores y sugerencias, únete a Discord: https://discord.gg/ekw8zU
 
 EZOMetter está en beta pública. El addon es utilizable, pero varias métricas de combate dependen de eventos del cliente de ESO, del estado visible del objetivo y de librerías opcionales. Trata los valores como información práctica de apoyo, no como sustituto completo de un analizador de logs de combate.
 
-Versión actual: **0.1.19**.
+Versión actual: **0.1.20**.
 
 ## Requisitos
 
@@ -21,6 +21,7 @@ Versión actual: **0.1.19**.
   - `LibCombat` habilita los paneles de daño/curación observados, los resúmenes de estadísticas DD ponderados por daño y la atribución de daño durante Off Balance.
   - `LibChatMessage` mejora la salida del addon en chat.
   - `LibDebugLogger` y `DebugLogViewer` se usan para logs técnicos y para la salida opcional del informe post-combate.
+  - `EZOCore` proporciona acceso central desde Ajustes > EZO.
 
 ## Instalación
 
@@ -33,7 +34,7 @@ Documents/Elder Scrolls Online/live/AddOns/
 
 3. Instala y activa `LibAddonMenu-2.0`.
 4. Activa `EZOMetter` desde la pantalla de complementos del juego.
-5. Configura el addon desde Ajustes > Addons > EZOMetter.
+5. Con EZOCore activo, configura el addon desde Ajustes > EZO > EZOMetter. Sin EZOCore, usa Ajustes > Addons > EZOMetter.
 
 ## Funciones principales
 
@@ -128,7 +129,8 @@ git diff --check
 Comprobaciones recomendadas dentro del juego:
 
 - `/reloadui` con paneles bloqueados y desbloqueados.
-- Apertura del panel de configuración mediante LibAddonMenu.
+- Apertura del panel dentro de Ajustes > EZO cuando EZOCore está activo, sin una entrada duplicada en la lista estándar de Addons.
+- Apertura del fallback independiente de LibAddonMenu cuando EZOCore no está disponible.
 - Tooltips de ayuda general por sección y ayuda específica por campo en el panel de configuración.
 - Selección de idioma inglés/español y modo automático de idioma.
 - Visibilidad del HUD en combate, fuera de combate, inventario, mapa, crafting, Champion Points, Tales of Tribute y configuración de addons.
