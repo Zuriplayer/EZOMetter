@@ -77,7 +77,7 @@ Los controles visuales propios deben comportarse como HUDs de ESO, no como venta
 - Refrescar visibilidad desde el callback central `SceneStateChanged`.
 - No usar listas negativas de escenas.
 
-El modo mover es global: `general.unlockHud` muestra todos los paneles visuales en HUD/HUD_UI y permite arrastrarlos individualmente. No hay botones de test, reset ni desbloqueo por panel en LAM.
+El modo mover es global y temporal: `EZOMetter.runtime.hudLayoutEditMode` muestra todos los paneles visuales en HUD/HUD_UI y permite arrastrarlos individualmente. El mismo modo se registra como una superficie agregada en `family.layout` cuando EZOCore está disponible. No hay botones de test, reset ni desbloqueo por panel en LAM.
 
 ## Pendiente de medicion avanzada
 

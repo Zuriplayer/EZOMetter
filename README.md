@@ -11,7 +11,7 @@ For support, bug reports, and suggestions, join Discord: https://discord.gg/ekw8
 
 EZOMetter is in public beta. The addon is usable, but several combat metrics depend on ESO client events, visible target state, and optional libraries. Treat the numbers as practical helper information, not as a full replacement for dedicated combat log analysis.
 
-Current version: **0.1.20**.
+Current version: **0.1.21**.
 
 ## Requirements
 
@@ -21,7 +21,7 @@ Current version: **0.1.20**.
   - `LibCombat` enables observed damage/healing panels, damage-weighted DD stat summaries, and Off Balance damage attribution.
   - `LibChatMessage` improves addon chat output.
   - `LibDebugLogger` and `DebugLogViewer` are used for technical debug logs and the optional post-combat report output.
-  - `EZOCore` provides central access through Settings > EZO.
+  - `EZOCore` provides central access through Settings > EZO and shared interface layout control.
 
 ## Installation
 
@@ -43,7 +43,7 @@ Documents/Elder Scrolls Online/live/AddOns/
 - English and Spanish localization, with automatic client-language detection or manual language selection.
 - Manual role profile selection for DD, Healer, or Tank.
 - Optional automatic role detection based on equipped weapons and slotted skills. It uses conservative tank/healer scoring and falls back to DD.
-- One global HUD unlock option that shows movable EZOMetter panels in normal HUD/HUD UI scenes.
+- One session-only global HUD unlock option that shows movable EZOMetter panels in normal HUD/HUD UI scenes. With EZOCore, the same aggregate surface participates in global or individual family layout control.
 - Optional post-combat report with date, character, content type, zone, boss/trash context, difficulty when available, and sections from active trackers.
 - Debug mode for technical output through `LibDebugLogger`/`DebugLogViewer` when installed.
 - The settings panel uses purple information headers for section-level help, while each field keeps its own tooltip for specific behavior.

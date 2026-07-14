@@ -42,26 +42,8 @@ function EZOMetter_Menu.Init()
     }
 
     local function RefreshVisualModules()
-        if EZOMetter_BuffAlert and EZOMetter_BuffAlert.ApplySettings then
-            EZOMetter_BuffAlert.ApplySettings()
-        end
-        if EZOMetter_OffBalance and EZOMetter_OffBalance.ApplySettings then
-            EZOMetter_OffBalance.ApplySettings()
-        end
-        if EZOMetter_Coral and EZOMetter_Coral.ApplySettings then
-            EZOMetter_Coral.ApplySettings()
-        end
-        if EZOMetter_DDStats and EZOMetter_DDStats.ApplySettings then
-            EZOMetter_DDStats.ApplySettings()
-        end
-        if EZOMetter_ObservedDamage and EZOMetter_ObservedDamage.ApplySettings then
-            EZOMetter_ObservedDamage.ApplySettings()
-        end
-        if EZOMetter_ObservedHealing and EZOMetter_ObservedHealing.ApplySettings then
-            EZOMetter_ObservedHealing.ApplySettings()
-        end
-        if EZOMetter_AbilityTracker and EZOMetter_AbilityTracker.ApplySettings then
-            EZOMetter_AbilityTracker.ApplySettings()
+        if EZOMetter and type(EZOMetter.RefreshVisualModules) == "function" then
+            EZOMetter.RefreshVisualModules()
         end
     end
 
@@ -159,11 +141,10 @@ function EZOMetter_Menu.Init()
                     name = GetString(EZOM_OPTION_UNLOCK_HUD),
                     tooltip = GetString(EZOM_OPTION_UNLOCK_HUD_TOOLTIP),
                     getFunc = function()
-                        return EZOMetter.sv.general.unlockHud == true
+                        return EZOMetter.IsHudLayoutEditMode()
                     end,
                     setFunc = function(value)
-                        EZOMetter.sv.general.unlockHud = value == true
-                        RefreshVisualModules()
+                        EZOMetter.SetHudLayoutEditMode(value)
                     end,
                     default = false,
                 },

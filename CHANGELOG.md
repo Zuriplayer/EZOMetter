@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.21 - Shared layout integration
+
+- Registers the aggregate EZOMetter HUD with EZOCore `family.layout` for global or individual movement control.
+- Moves HUD unlock state from SavedVariables to explicit session runtime state.
+- Keeps the standalone global HUD unlock control when EZOCore is unavailable.
+
 ## 0.1.20 - EZOCore settings integration
 
 - Registered the complete settings panel in Settings > EZO when EZOCore is available.

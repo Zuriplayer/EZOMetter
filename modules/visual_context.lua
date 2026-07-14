@@ -58,7 +58,6 @@ end
 
 function VisualContext.IsHudUnlocked()
     return EZOMetter
-        and EZOMetter.sv
-        and EZOMetter.sv.general
-        and EZOMetter.sv.general.unlockHud == true
+        and type(EZOMetter.IsHudLayoutEditMode) == "function"
+        and EZOMetter.IsHudLayoutEditMode()
 end

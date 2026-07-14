@@ -11,7 +11,7 @@ Para soporte, errores y sugerencias, únete a Discord: https://discord.gg/ekw8zU
 
 EZOMetter está en beta pública. El addon es utilizable, pero varias métricas de combate dependen de eventos del cliente de ESO, del estado visible del objetivo y de librerías opcionales. Trata los valores como información práctica de apoyo, no como sustituto completo de un analizador de logs de combate.
 
-Versión actual: **0.1.20**.
+Versión actual: **0.1.21**.
 
 ## Requisitos
 
@@ -21,7 +21,7 @@ Versión actual: **0.1.20**.
   - `LibCombat` habilita los paneles de daño/curación observados, los resúmenes de estadísticas DD ponderados por daño y la atribución de daño durante Off Balance.
   - `LibChatMessage` mejora la salida del addon en chat.
   - `LibDebugLogger` y `DebugLogViewer` se usan para logs técnicos y para la salida opcional del informe post-combate.
-  - `EZOCore` proporciona acceso central desde Ajustes > EZO.
+  - `EZOCore` proporciona acceso central desde Ajustes > EZO y control compartido de disposición de interfaz.
 
 ## Instalación
 
@@ -43,7 +43,7 @@ Documents/Elder Scrolls Online/live/AddOns/
 - Localización en inglés y español, con detección automática del idioma del cliente o selección manual.
 - Selección manual de perfil de rol: DD, Healer o Tank.
 - Detección automática opcional de rol según armas equipadas y habilidades sloteadas. Usa una puntuación conservadora de tank/healer y vuelve a DD si no hay una señal clara.
-- Opción global para desbloquear el HUD y mover todos los paneles de EZOMetter en escenas normales de HUD/HUD UI.
+- Opción global temporal para desbloquear el HUD y mover todos los paneles de EZOMetter en escenas normales de HUD/HUD UI. Con EZOCore, la misma superficie agregada participa en el control global o individual de disposición de la familia.
 - Informe post-combate opcional con fecha, personaje, tipo de contenido, zona, contexto de boss/trash, dificultad cuando está disponible y secciones de los trackers activos.
 - Modo debug para salida técnica mediante `LibDebugLogger`/`DebugLogViewer` si están instalados.
 - El panel de configuración usa cabeceras informativas moradas para la ayuda general de cada sección, mientras cada campo conserva su propio tooltip para el comportamiento específico.

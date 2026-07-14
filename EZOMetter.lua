@@ -10,6 +10,7 @@ EZOM.LANGUAGE_AUTO = LANGUAGE_AUTO
 
 local languageCallbackRegistered = false
 local ezocoreRegistered = false
+local layoutSurfaceRegistered = false
 
 local function Print(message)
     if LibChatMessage then
@@ -115,12 +116,13 @@ function EZOM.RegisterWithEZOCore()
             id = "ezometter",
             name = EZOM.ADDON_NAME or ADDON_NAME,
             version = EZOM.ADDON_VERSION or "0.0.0",
-            addOnVersion = 10019,
+            addOnVersion = 10021,
             apiVersion = 1,
             capabilities = {
                 "combat.metrics",
                 "combat.observedPanels",
                 "family.language.consumer",
+                "family.layout.consumer",
                 "family.settings.consumer",
             },
         })
@@ -128,6 +130,70 @@ function EZOM.RegisterWithEZOCore()
 
     ezocoreRegistered = ok and result == true
     return ezocoreRegistered
+end
+
+function EZOM.RefreshVisualModules()
+    local moduleNames = {
+        "EZOMetter_BuffAlert",
+        "EZOMetter_OffBalance",
+        "EZOMetter_Coral",
+        "EZOMetter_DDStats",
+        "EZOMetter_ObservedDamage",
+        "EZOMetter_ObservedHealing",
+        "EZOMetter_AbilityTracker",
+    }
+    for _, moduleName in ipairs(moduleNames) do
+        local visualModule = _G[moduleName]
+        if visualModule and type(visualModule.ApplySettings) == "function" then
+            visualModule.ApplySettings()
+        end
+    end
+end
+
+function EZOM.IsHudLayoutEditMode()
+    return EZOM.runtime and EZOM.runtime.hudLayoutEditMode == true
+end
+
+function EZOM.SetHudLayoutEditMode(enabled)
+    EZOM.runtime = EZOM.runtime or {}
+    EZOM.runtime.hudLayoutEditMode = enabled == true
+    if EZOM.sv and EZOM.sv.general then
+        EZOM.sv.general.unlockHud = false
+    end
+    EZOM.RefreshVisualModules()
+    return EZOM.runtime.hudLayoutEditMode
+end
+
+function EZOM.RegisterLayoutWithEZOCore()
+    if layoutSurfaceRegistered
+        or not (EZOCore and type(EZOCore.GetService) == "function") then
+        return false
+    end
+
+    local service = EZOCore:GetService("family.layout", 1)
+    if not service or type(service.RegisterSurface) ~= "function" then
+        return false
+    end
+
+    local ok, result = pcall(function()
+        return service:RegisterSurface({
+            id = "ezometter.hud",
+            addonId = "ezometter",
+            addonName = "EZOMetter",
+            name = function() return GetString(EZOM_OPTION_UNLOCK_HUD) end,
+            tooltip = function() return GetString(EZOM_OPTION_UNLOCK_HUD_TOOLTIP) end,
+            setEditMode = function(enabled)
+                EZOM.SetHudLayoutEditMode(enabled)
+                return EZOM.IsHudLayoutEditMode() == (enabled == true)
+            end,
+            isEditMode = function()
+                return EZOM.IsHudLayoutEditMode()
+            end,
+        })
+    end)
+
+    layoutSurfaceRegistered = ok and result == true
+    return layoutSurfaceRegistered
 end
 
 function EZOM:Initialize()
@@ -139,6 +205,8 @@ function EZOM:Initialize()
     EZOM.ApplyLanguagePreference(language)
     EZOM.RegisterEZOCoreLanguageCallback()
     EZOM.RegisterWithEZOCore()
+    self.runtime = self.runtime or {}
+    self.runtime.hudLayoutEditMode = false
 
     if self.DebugLog then
         self.DebugLog(GetString(EZOM_DEBUG_SAVED_VARIABLES_LOADED))
@@ -187,6 +255,8 @@ function EZOM:Initialize()
     if EZOMetter_RoleDetector and EZOMetter_RoleDetector.Init then
         EZOMetter_RoleDetector.Init()
     end
+
+    EZOM.RegisterLayoutWithEZOCore()
 
     Print(GetString(EZOM_MSG_INIT))
 end
