@@ -2,9 +2,24 @@
 EZOMetter_Menu = EZOMetter_Menu or {}
 
 local ADDON_NAME = "EZOMetter"
+local INFO_HEADER_TEXTURE = "EsoUI/Art/Miscellaneous/help_icon.dds"
+
+local function CreateInfoHeader(name, tooltip)
+    return {
+        type = "header",
+        name = zo_strformat(
+            "<<1>> |cB040FF|t26:26:<<2>>:inheritcolor|t|r",
+            tostring(name or ""),
+            INFO_HEADER_TEXTURE
+        ),
+        tooltip = tooltip,
+    }
+end
 
 local function RefreshLanguage()
-    if EZOMetter_Lang and EZOMetter_Lang.Apply and EZOMetter.sv and EZOMetter.sv.general then
+    if EZOMetter.ApplyLanguagePreference and EZOMetter.sv and EZOMetter.sv.general then
+        EZOMetter.ApplyLanguagePreference(EZOMetter.sv.general.language or EZOMetter.GetDefaultLanguage())
+    elseif EZOMetter_Lang and EZOMetter_Lang.Apply and EZOMetter.sv and EZOMetter.sv.general then
         EZOMetter_Lang.Apply(EZOMetter.sv.general.language or EZOMetter.GetDefaultLanguage())
     end
 end
@@ -52,24 +67,22 @@ function EZOMetter_Menu.Init()
 
     local options = {
         {
-            type = "description",
-            title = GetString(EZOM_OPTION_STATUS),
-            text = GetString(EZOM_OPTION_STATUS_TEXT),
-        },
-        {
             type = "submenu",
             name = GetString(EZOM_OPTION_GENERAL),
             controls = {
+                CreateInfoHeader(GetString(EZOM_OPTION_GENERAL), GetString(EZOM_OPTION_GENERAL_HEADER_TOOLTIP)),
                 {
                     type = "dropdown",
                     name = GetString(EZOM_OPTION_LANGUAGE),
                     tooltip = GetString(EZOM_OPTION_LANGUAGE_TOOLTIP),
                     choices = {
+                        GetString(EZOM_OPTION_LANGUAGE_INHERIT),
                         GetString(EZOM_OPTION_LANGUAGE_AUTO),
                         "English",
                         "Espanol",
                     },
                     choicesValues = {
+                        "inherit",
                         "auto",
                         "en",
                         "es",
@@ -168,6 +181,7 @@ function EZOMetter_Menu.Init()
             type = "submenu",
             name = GetString(EZOM_OPTION_ALERTS),
             controls = {
+                CreateInfoHeader(GetString(EZOM_OPTION_ALERTS), GetString(EZOM_OPTION_ALERTS_HEADER_TOOLTIP)),
                 {
                     type = "checkbox",
                     name = GetString(EZOM_OPTION_MISSING_BUFF_ALERTS),
@@ -222,6 +236,7 @@ function EZOMetter_Menu.Init()
             type = "submenu",
             name = GetString(EZOM_OPTION_OFF_BALANCE),
             controls = {
+                CreateInfoHeader(GetString(EZOM_OPTION_OFF_BALANCE), GetString(EZOM_OPTION_OFF_BALANCE_HEADER_TOOLTIP)),
                 {
                     type = "checkbox",
                     name = GetString(EZOM_OPTION_OFF_BALANCE_ENABLED),
@@ -328,6 +343,7 @@ function EZOMetter_Menu.Init()
             type = "submenu",
             name = GetString(EZOM_OPTION_CORAL),
             controls = {
+                CreateInfoHeader(GetString(EZOM_OPTION_CORAL), GetString(EZOM_OPTION_CORAL_HEADER_TOOLTIP)),
                 {
                     type = "checkbox",
                     name = GetString(EZOM_OPTION_CORAL_ENABLED),
@@ -442,6 +458,7 @@ function EZOMetter_Menu.Init()
             type = "submenu",
             name = GetString(EZOM_OPTION_DD_STATS),
             controls = {
+                CreateInfoHeader(GetString(EZOM_OPTION_DD_STATS), GetString(EZOM_OPTION_DD_STATS_HEADER_TOOLTIP)),
                 {
                     type = "checkbox",
                     name = GetString(EZOM_OPTION_DD_STATS_ENABLED),
@@ -610,10 +627,10 @@ function EZOMetter_Menu.Init()
                     end,
                     default = 125,
                 },
-                {
-                    type = "header",
-                    name = GetString(EZOM_OPTION_DD_STATS_EFFECTIVE_HEADER),
-                },
+                CreateInfoHeader(
+                    GetString(EZOM_OPTION_DD_STATS_EFFECTIVE_HEADER),
+                    GetString(EZOM_OPTION_DD_STATS_EFFECTIVE_HEADER_TOOLTIP)
+                ),
                 {
                     type = "slider",
                     name = GetString(EZOM_OPTION_DD_STATS_TARGET_RESISTANCE),
@@ -680,6 +697,7 @@ function EZOMetter_Menu.Init()
             type = "submenu",
             name = GetString(EZOM_OPTION_DAMAGE),
             controls = {
+                CreateInfoHeader(GetString(EZOM_OPTION_DAMAGE), GetString(EZOM_OPTION_DAMAGE_HEADER_TOOLTIP)),
                 {
                     type = "checkbox",
                     name = GetString(EZOM_OPTION_DAMAGE_ENABLED),
@@ -764,6 +782,7 @@ function EZOMetter_Menu.Init()
             type = "submenu",
             name = GetString(EZOM_OPTION_HEALING),
             controls = {
+                CreateInfoHeader(GetString(EZOM_OPTION_HEALING), GetString(EZOM_OPTION_HEALING_HEADER_TOOLTIP)),
                 {
                     type = "checkbox",
                     name = GetString(EZOM_OPTION_HEALING_ENABLED),
@@ -848,6 +867,7 @@ function EZOMetter_Menu.Init()
             type = "submenu",
             name = GetString(EZOM_OPTION_ABILITIES),
             controls = {
+                CreateInfoHeader(GetString(EZOM_OPTION_ABILITIES), GetString(EZOM_OPTION_ABILITIES_HEADER_TOOLTIP)),
                 {
                     type = "checkbox",
                     name = GetString(EZOM_OPTION_FATECARVER_ENABLED),
@@ -920,6 +940,7 @@ function EZOMetter_Menu.Init()
             type = "submenu",
             name = GetString(EZOM_OPTION_DEBUG),
             controls = {
+                CreateInfoHeader(GetString(EZOM_OPTION_DEBUG), GetString(EZOM_OPTION_DEBUG_HEADER_TOOLTIP)),
                 {
                     type = "checkbox",
                     name = GetString(EZOM_OPTION_DEBUG_MODE),

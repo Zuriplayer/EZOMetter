@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.19 - Settings panel help
+
+- Reworked the LibAddonMenu presentation with shared purple information headers and section-level tooltips.
+- Moved permanent explanatory settings text into hover help while keeping field-specific tooltips.
+- Updated English and Spanish documentation for the settings panel help layout.
+
 ## 0.1.18 - Public beta
 
 - Prepared repository metadata, documentation, license, ignore rules, and line-ending rules for public beta publication.

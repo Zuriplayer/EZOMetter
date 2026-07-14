@@ -11,7 +11,7 @@ For support, bug reports, and suggestions, join Discord: https://discord.gg/ekw8
 
 EZOMetter is in public beta. The addon is usable, but several combat metrics depend on ESO client events, visible target state, and optional libraries. Treat the numbers as practical helper information, not as a full replacement for dedicated combat log analysis.
 
-Current version: **0.1.18**.
+Current version: **0.1.19**.
 
 ## Requirements
 
@@ -45,6 +45,7 @@ Documents/Elder Scrolls Online/live/AddOns/
 - One global HUD unlock option that shows movable EZOMetter panels in normal HUD/HUD UI scenes.
 - Optional post-combat report with date, character, content type, zone, boss/trash context, difficulty when available, and sections from active trackers.
 - Debug mode for technical output through `LibDebugLogger`/`DebugLogViewer` when installed.
+- The settings panel uses purple information headers for section-level help, while each field keeps its own tooltip for specific behavior.
 
 ### Role Buff Alerts
 
@@ -128,6 +129,7 @@ Recommended in-game checks:
 
 - `/reloadui` with panels locked and unlocked.
 - Settings panel opens through LibAddonMenu.
+- Section-level and field-level help tooltips in the settings panel.
 - English/Spanish language selection and automatic language mode.
 - HUD visibility in combat, out of combat, inventory, map, crafting, Champion Points, Tales of Tribute, and addon settings.
 - DD role buff alerts with and without required buffs.
