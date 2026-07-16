@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.22 - Shared diagnostics control
+
+- Registers the existing debug mode with EZOCore for family-wide disable control.
+- Keeps the standalone settings control and SavedVariables ownership in EZOMetter.
+- Restricts every movable meter, tracker and alert panel to left-button dragging.
+
 ## 0.1.21 - Shared layout integration
 
 - Registers the aggregate EZOMetter HUD with EZOCore `family.layout` for global or individual movement control.

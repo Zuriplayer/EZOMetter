@@ -931,10 +931,10 @@ function EZOMetter_Menu.Init()
                     name = GetString(EZOM_OPTION_DEBUG_MODE),
                     tooltip = GetString(EZOM_OPTION_DEBUG_MODE_TOOLTIP),
                     getFunc = function()
-                        return EZOMetter.sv.general.debugMode == true
+                        return EZOMetter.IsDebugModeEnabled()
                     end,
                     setFunc = function(value)
-                        EZOMetter.sv.general.debugMode = value == true
+                        EZOMetter.SetDebugModeEnabled(value == true)
                         if EZOMetter.Print then
                             EZOMetter.Print(GetString(value and EZOM_DEBUG_MODE_ENABLED or EZOM_DEBUG_MODE_DISABLED))
                         end

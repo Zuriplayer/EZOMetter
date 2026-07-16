@@ -61,3 +61,41 @@ function VisualContext.IsHudUnlocked()
         and type(EZOMetter.IsHudLayoutEditMode) == "function"
         and EZOMetter.IsHudLayoutEditMode()
 end
+
+function VisualContext.BindPrimaryDrag(control, canMove, onMoveStop)
+    if not control or type(canMove) ~= "function" then return end
+
+    local dragActive = false
+    control:SetMovable(false)
+    control:SetHandler("OnMouseDown", function(_, button)
+        if button ~= MOUSE_BUTTON_INDEX_LEFT or canMove() ~= true then
+            return
+        end
+        dragActive = true
+        control:SetMovable(true)
+        control:StartMoving()
+    end)
+    control:SetHandler("OnMouseUp", function(_, button)
+        if button ~= MOUSE_BUTTON_INDEX_LEFT or not dragActive then
+            return
+        end
+        control:StopMovingOrResizing()
+        dragActive = false
+        control:SetMovable(false)
+    end)
+    control:SetHandler("OnMoveStop", function()
+        dragActive = false
+        control:SetMovable(false)
+        if type(onMoveStop) == "function" then
+            onMoveStop()
+        end
+    end)
+
+    control.ezomPrimaryDragRefresh = function()
+        if dragActive and canMove() ~= true then
+            control:StopMovingOrResizing()
+            dragActive = false
+        end
+        control:SetMovable(false)
+    end
+end

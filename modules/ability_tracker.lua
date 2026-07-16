@@ -410,8 +410,9 @@ end
 
 local function SetMoveMode(enabled)
     if not control then return end
+    control.ezomMoveEnabled = enabled == true
     control:SetMouseEnabled(true)
-    control:SetMovable(enabled == true)
+    if control.ezomPrimaryDragRefresh then control.ezomPrimaryDragRefresh() end
 end
 
 local function ApplyStyle(activeStyle)
@@ -481,7 +482,9 @@ local function EnsureControl()
     control:SetClampedToScreen(true)
     control:SetDrawTier(DT_HIGH)
     control:SetHidden(true)
-    control:SetHandler("OnMoveStop", SavePosition)
+    EZOMetter_VisualContext.BindPrimaryDrag(control, function()
+        return control.ezomMoveEnabled == true
+    end, SavePosition)
     control:SetHandler("OnMouseEnter", ShowTooltip)
     control:SetHandler("OnMouseExit", HideTooltip)
 

@@ -11,6 +11,7 @@ EZOM.LANGUAGE_AUTO = LANGUAGE_AUTO
 local languageCallbackRegistered = false
 local ezocoreRegistered = false
 local layoutSurfaceRegistered = false
+local debugControllerRegistered = false
 
 local function Print(message)
     if LibChatMessage then
@@ -116,11 +117,12 @@ function EZOM.RegisterWithEZOCore()
             id = "ezometter",
             name = EZOM.ADDON_NAME or ADDON_NAME,
             version = EZOM.ADDON_VERSION or "0.0.0",
-            addOnVersion = 10021,
+            addOnVersion = 10022,
             apiVersion = 1,
             capabilities = {
                 "combat.metrics",
                 "combat.observedPanels",
+                "family.debug.controller",
                 "family.language.consumer",
                 "family.layout.consumer",
                 "family.settings.consumer",
@@ -130,6 +132,46 @@ function EZOM.RegisterWithEZOCore()
 
     ezocoreRegistered = ok and result == true
     return ezocoreRegistered
+end
+
+function EZOM.IsDebugModeEnabled()
+    return EZOM.sv and EZOM.sv.general and EZOM.sv.general.debugMode == true
+end
+
+function EZOM.SetDebugModeEnabled(enabled)
+    if not (EZOM.sv and EZOM.sv.general) then
+        return false
+    end
+    EZOM.sv.general.debugMode = enabled == true
+    return EZOM.sv.general.debugMode == (enabled == true)
+end
+
+function EZOM.RegisterDebugWithEZOCore()
+    if debugControllerRegistered
+        or not (EZOCore and type(EZOCore.GetService) == "function") then
+        return false
+    end
+
+    local service = EZOCore:GetService("family.debug", 1)
+    if not service or type(service.RegisterController) ~= "function" then
+        return false
+    end
+
+    local ok, result = pcall(function()
+        return service:RegisterController({
+            id = "ezometter.debug",
+            addonId = "ezometter",
+            addonName = "EZOMetter",
+            name = function() return GetString(EZOM_OPTION_DEBUG_MODE) end,
+            isEnabled = EZOM.IsDebugModeEnabled,
+            setEnabled = function(enabled)
+                return EZOM.SetDebugModeEnabled(enabled == true)
+            end,
+        })
+    end)
+
+    debugControllerRegistered = ok and result == true
+    return debugControllerRegistered
 end
 
 function EZOM.RefreshVisualModules()
@@ -205,6 +247,7 @@ function EZOM:Initialize()
     EZOM.ApplyLanguagePreference(language)
     EZOM.RegisterEZOCoreLanguageCallback()
     EZOM.RegisterWithEZOCore()
+    EZOM.RegisterDebugWithEZOCore()
     self.runtime = self.runtime or {}
     self.runtime.hudLayoutEditMode = false
 
