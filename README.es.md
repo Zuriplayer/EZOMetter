@@ -11,7 +11,7 @@ Para soporte, errores y sugerencias, únete a Discord: https://discord.gg/ekw8zU
 
 EZOMetter está en beta pública. El addon es utilizable, pero varias métricas de combate dependen de eventos del cliente de ESO, del estado visible del objetivo y de librerías opcionales. Trata los valores como información práctica de apoyo, no como sustituto completo de un analizador de logs de combate.
 
-Versión actual: **0.1.21**.
+Versión actual: **0.1.30**.
 
 ## Requisitos
 
@@ -79,6 +79,18 @@ Documents/Elder Scrolls Online/live/AddOns/
 - Escaneo debug opcional de equipo para nombres e IDs de set.
 - El resumen del último combate incluye bonus medio estimado y tiempo en bandas útiles, malas o inactivas.
 
+### Tracker de Rugido de Alkosh
+
+- Panel movible separado para Rugido de Alkosh, desactivado por defecto.
+- Detecta el set equipado de 5 piezas mediante una lectura de itemLink canónico del set, con coincidencia por slots/nombre como respaldo.
+- Sigue Alkosh por abilityId, usando Line Breaker y el aura del Trial Dummy como fuentes principales de timing de 10 segundos.
+- Usa los IDs de penetración usados por CombatMetrics como señales observadas de proc/cálculo, no como reloj principal de uptime.
+- Muestra estado equipado, último proc en combate, duración restante limitada a los 10 segundos del set, eficiencia frente al uptime posible observado y objetivo afectado cuando ESO expone un objetivo legible.
+- Mantiene visible la última eficiencia válida después del combate hasta que nuevos datos de combate la sustituyen; el proc vivo y el tiempo restante se reinician a estado neutro fuera de combate.
+- Ofrece modos Off, Avisar y Bloqueo visual. Bloqueo visual es solo un aviso, aparece únicamente cuando hay una sinergia visible y no intercepta el input de sinergias.
+- Opacidad del fondo, borde y registro debug opcional de eventos configurables.
+- El tooltip/informe del último combate incluye eficiencia de Alkosh, tiempo posible observado y los últimos datos observados de objetivo/proc.
+
 ### Estadísticas DD
 
 - Panel movible separado para estadísticas DD:
@@ -115,6 +127,7 @@ Documents/Elder Scrolls Online/live/AddOns/
 - No reemplaza elementos de la interfaz original del juego.
 - Los elementos HUD están diseñados para aparecer solo en escenas normales de HUD/HUD UI y no en menús como inventario, mapa, crafting, Champion Points o Tales of Tribute.
 - El daño/curación de grupo observados y el valor de Exploiter son estimaciones basadas en eventos disponibles para el cliente.
+- El modo Bloqueo visual de Alkosh es solo informativo; EZOMetter no bloquea, consume ni cancela el input de sinergias.
 - El addon incluye scripts de publicación en Discord para mantenimiento del proyecto, pero no se publica nada en Discord sin autorización explícita.
 
 ## Pruebas recomendadas
@@ -138,6 +151,7 @@ Comprobaciones recomendadas dentro del juego:
 - Aviso de Banner Bearer cuando hay una habilidad de Banner sloteada y cuando no hay ninguna.
 - Off Balance en dummy/boss, incluyendo tiempo activo real, cooldown/ciclo e informe de Exploiter.
 - Coral Riptide con menos de 5 piezas, con 5 piezas y con distintos niveles de stamina.
+- Rugido de Alkosh con menos de 5 piezas, con 5 piezas, modo Avisar, modo Bloqueo visual, debuff de Trial Dummy y objetivo normal cuando esté disponible.
 - Valores propios/efectivos/máximos de Estadísticas DD y tooltip después del combate.
 - Daño/curación observados con `LibCombat` instalado y sin `LibCombat`.
 - Inicio, finalización, corte temprano y color de aviso de Fatecarver.

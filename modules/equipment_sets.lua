@@ -67,17 +67,26 @@ local function ReadSetInfo(itemLink)
         return nil
     end
 
-    local ok, hasSet, setName, numBonuses, numEquipped, maxEquipped, setId = pcall(GetItemLinkSetInfo, itemLink, true)
+    local ok, hasSet, setName, numBonuses, numEquipped, maxEquipped, setId, numPerfectedEquipped = pcall(GetItemLinkSetInfo, itemLink, true)
     if not ok then
-        ok, hasSet, setName, numBonuses, numEquipped, maxEquipped, setId = pcall(GetItemLinkSetInfo, itemLink)
+        ok, hasSet, setName, numBonuses, numEquipped, maxEquipped, setId, numPerfectedEquipped = pcall(GetItemLinkSetInfo, itemLink)
     end
     if not ok or not hasSet then return nil end
+
+    numEquipped = tonumber(numEquipped) or 0
+    numPerfectedEquipped = tonumber(numPerfectedEquipped) or 0
+    local activePieces = numEquipped + numPerfectedEquipped
+    if activePieces <= 0 then
+        activePieces = numEquipped
+    end
 
     return {
         setName = CleanName(setName),
         normalizedName = NormalizeName(setName),
         numBonuses = tonumber(numBonuses) or 0,
-        numEquipped = tonumber(numEquipped) or 0,
+        numEquipped = activePieces,
+        numNormalEquipped = numEquipped,
+        numPerfectedEquipped = numPerfectedEquipped,
         maxEquipped = tonumber(maxEquipped) or 0,
         setId = tonumber(setId) or 0,
     }
@@ -139,6 +148,41 @@ function EquipmentSets.GetWornSetSnapshot(matchFunc)
         snapshot.numEquipped = #snapshot.slots
         snapshot.maxEquipped = math.max(snapshot.maxEquipped, #snapshot.slots)
     end
+
+    return snapshot
+end
+
+function EquipmentSets.GetSetSnapshotFromItemLink(itemLink, matchFunc)
+    local snapshot = {
+        hasSet = false,
+        setName = "",
+        setId = 0,
+        numEquipped = 0,
+        numNormalEquipped = 0,
+        numPerfectedEquipped = 0,
+        maxEquipped = 0,
+        slots = {},
+        debugRows = {},
+    }
+
+    local info = ReadSetInfo(itemLink)
+    if not info then return snapshot end
+    if matchFunc and not matchFunc(info.setName, info.setId) then return snapshot end
+
+    snapshot.hasSet = true
+    snapshot.setName = info.setName
+    snapshot.setId = info.setId
+    snapshot.numEquipped = info.numEquipped
+    snapshot.numNormalEquipped = info.numNormalEquipped
+    snapshot.numPerfectedEquipped = info.numPerfectedEquipped
+    snapshot.maxEquipped = info.maxEquipped
+    table.insert(snapshot.debugRows, {
+        slot = "itemLink",
+        setName = info.setName,
+        setId = info.setId,
+        numEquipped = info.numEquipped,
+        maxEquipped = info.maxEquipped,
+    })
 
     return snapshot
 end

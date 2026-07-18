@@ -83,7 +83,7 @@ local TARGET_MODIFIERS = {
         stat = "penetration",
         settingKey = "alkoshValue",
         defaultValue = DEFAULT_ALKOSH,
-        abilityIds = { 120018, 76667 },
+        abilityIds = { 75753, 120018, 76667 },
     },
     {
         key = "crimsonOath",
@@ -295,4 +295,17 @@ end
 
 function Effective.GetModifiers()
     return TARGET_MODIFIERS
+end
+
+function Effective.GetModifierAbilityIds(key)
+    local ids = {}
+    for _, modifier in ipairs(TARGET_MODIFIERS) do
+        if modifier.key == key then
+            for _, abilityId in ipairs(modifier.abilityIds or {}) do
+                table.insert(ids, abilityId)
+            end
+            break
+        end
+    end
+    return ids
 end

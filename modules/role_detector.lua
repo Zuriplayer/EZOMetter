@@ -219,6 +219,9 @@ local function RefreshVisualModules()
     if EZOMetter_Coral and EZOMetter_Coral.ApplySettings then
         EZOMetter_Coral.ApplySettings()
     end
+    if EZOMetter_Alkosh and EZOMetter_Alkosh.ApplySettings then
+        EZOMetter_Alkosh.ApplySettings()
+    end
     if EZOMetter_DDStats and EZOMetter_DDStats.ApplySettings then
         EZOMetter_DDStats.ApplySettings()
     end

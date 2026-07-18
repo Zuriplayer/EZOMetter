@@ -1,5 +1,43 @@
 # Changelog
 
+## 0.1.30 - Alkosh out-of-combat panel state
+
+- Stops the live Alkosh panel from showing an aging proc timer and residual remaining time outside combat.
+
+## 0.1.29 - Alkosh post-combat display
+
+- Keeps the last valid Alkosh efficiency visible after combat instead of resetting the panel display to zero.
+
+## 0.1.28 - Alkosh efficiency denominator
+
+- Changes Alkosh `Up` to efficiency against observed possible uptime instead of total equipped combat time.
+- Adds possible time to the Alkosh tooltip/report.
+
+## 0.1.27 - Alkosh timer decay
+
+- Prevents target aura scans with missing end times from refreshing Alkosh `Left` back to 10 seconds.
+
+## 0.1.26 - Alkosh warning gating
+
+- Shows the red Alkosh block warning only when Alkosh is active and a synergy prompt is visible.
+
+## 0.1.25 - Alkosh panel spacing
+
+- Gives the Alkosh warning its own row so it does not overlap uptime or target text.
+
+## 0.1.24 - Alkosh timing precision
+
+- Uses Line Breaker and the Trial Dummy aura as Alkosh's primary 10-second uptime sources.
+- Keeps CombatMetrics penetration IDs as observed proc/calculation signals instead of primary timing sources.
+- Caps displayed remaining duration and combat uptime sampling to the set's 10-second effect window.
+
+## 0.1.23 - Roar of Alkosh MVP
+
+- Adds a disabled-by-default Roar of Alkosh HUD tracker with Off, Warn, and visual Block warning modes.
+- Detects the worn 5-piece set through a canonical set itemLink read with equipped-slot fallback, and tracks Alkosh/Line Breaker debuffs by abilityId.
+- Reports last proc, remaining duration, combat uptime, and target information when ESO exposes it.
+- Documents the safety limit that Alkosh Block warning mode does not intercept synergy input.
+
 ## 0.1.22 - Shared diagnostics control
 
 - Registers the existing debug mode with EZOCore for family-wide disable control.

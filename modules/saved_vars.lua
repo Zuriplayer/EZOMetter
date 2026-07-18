@@ -49,6 +49,14 @@ function EZOMetter.savedVars.Init()
             x = 0,
             y = 40,
         },
+        alkosh = {
+            mode = "off",
+            backgroundOpacity = 86,
+            showBorder = true,
+            debugEvents = false,
+            x = 260,
+            y = -160,
+        },
         ddStats = {
             enabled = true,
             ddOnly = true,
@@ -106,6 +114,7 @@ function EZOMetter.savedVars.Init()
     EZOMetter.sv.alerts = EZOMetter.sv.alerts or defaults.alerts
     EZOMetter.sv.offBalance = EZOMetter.sv.offBalance or defaults.offBalance
     EZOMetter.sv.coral = EZOMetter.sv.coral or defaults.coral
+    EZOMetter.sv.alkosh = EZOMetter.sv.alkosh or defaults.alkosh
     EZOMetter.sv.ddStats = EZOMetter.sv.ddStats or defaults.ddStats
     EZOMetter.sv.observedDamage = EZOMetter.sv.observedDamage or defaults.observedDamage
     EZOMetter.sv.observedHealing = EZOMetter.sv.observedHealing or defaults.observedHealing
@@ -176,6 +185,18 @@ function EZOMetter.savedVars.Init()
     end
     EZOMetter.sv.coral.x = EZOMetter.sv.coral.x or defaults.coral.x
     EZOMetter.sv.coral.y = EZOMetter.sv.coral.y or defaults.coral.y
+    if EZOMetter.sv.alkosh.mode ~= "warn" and EZOMetter.sv.alkosh.mode ~= "block" then
+        EZOMetter.sv.alkosh.mode = defaults.alkosh.mode
+    end
+    EZOMetter.sv.alkosh.backgroundOpacity = EZOMetter.sv.alkosh.backgroundOpacity or defaults.alkosh.backgroundOpacity
+    if EZOMetter.sv.alkosh.showBorder == nil then
+        EZOMetter.sv.alkosh.showBorder = defaults.alkosh.showBorder
+    end
+    if EZOMetter.sv.alkosh.debugEvents == nil then
+        EZOMetter.sv.alkosh.debugEvents = defaults.alkosh.debugEvents
+    end
+    EZOMetter.sv.alkosh.x = EZOMetter.sv.alkosh.x or defaults.alkosh.x
+    EZOMetter.sv.alkosh.y = EZOMetter.sv.alkosh.y or defaults.alkosh.y
     if EZOMetter.sv.ddStats.enabled == nil then
         EZOMetter.sv.ddStats.enabled = defaults.ddStats.enabled
     end

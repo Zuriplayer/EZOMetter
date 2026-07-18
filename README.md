@@ -11,7 +11,7 @@ For support, bug reports, and suggestions, join Discord: https://discord.gg/ekw8
 
 EZOMetter is in public beta. The addon is usable, but several combat metrics depend on ESO client events, visible target state, and optional libraries. Treat the numbers as practical helper information, not as a full replacement for dedicated combat log analysis.
 
-Current version: **0.1.21**.
+Current version: **0.1.30**.
 
 ## Requirements
 
@@ -79,6 +79,18 @@ Documents/Elder Scrolls Online/live/AddOns/
 - Optional equipment debug scan for set names and IDs.
 - Last-combat summary includes estimated average bonus and time in useful/bad/inactive bands.
 
+### Roar of Alkosh Tracker
+
+- Separate movable Roar of Alkosh panel, disabled by default.
+- Detects the worn 5-piece Roar of Alkosh set through a canonical set itemLink read, with equipped-slot/name matching as fallback.
+- Tracks Alkosh by abilityId, using Line Breaker and the Trial Dummy aura as the primary 10-second timing sources.
+- Uses CombatMetrics penetration IDs as observed proc/calculation signals, not as the primary uptime clock.
+- Shows equipped state, in-combat last proc, remaining duration capped to the 10-second set duration, efficiency against observed possible uptime, and affected target when ESO exposes a readable target.
+- Keeps the last valid efficiency visible after combat until new combat data replaces it; live proc and remaining time reset to neutral outside combat.
+- Provides Off, Warn, and Block warning modes. Block warning is visual only, appears only while a synergy prompt is visible, and does not intercept synergy input.
+- Configurable background opacity, border, and optional debug event logging.
+- Last-combat tooltip/report includes Alkosh efficiency, observed possible time, and last observed target/proc data.
+
 ### DD Stats
 
 - Separate movable DD stats panel for:
@@ -115,6 +127,7 @@ Documents/Elder Scrolls Online/live/AddOns/
 - It does not replace vanilla UI elements.
 - HUD elements are designed to appear only in normal HUD/HUD UI scenes and not in menus such as inventory, map, crafting, Champion Points, or Tales of Tribute.
 - Observed group damage/healing and Exploiter value are estimates based on events available to the client.
+- Alkosh Block warning mode is advisory only; EZOMetter does not block, consume, or cancel synergy input.
 - The addon includes Discord publication scripts for project maintenance, but nothing is posted to Discord without explicit authorization.
 
 ## Recommended Testing
@@ -138,6 +151,7 @@ Recommended in-game checks:
 - Banner Bearer alert when a Banner skill is slotted and when no Banner skill is slotted.
 - Off Balance on dummy/boss, including real active time, cooldown/cycle, and Exploiter reporting.
 - Coral Riptide with fewer than 5 pieces, 5 pieces, and different stamina levels.
+- Roar of Alkosh with fewer than 5 pieces, 5 pieces, Warn mode, Block warning mode, Trial Dummy debuff, and a normal target when available.
 - DD Stats own/effective/max values and tooltip after combat.
 - Observed Damage/Healing with `LibCombat` installed and with `LibCombat` missing.
 - Fatecarver channel start, completion, early stop, and warning color.

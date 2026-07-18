@@ -441,6 +441,86 @@ function EZOMetter_Menu.Init()
         },
         {
             type = "submenu",
+            name = GetString(EZOM_OPTION_ALKOSH),
+            controls = {
+                CreateInfoHeader(GetString(EZOM_OPTION_ALKOSH), GetString(EZOM_OPTION_ALKOSH_HEADER_TOOLTIP)),
+                {
+                    type = "dropdown",
+                    name = GetString(EZOM_OPTION_ALKOSH_MODE),
+                    tooltip = GetString(EZOM_OPTION_ALKOSH_MODE_TOOLTIP),
+                    choices = {
+                        GetString(EZOM_OPTION_ALKOSH_MODE_OFF),
+                        GetString(EZOM_OPTION_ALKOSH_MODE_WARN),
+                        GetString(EZOM_OPTION_ALKOSH_MODE_BLOCK),
+                    },
+                    choicesValues = {
+                        "off",
+                        "warn",
+                        "block",
+                    },
+                    getFunc = function()
+                        return EZOMetter.sv.alkosh and EZOMetter.sv.alkosh.mode or "off"
+                    end,
+                    setFunc = function(value)
+                        if value ~= "warn" and value ~= "block" then
+                            value = "off"
+                        end
+                        EZOMetter.sv.alkosh.mode = value
+                        if EZOMetter_Alkosh and EZOMetter_Alkosh.ApplySettings then
+                            EZOMetter_Alkosh.ApplySettings()
+                        end
+                    end,
+                    default = "off",
+                },
+                {
+                    type = "slider",
+                    name = GetString(EZOM_OPTION_ALKOSH_BACKGROUND_OPACITY),
+                    tooltip = GetString(EZOM_OPTION_ALKOSH_BACKGROUND_OPACITY_TOOLTIP),
+                    min = 0,
+                    max = 100,
+                    step = 5,
+                    getFunc = function()
+                        return EZOMetter.sv.alkosh.backgroundOpacity or 86
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.alkosh.backgroundOpacity = tonumber(value) or 86
+                        if EZOMetter_Alkosh and EZOMetter_Alkosh.ApplySettings then
+                            EZOMetter_Alkosh.ApplySettings()
+                        end
+                    end,
+                    default = 86,
+                },
+                {
+                    type = "checkbox",
+                    name = GetString(EZOM_OPTION_ALKOSH_SHOW_BORDER),
+                    tooltip = GetString(EZOM_OPTION_ALKOSH_SHOW_BORDER_TOOLTIP),
+                    getFunc = function()
+                        return EZOMetter.sv.alkosh.showBorder ~= false
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.alkosh.showBorder = value == true
+                        if EZOMetter_Alkosh and EZOMetter_Alkosh.ApplySettings then
+                            EZOMetter_Alkosh.ApplySettings()
+                        end
+                    end,
+                    default = true,
+                },
+                {
+                    type = "checkbox",
+                    name = GetString(EZOM_OPTION_ALKOSH_DEBUG_EVENTS),
+                    tooltip = GetString(EZOM_OPTION_ALKOSH_DEBUG_EVENTS_TOOLTIP),
+                    getFunc = function()
+                        return EZOMetter.sv.alkosh and EZOMetter.sv.alkosh.debugEvents == true
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.alkosh.debugEvents = value == true
+                    end,
+                    default = false,
+                },
+            },
+        },
+        {
+            type = "submenu",
             name = GetString(EZOM_OPTION_DD_STATS),
             controls = {
                 CreateInfoHeader(GetString(EZOM_OPTION_DD_STATS), GetString(EZOM_OPTION_DD_STATS_HEADER_TOOLTIP)),
