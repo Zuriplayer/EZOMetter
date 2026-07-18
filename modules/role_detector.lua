@@ -222,6 +222,9 @@ local function RefreshVisualModules()
     if EZOMetter_Alkosh and EZOMetter_Alkosh.ApplySettings then
         EZOMetter_Alkosh.ApplySettings()
     end
+    if EZOMetter_Zen and EZOMetter_Zen.ApplySettings then
+        EZOMetter_Zen.ApplySettings()
+    end
     if EZOMetter_DDStats and EZOMetter_DDStats.ApplySettings then
         EZOMetter_DDStats.ApplySettings()
     end

@@ -11,6 +11,7 @@ function EZOMetter.savedVars.Init()
             debugMode = false,
             unlockHud = false,
             combatReportEnabled = false,
+            windowTextSize = 100,
         },
         alerts = {
             missingBuffAlerts = true,
@@ -56,6 +57,14 @@ function EZOMetter.savedVars.Init()
             debugEvents = false,
             x = 260,
             y = -160,
+        },
+        zen = {
+            mode = "auto",
+            backgroundOpacity = 86,
+            showBorder = true,
+            debugEvents = false,
+            x = 260,
+            y = -40,
         },
         ddStats = {
             enabled = true,
@@ -115,6 +124,7 @@ function EZOMetter.savedVars.Init()
     EZOMetter.sv.offBalance = EZOMetter.sv.offBalance or defaults.offBalance
     EZOMetter.sv.coral = EZOMetter.sv.coral or defaults.coral
     EZOMetter.sv.alkosh = EZOMetter.sv.alkosh or defaults.alkosh
+    EZOMetter.sv.zen = EZOMetter.sv.zen or defaults.zen
     EZOMetter.sv.ddStats = EZOMetter.sv.ddStats or defaults.ddStats
     EZOMetter.sv.observedDamage = EZOMetter.sv.observedDamage or defaults.observedDamage
     EZOMetter.sv.observedHealing = EZOMetter.sv.observedHealing or defaults.observedHealing
@@ -130,6 +140,9 @@ function EZOMetter.savedVars.Init()
     if EZOMetter.sv.general.combatReportEnabled == nil then
         EZOMetter.sv.general.combatReportEnabled = defaults.general.combatReportEnabled
     end
+    EZOMetter.sv.general.windowTextSize = EZOMetter_WindowStyle
+        and EZOMetter_WindowStyle.NormalizeTextSize(EZOMetter.sv.general.windowTextSize)
+        or defaults.general.windowTextSize
     if EZOMetter.sv.alerts.missingBuffAlerts == nil then
         EZOMetter.sv.alerts.missingBuffAlerts = defaults.alerts.missingBuffAlerts
     end
@@ -197,6 +210,18 @@ function EZOMetter.savedVars.Init()
     end
     EZOMetter.sv.alkosh.x = EZOMetter.sv.alkosh.x or defaults.alkosh.x
     EZOMetter.sv.alkosh.y = EZOMetter.sv.alkosh.y or defaults.alkosh.y
+    if EZOMetter.sv.zen.mode ~= "off" and EZOMetter.sv.zen.mode ~= "on" then
+        EZOMetter.sv.zen.mode = defaults.zen.mode
+    end
+    EZOMetter.sv.zen.backgroundOpacity = EZOMetter.sv.zen.backgroundOpacity or defaults.zen.backgroundOpacity
+    if EZOMetter.sv.zen.showBorder == nil then
+        EZOMetter.sv.zen.showBorder = defaults.zen.showBorder
+    end
+    if EZOMetter.sv.zen.debugEvents == nil then
+        EZOMetter.sv.zen.debugEvents = defaults.zen.debugEvents
+    end
+    EZOMetter.sv.zen.x = EZOMetter.sv.zen.x or defaults.zen.x
+    EZOMetter.sv.zen.y = EZOMetter.sv.zen.y or defaults.zen.y
     if EZOMetter.sv.ddStats.enabled == nil then
         EZOMetter.sv.ddStats.enabled = defaults.ddStats.enabled
     end

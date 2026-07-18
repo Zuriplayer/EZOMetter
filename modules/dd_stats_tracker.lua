@@ -797,6 +797,9 @@ local function SetMoveMode(enabled)
 end
 
 local function ApplyStyle()
+    if EZOMetter_WindowStyle then
+        EZOMetter_WindowStyle.ApplyControlScale(control)
+    end
     if not backdrop then return end
 
     local settings = GetSettings() or {}

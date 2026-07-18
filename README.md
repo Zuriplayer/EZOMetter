@@ -11,14 +11,14 @@ For support, bug reports, and suggestions, join Discord: https://discord.gg/ekw8
 
 EZOMetter is in public beta. The addon is usable, but several combat metrics depend on ESO client events, visible target state, and optional libraries. Treat the numbers as practical helper information, not as a full replacement for dedicated combat log analysis.
 
-Current version: **0.1.30**.
+Current version: **0.1.32**.
 
 ## Requirements
 
 - *The Elder Scrolls Online* for PC.
 - [LibAddonMenu-2.0](https://www.esoui.com/downloads/info7-LibAddonMenu.html) is required for the settings panel.
 - Optional libraries:
-  - `LibCombat` enables observed damage/healing panels, damage-weighted DD stat summaries, and Off Balance damage attribution.
+  - `LibCombat` enables observed damage/healing panels, damage-weighted DD stat summaries, Off Balance damage attribution, and preferred Z'en stack tracking.
   - `LibChatMessage` improves addon chat output.
   - `LibDebugLogger` and `DebugLogViewer` are used for technical debug logs and the optional post-combat report output.
   - `EZOCore` provides central access through Settings > EZO and shared interface layout control.
@@ -44,6 +44,7 @@ Documents/Elder Scrolls Online/live/AddOns/
 - Manual role profile selection for DD, Healer, or Tank.
 - Optional automatic role detection based on equipped weapons and slotted skills. It uses conservative tank/healer scoring and falls back to DD.
 - One session-only global HUD unlock option that shows movable EZOMetter panels in normal HUD/HUD UI scenes. With EZOCore, the same aggregate surface participates in global or individual family layout control.
+- Common HUD text size setting that scales EZOMetter visual windows and text together so panel layouts remain proportional.
 - Optional post-combat report with date, character, content type, zone, boss/trash context, difficulty when available, and sections from active trackers.
 - Debug mode for technical output through `LibDebugLogger`/`DebugLogViewer` when installed.
 - The settings panel uses purple information headers for section-level help, while each field keeps its own tooltip for specific behavior.
@@ -90,6 +91,17 @@ Documents/Elder Scrolls Online/live/AddOns/
 - Provides Off, Warn, and Block warning modes. Block warning is visual only, appears only while a synergy prompt is visible, and does not intercept synergy input.
 - Configurable background opacity, border, and optional debug event logging.
 - Last-combat tooltip/report includes Alkosh efficiency, observed possible time, and last observed target/proc data.
+
+### Z'en's Redress Tracker
+
+- Separate movable Z'en panel for support DPS/healer setups.
+- Auto mode shows the panel while wearing at least 3 pieces; On forces it visible for testing.
+- Uses `LibCombat` as the preferred source for Z'en stacks when available, with an internal player-DoT counter as fallback.
+- Counts your own damage-over-time effects on the tracked target as potential Z'en stacks, including fallback visibility below 5 set pieces.
+- Tracks Touch of Z'en by abilityId and shows effective value only when the 5-piece Touch is active.
+- Shows pieces, potential stacks, effective value, Touch remaining time, target, stack source, and a stack bar.
+- Configurable background opacity, border, and optional debug event logging.
+- Last-combat tooltip/report includes Touch uptime, potential/effective averages, cap time, and target data.
 
 ### DD Stats
 
@@ -142,6 +154,7 @@ git diff --check
 Recommended in-game checks:
 
 - `/reloadui` with panels locked and unlocked.
+- Common HUD text size at minimum, default, and maximum values, checking that panels scale together with their text and remain movable.
 - Settings panel opens under Settings > EZO when EZOCore is enabled, without a duplicate standard Addons entry.
 - Standalone LibAddonMenu fallback opens when EZOCore is unavailable.
 - Section-level and field-level help tooltips in the settings panel.
@@ -152,6 +165,7 @@ Recommended in-game checks:
 - Off Balance on dummy/boss, including real active time, cooldown/cycle, and Exploiter reporting.
 - Coral Riptide with fewer than 5 pieces, 5 pieces, and different stamina levels.
 - Roar of Alkosh with fewer than 5 pieces, 5 pieces, Warn mode, Block warning mode, Trial Dummy debuff, and a normal target when available.
+- Z'en's Redress with 3-4 pieces, 5 pieces, multiple DoTs, Touch refreshes, target changes, weapon swaps, and with/without `LibCombat`.
 - DD Stats own/effective/max values and tooltip after combat.
 - Observed Damage/Healing with `LibCombat` installed and with `LibCombat` missing.
 - Fatecarver channel start, completion, early stop, and warning color.

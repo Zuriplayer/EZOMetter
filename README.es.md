@@ -11,14 +11,14 @@ Para soporte, errores y sugerencias, únete a Discord: https://discord.gg/ekw8zU
 
 EZOMetter está en beta pública. El addon es utilizable, pero varias métricas de combate dependen de eventos del cliente de ESO, del estado visible del objetivo y de librerías opcionales. Trata los valores como información práctica de apoyo, no como sustituto completo de un analizador de logs de combate.
 
-Versión actual: **0.1.30**.
+Versión actual: **0.1.32**.
 
 ## Requisitos
 
 - *The Elder Scrolls Online* para PC.
 - [LibAddonMenu-2.0](https://www.esoui.com/downloads/info7-LibAddonMenu.html) es obligatorio para el panel de configuración.
 - Librerías opcionales:
-  - `LibCombat` habilita los paneles de daño/curación observados, los resúmenes de estadísticas DD ponderados por daño y la atribución de daño durante Off Balance.
+  - `LibCombat` habilita los paneles de daño/curación observados, los resúmenes de estadísticas DD ponderados por daño, la atribución de daño durante Off Balance y el seguimiento preferente de stacks de Z'en.
   - `LibChatMessage` mejora la salida del addon en chat.
   - `LibDebugLogger` y `DebugLogViewer` se usan para logs técnicos y para la salida opcional del informe post-combate.
   - `EZOCore` proporciona acceso central desde Ajustes > EZO y control compartido de disposición de interfaz.
@@ -44,6 +44,7 @@ Documents/Elder Scrolls Online/live/AddOns/
 - Selección manual de perfil de rol: DD, Healer o Tank.
 - Detección automática opcional de rol según armas equipadas y habilidades sloteadas. Usa una puntuación conservadora de tank/healer y vuelve a DD si no hay una señal clara.
 - Opción global temporal para desbloquear el HUD y mover todos los paneles de EZOMetter en escenas normales de HUD/HUD UI. Con EZOCore, la misma superficie agregada participa en el control global o individual de disposición de la familia.
+- Ajuste común de tamaño de texto HUD que escala las ventanas visuales de EZOMetter y su texto a la vez para mantener una distribución proporcional.
 - Informe post-combate opcional con fecha, personaje, tipo de contenido, zona, contexto de boss/trash, dificultad cuando está disponible y secciones de los trackers activos.
 - Modo debug para salida técnica mediante `LibDebugLogger`/`DebugLogViewer` si están instalados.
 - El panel de configuración usa cabeceras informativas moradas para la ayuda general de cada sección, mientras cada campo conserva su propio tooltip para el comportamiento específico.
@@ -90,6 +91,17 @@ Documents/Elder Scrolls Online/live/AddOns/
 - Ofrece modos Off, Avisar y Bloqueo visual. Bloqueo visual es solo un aviso, aparece únicamente cuando hay una sinergia visible y no intercepta el input de sinergias.
 - Opacidad del fondo, borde y registro debug opcional de eventos configurables.
 - El tooltip/informe del último combate incluye eficiencia de Alkosh, tiempo posible observado y los últimos datos observados de objetivo/proc.
+
+### Tracker de Reparación de Z'en
+
+- Panel movible separado de Z'en para configuraciones de soporte DPS/healer.
+- El modo Auto muestra el panel si llevas al menos 3 piezas; On lo fuerza visible para pruebas.
+- Usa `LibCombat` como fuente preferente de stacks de Z'en cuando está disponible, con un contador interno de DoTs propios como fallback.
+- Cuenta tus efectos propios de daño en el tiempo sobre el objetivo seguido como stacks potenciales, incluyendo visibilidad fallback con menos de 5 piezas.
+- Sigue Touch de Z'en por abilityId y solo muestra valor efectivo cuando el Touch de 5 piezas está activo.
+- Muestra piezas, stacks potenciales, valor efectivo, tiempo restante de Touch, objetivo, fuente de stacks y una barra de stacks.
+- Opacidad del fondo, borde y registro debug opcional de eventos configurables.
+- El tooltip/informe del último combate incluye uptime de Touch, medias potencial/efectiva, tiempo en cap y datos de objetivo.
 
 ### Estadísticas DD
 
@@ -142,6 +154,7 @@ git diff --check
 Comprobaciones recomendadas dentro del juego:
 
 - `/reloadui` con paneles bloqueados y desbloqueados.
+- Tamaño común de texto HUD en valores mínimo, por defecto y máximo, comprobando que los paneles escalan junto con su texto y siguen siendo movibles.
 - Apertura del panel dentro de Ajustes > EZO cuando EZOCore está activo, sin una entrada duplicada en la lista estándar de Addons.
 - Apertura del fallback independiente de LibAddonMenu cuando EZOCore no está disponible.
 - Tooltips de ayuda general por sección y ayuda específica por campo en el panel de configuración.
@@ -152,6 +165,7 @@ Comprobaciones recomendadas dentro del juego:
 - Off Balance en dummy/boss, incluyendo tiempo activo real, cooldown/ciclo e informe de Exploiter.
 - Coral Riptide con menos de 5 piezas, con 5 piezas y con distintos niveles de stamina.
 - Rugido de Alkosh con menos de 5 piezas, con 5 piezas, modo Avisar, modo Bloqueo visual, debuff de Trial Dummy y objetivo normal cuando esté disponible.
+- Reparación de Z'en con 3-4 piezas, con 5 piezas, varios DoTs, refrescos de Touch, cambios de objetivo, cambios de barra y con/sin `LibCombat`.
 - Valores propios/efectivos/máximos de Estadísticas DD y tooltip después del combate.
 - Daño/curación observados con `LibCombat` instalado y sin `LibCombat`.
 - Inicio, finalización, corte temprano y color de aviso de Fatecarver.

@@ -149,6 +149,25 @@ function EZOMetter_Menu.Init()
                     default = false,
                 },
                 {
+                    type = "slider",
+                    name = GetString(EZOM_OPTION_WINDOW_TEXT_SIZE),
+                    tooltip = GetString(EZOM_OPTION_WINDOW_TEXT_SIZE_TOOLTIP),
+                    min = 70,
+                    max = 150,
+                    step = 5,
+                    getFunc = function()
+                        return EZOMetter.sv.general.windowTextSize or 100
+                    end,
+                    setFunc = function(value)
+                        if EZOMetter_WindowStyle and EZOMetter_WindowStyle.NormalizeTextSize then
+                            value = EZOMetter_WindowStyle.NormalizeTextSize(value)
+                        end
+                        EZOMetter.sv.general.windowTextSize = tonumber(value) or 100
+                        RefreshVisualModules()
+                    end,
+                    default = 100,
+                },
+                {
                     type = "checkbox",
                     name = GetString(EZOM_OPTION_COMBAT_REPORT),
                     tooltip = GetString(EZOM_OPTION_COMBAT_REPORT_TOOLTIP),
@@ -514,6 +533,86 @@ function EZOMetter_Menu.Init()
                     end,
                     setFunc = function(value)
                         EZOMetter.sv.alkosh.debugEvents = value == true
+                    end,
+                    default = false,
+                },
+            },
+        },
+        {
+            type = "submenu",
+            name = GetString(EZOM_OPTION_ZEN),
+            controls = {
+                CreateInfoHeader(GetString(EZOM_OPTION_ZEN), GetString(EZOM_OPTION_ZEN_HEADER_TOOLTIP)),
+                {
+                    type = "dropdown",
+                    name = GetString(EZOM_OPTION_ZEN_MODE),
+                    tooltip = GetString(EZOM_OPTION_ZEN_MODE_TOOLTIP),
+                    choices = {
+                        GetString(EZOM_OPTION_ZEN_MODE_OFF),
+                        GetString(EZOM_OPTION_ZEN_MODE_AUTO),
+                        GetString(EZOM_OPTION_ZEN_MODE_ON),
+                    },
+                    choicesValues = {
+                        "off",
+                        "auto",
+                        "on",
+                    },
+                    getFunc = function()
+                        return EZOMetter.sv.zen and EZOMetter.sv.zen.mode or "auto"
+                    end,
+                    setFunc = function(value)
+                        if value ~= "off" and value ~= "on" then
+                            value = "auto"
+                        end
+                        EZOMetter.sv.zen.mode = value
+                        if EZOMetter_Zen and EZOMetter_Zen.ApplySettings then
+                            EZOMetter_Zen.ApplySettings()
+                        end
+                    end,
+                    default = "auto",
+                },
+                {
+                    type = "slider",
+                    name = GetString(EZOM_OPTION_ZEN_BACKGROUND_OPACITY),
+                    tooltip = GetString(EZOM_OPTION_ZEN_BACKGROUND_OPACITY_TOOLTIP),
+                    min = 0,
+                    max = 100,
+                    step = 5,
+                    getFunc = function()
+                        return EZOMetter.sv.zen.backgroundOpacity or 86
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.zen.backgroundOpacity = tonumber(value) or 86
+                        if EZOMetter_Zen and EZOMetter_Zen.ApplySettings then
+                            EZOMetter_Zen.ApplySettings()
+                        end
+                    end,
+                    default = 86,
+                },
+                {
+                    type = "checkbox",
+                    name = GetString(EZOM_OPTION_ZEN_SHOW_BORDER),
+                    tooltip = GetString(EZOM_OPTION_ZEN_SHOW_BORDER_TOOLTIP),
+                    getFunc = function()
+                        return EZOMetter.sv.zen.showBorder ~= false
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.zen.showBorder = value == true
+                        if EZOMetter_Zen and EZOMetter_Zen.ApplySettings then
+                            EZOMetter_Zen.ApplySettings()
+                        end
+                    end,
+                    default = true,
+                },
+                {
+                    type = "checkbox",
+                    name = GetString(EZOM_OPTION_ZEN_DEBUG_EVENTS),
+                    tooltip = GetString(EZOM_OPTION_ZEN_DEBUG_EVENTS_TOOLTIP),
+                    getFunc = function()
+                        return EZOMetter.sv.zen and EZOMetter.sv.zen.debugEvents == true
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.zen.debugEvents = value == true
                     end,
                     default = false,
                 },

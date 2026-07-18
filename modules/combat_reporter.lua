@@ -23,6 +23,7 @@ local providers = {
     function() return EZOMetter_OffBalance end,
     function() return EZOMetter_Coral end,
     function() return EZOMetter_Alkosh end,
+    function() return EZOMetter_Zen end,
     function() return EZOMetter_DDStats end,
     function() return EZOMetter_ObservedDamage end,
     function() return EZOMetter_ObservedHealing end,

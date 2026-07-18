@@ -238,7 +238,9 @@ local function ApplyStyle()
     local size = tonumber(settings.size) or 100
     if size < 70 then size = 70 end
     if size > 140 then size = 140 end
-    if control and control.SetScale then
+    if EZOMetter_WindowStyle then
+        EZOMetter_WindowStyle.ApplyControlScale(control, size)
+    elseif control and control.SetScale then
         control:SetScale(size / 100)
     end
 

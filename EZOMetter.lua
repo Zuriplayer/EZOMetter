@@ -180,6 +180,7 @@ function EZOM.RefreshVisualModules()
         "EZOMetter_OffBalance",
         "EZOMetter_Coral",
         "EZOMetter_Alkosh",
+        "EZOMetter_Zen",
         "EZOMetter_DDStats",
         "EZOMetter_ObservedDamage",
         "EZOMetter_ObservedHealing",
@@ -278,6 +279,10 @@ function EZOM:Initialize()
 
     if EZOMetter_Alkosh and EZOMetter_Alkosh.Init then
         EZOMetter_Alkosh.Init()
+    end
+
+    if EZOMetter_Zen and EZOMetter_Zen.Init then
+        EZOMetter_Zen.Init()
     end
 
     if EZOMetter_DDStats and EZOMetter_DDStats.Init then

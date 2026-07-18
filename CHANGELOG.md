@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.32 - Shared HUD text scaling
+
+- Adds a common HUD text size setting for EZOMetter visual windows.
+- Scales panel containers together with text so layouts stay proportional.
+- Combines the shared scale with Coral Riptide's existing individual size setting.
+
+## 0.1.31 - Z'en's Redress tracker MVP
+
+- Adds a movable Z'en's Redress support-set panel with Off, Auto, and On modes.
+- Counts player-applied damage-over-time effects as potential Z'en stacks even below 5 set pieces.
+- Uses LibCombat as the preferred Z'en stack source when available, with the internal DoT counter as fallback.
+- Tracks Touch of Z'en by abilityId and reports effective stacks only when the 5-piece Touch is active.
+- Adds last-combat Z'en potential/effective averages, cap time, Touch uptime, and target reporting.
+
 ## 0.1.30 - Alkosh out-of-combat panel state
 
 - Stops the live Alkosh panel from showing an aging proc timer and residual remaining time outside combat.
