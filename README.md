@@ -11,7 +11,7 @@ For support, bug reports, and suggestions, join Discord: https://discord.gg/ekw8
 
 EZOMetter is in public beta. The addon is usable, but several combat metrics depend on ESO client events, visible target state, and optional libraries. Treat the numbers as practical helper information, not as a full replacement for dedicated combat log analysis.
 
-Current version: **0.1.33**.
+Current version: **0.1.34**.
 
 ## Requirements
 
@@ -83,7 +83,8 @@ Documents/Elder Scrolls Online/live/AddOns/
 ### Roar of Alkosh Tracker
 
 - Separate movable Roar of Alkosh panel, disabled by default.
-- Detects the worn 5-piece Roar of Alkosh set through a canonical set itemLink read, with equipped-slot/name matching as fallback.
+- Detects equipped Roar of Alkosh through a canonical set itemLink read, with equipped-slot/name matching as fallback.
+- Automatically hides below three equipped Roar of Alkosh pieces, while HUD layout editing and preview remain available.
 - Tracks Alkosh by abilityId, using Line Breaker and the Trial Dummy aura as the primary 10-second timing sources.
 - Uses CombatMetrics penetration IDs as observed proc/calculation signals, not as the primary uptime clock.
 - Shows equipped state, in-combat last proc, remaining duration capped to the 10-second set duration, efficiency against observed possible uptime, and affected target when ESO exposes a readable target.
@@ -165,7 +166,7 @@ Recommended in-game checks:
 - Banner Bearer alert when a Banner skill is slotted and when no Banner skill is slotted.
 - Off Balance on dummy/boss, including real active time, cooldown/cycle, and Exploiter reporting.
 - Coral Riptide with fewer than 5 pieces, 5 pieces, and different stamina levels.
-- Roar of Alkosh with fewer than 5 pieces, 5 pieces, Warn mode, Block warning mode, Trial Dummy debuff, and a normal target when available.
+- Roar of Alkosh with 0-2 pieces (hidden), 3-4 pieces (visible without the 5-piece bonus), 5 pieces, Warn mode, Block warning mode, Trial Dummy debuff, and a normal target when available.
 - Z'en's Redress with 3-4 pieces, 5 pieces, multiple DoTs, Touch refreshes, target changes, weapon swaps, and with/without `LibCombat`.
 - DD Stats own/effective/max values and tooltip after combat.
 - Observed Damage/Healing with `LibCombat` installed and with `LibCombat` missing.

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.34 - Alkosh panel visibility
+
+- Hides the Alkosh HUD automatically below three equipped Roar of Alkosh pieces.
+- Keeps the panel available during HUD layout editing and its built-in preview.
+
 ## 0.1.33 - DD Stats reference window
 
 - Reworks the DD Stats panel as the first shared EZO window-style reference.

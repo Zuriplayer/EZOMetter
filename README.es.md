@@ -11,7 +11,7 @@ Para soporte, errores y sugerencias, únete a Discord: https://discord.gg/ekw8zU
 
 EZOMetter está en beta pública. El addon es utilizable, pero varias métricas de combate dependen de eventos del cliente de ESO, del estado visible del objetivo y de librerías opcionales. Trata los valores como información práctica de apoyo, no como sustituto completo de un analizador de logs de combate.
 
-Versión actual: **0.1.33**.
+Versión actual: **0.1.34**.
 
 ## Requisitos
 
@@ -83,7 +83,8 @@ Documents/Elder Scrolls Online/live/AddOns/
 ### Tracker de Rugido de Alkosh
 
 - Panel movible separado para Rugido de Alkosh, desactivado por defecto.
-- Detecta el set equipado de 5 piezas mediante una lectura de itemLink canónico del set, con coincidencia por slots/nombre como respaldo.
+- Detecta Rugido de Alkosh equipado mediante una lectura de itemLink canónico del set, con coincidencia por slots/nombre como respaldo.
+- Se oculta automáticamente por debajo de tres piezas equipadas de Rugido de Alkosh; la edición de HUD y la previsualización siguen disponibles.
 - Sigue Alkosh por abilityId, usando Line Breaker y el aura del Trial Dummy como fuentes principales de timing de 10 segundos.
 - Usa los IDs de penetración usados por CombatMetrics como señales observadas de proc/cálculo, no como reloj principal de uptime.
 - Muestra estado equipado, último proc en combate, duración restante limitada a los 10 segundos del set, eficiencia frente al uptime posible observado y objetivo afectado cuando ESO expone un objetivo legible.
@@ -165,7 +166,7 @@ Comprobaciones recomendadas dentro del juego:
 - Aviso de Banner Bearer cuando hay una habilidad de Banner sloteada y cuando no hay ninguna.
 - Off Balance en dummy/boss, incluyendo tiempo activo real, cooldown/ciclo e informe de Exploiter.
 - Coral Riptide con menos de 5 piezas, con 5 piezas y con distintos niveles de stamina.
-- Rugido de Alkosh con menos de 5 piezas, con 5 piezas, modo Avisar, modo Bloqueo visual, debuff de Trial Dummy y objetivo normal cuando esté disponible.
+- Rugido de Alkosh con 0-2 piezas (oculto), con 3-4 piezas (visible sin el bonus de 5 piezas), con 5 piezas, modo Avisar, modo Bloqueo visual, debuff de Trial Dummy y objetivo normal cuando esté disponible.
 - Reparación de Z'en con 3-4 piezas, con 5 piezas, varios DoTs, refrescos de Touch, cambios de objetivo, cambios de barra y con/sin `LibCombat`.
 - Valores propios/efectivos/máximos de Estadísticas DD y tooltip después del combate.
 - Daño/curación observados con `LibCombat` instalado y sin `LibCombat`.

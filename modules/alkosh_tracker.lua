@@ -165,6 +165,10 @@ local function IsEquipped()
     return currentSnapshot and currentSnapshot.hasSet == true and (tonumber(currentSnapshot.numEquipped) or 0) >= 5
 end
 
+local function HasMinimumPieces()
+    return currentSnapshot and currentSnapshot.hasSet == true and (tonumber(currentSnapshot.numEquipped) or 0) >= 3
+end
+
 local function CleanName(name)
     name = tostring(name or "")
     name = string.gsub(name, "%^.*", "")
@@ -520,6 +524,8 @@ local function UpdateVisibility()
         hidden = false
     elseif not IsEnabled() then
         hidden = true
+    elseif not HasMinimumPieces() then
+        hidden = true
     end
     control:SetHidden(hidden)
 end
@@ -549,7 +555,7 @@ local function UnregisterUpdate()
 end
 
 local function RefreshUpdateRegistration()
-    if IsHudUnlocked() or forceShow or IsEnabled() then
+    if IsHudUnlocked() or forceShow or (IsEnabled() and HasMinimumPieces()) then
         RegisterUpdate()
     else
         UnregisterUpdate()
