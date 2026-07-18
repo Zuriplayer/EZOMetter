@@ -19,6 +19,25 @@ function Normalize-RelativePath {
     return ($Path -replace "\\", "/").TrimStart("/")
 }
 
+function Get-PortableRelativePath {
+    param(
+        [string] $BasePath,
+        [string] $FullPath
+    )
+
+    $baseFullPath = [System.IO.Path]::GetFullPath($BasePath)
+    $targetFullPath = [System.IO.Path]::GetFullPath($FullPath)
+
+    if (-not $baseFullPath.EndsWith([System.IO.Path]::DirectorySeparatorChar)) {
+        $baseFullPath += [System.IO.Path]::DirectorySeparatorChar
+    }
+
+    $baseUri = [System.Uri]::new($baseFullPath)
+    $targetUri = [System.Uri]::new($targetFullPath)
+    $relativeUri = $baseUri.MakeRelativeUri($targetUri)
+    return [System.Uri]::UnescapeDataString($relativeUri.ToString())
+}
+
 function Test-RelativePathMatch {
     param(
         [string] $RelativePath,
@@ -73,7 +92,7 @@ function Get-IncludedFiles {
 
             if (Test-Path -LiteralPath $fullDirectory) {
                 Get-ChildItem -LiteralPath $fullDirectory -Recurse -File | ForEach-Object {
-                    $relative = Normalize-RelativePath ([System.IO.Path]::GetRelativePath($RepoRoot, $_.FullName))
+                    $relative = Normalize-RelativePath (Get-PortableRelativePath -BasePath $RepoRoot -FullPath $_.FullName)
                     if (-not (Test-Excluded -RelativePath $relative -Patterns $ExcludePatterns)) {
                         $filesByPath[$relative] = $_.FullName
                     }
@@ -85,7 +104,7 @@ function Get-IncludedFiles {
 
         if ($pattern -notmatch "/") {
             Get-ChildItem -LiteralPath $RepoRoot -File -Filter $pattern | ForEach-Object {
-                $relative = Normalize-RelativePath ([System.IO.Path]::GetRelativePath($RepoRoot, $_.FullName))
+                $relative = Normalize-RelativePath (Get-PortableRelativePath -BasePath $RepoRoot -FullPath $_.FullName)
                 if (-not (Test-Excluded -RelativePath $relative -Patterns $ExcludePatterns)) {
                     $filesByPath[$relative] = $_.FullName
                 }
@@ -95,7 +114,7 @@ function Get-IncludedFiles {
         }
 
         Get-ChildItem -LiteralPath $RepoRoot -Recurse -File | ForEach-Object {
-            $relative = Normalize-RelativePath ([System.IO.Path]::GetRelativePath($RepoRoot, $_.FullName))
+            $relative = Normalize-RelativePath (Get-PortableRelativePath -BasePath $RepoRoot -FullPath $_.FullName)
             if ((Test-RelativePathMatch -RelativePath $relative -Pattern $pattern) -and -not (Test-Excluded -RelativePath $relative -Patterns $ExcludePatterns)) {
                 $filesByPath[$relative] = $_.FullName
             }
