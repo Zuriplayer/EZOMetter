@@ -11,7 +11,7 @@ Para soporte, errores y sugerencias, únete a Discord: https://discord.gg/ekw8zU
 
 EZOMetter está en beta pública. El addon es utilizable, pero varias métricas de combate dependen de eventos del cliente de ESO, del estado visible del objetivo y de librerías opcionales. Trata los valores como información práctica de apoyo, no como sustituto completo de un analizador de logs de combate.
 
-Versión actual: **0.1.32**.
+Versión actual: **0.1.33**.
 
 ## Requisitos
 
@@ -114,6 +114,7 @@ Documents/Elder Scrolls Online/live/AddOns/
 - La penetración efectiva y el daño crítico efectivo incluyen supuestos configurados y debuffs detectados en el objetivo.
 - Umbrales configurables de daño ofensivo, crítico, penetración propia, daño crítico, resistencia del objetivo, Crusher, Alkosh y Tremorscale.
 - Opacidad del fondo, borde, visibilidad solo DD y visibilidad solo en combate configurables.
+- Usa la primera distribución de ventana EZO compartida con varias columnas, ampliando los valores efectivo y máximo para mejorar la legibilidad.
 - El tooltip/informe del último combate incluye resúmenes por tiempo y ponderados por daño cuando hay datos.
 
 ### Daño y curación observados

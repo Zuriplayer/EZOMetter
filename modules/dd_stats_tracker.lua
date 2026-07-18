@@ -6,16 +6,17 @@ local ADDON_NAME = "EZOMetter"
 local CALLBACK_NAME = "EZOMetterDDStats"
 local CONTROL_NAME = "EZOMetterDDStatsTracker"
 local UPDATE_INTERVAL_MS = 250
-local WIDTH = 360
-local HEIGHT = 144
-local PADDING = 12
-local ROW_HEIGHT = 22
-local NAME_WIDTH = 86
-local VALUE_WIDTH = 70
-local EFFECTIVE_WIDTH = 70
-local MAX_WIDTH = 70
-local HEADER_TOP = 30
-local ROWS_TOP = 52
+local WIDTH = 390
+local HEIGHT = 158
+local PADDING = 14
+local ROW_HEIGHT = 23
+local COLUMN_GAP = 8
+local NAME_WIDTH = 94
+local VALUE_WIDTH = 72
+local EFFECTIVE_WIDTH = 88
+local MAX_WIDTH = 82
+local HEADER_TOP = 34
+local ROWS_TOP = 58
 local EFFECTIVE_COLOR = { r = 0.78, g = 0.9, b = 1, a = 1 }
 local EFFECTIVE_OVERCAP_COLOR = { r = 1, g = 0.35, b = 0.25, a = 1 }
 
@@ -29,11 +30,14 @@ local CRIT_DAMAGE_BASE_PERCENT = 50
 
 local control
 local backdrop
+local panel
 local titleLabel
 local ownHeaderLabel
 local effectiveHeaderLabel
 local maxHeaderLabel
 local rows = {}
+local headerGrid
+local valueGrid
 local updateRegistered = false
 local forceShow = false
 local isCombat = false
@@ -236,7 +240,7 @@ local function GetBand(def, value)
     return BAND_OK
 end
 
-local function GetEffectiveBand(def, ownValue, effectiveValue)
+local function GetEffectiveBand(def, _ownValue, effectiveValue)
     effectiveValue = tonumber(effectiveValue)
     if not effectiveValue then return BAND_UNKNOWN end
 
@@ -356,7 +360,7 @@ end
 local function CopyValueSummary(summary)
     if not summary or summary.hasData ~= true then return nil end
 
-    local rows = {}
+    local summaryRows = {}
     local byKey = {}
     for _, row in ipairs(summary.rows or {}) do
         local copy = {
@@ -369,22 +373,22 @@ local function CopyValueSummary(summary)
             lastValue = row.lastValue,
             bandMs = CopyBandTable(row.bandMs),
         }
-        table.insert(rows, copy)
+        table.insert(summaryRows, copy)
         byKey[copy.key] = copy
     end
 
     return {
         durationMs = summary.durationMs,
-        rows = rows,
+        rows = summaryRows,
         byKey = byKey,
-        hasData = #rows > 0,
+        hasData = #summaryRows > 0,
     }
 end
 
 local function CopyDamageWeightedSummary(summary)
     if not summary or summary.hasData ~= true then return nil end
 
-    local rows = {}
+    local summaryRows = {}
     local byKey = {}
     for _, row in ipairs(summary.rows or {}) do
         local copy = {
@@ -402,16 +406,16 @@ local function CopyDamageWeightedSummary(summary)
             maxOvercap = row.maxOvercap,
             bandDamage = CopyBandTable(row.bandDamage),
         }
-        table.insert(rows, copy)
+        table.insert(summaryRows, copy)
         byKey[copy.key] = copy
     end
 
     return {
         durationMs = summary.durationMs,
         totalDamage = summary.totalDamage,
-        rows = rows,
+        rows = summaryRows,
         byKey = byKey,
-        hasData = #rows > 0,
+        hasData = #summaryRows > 0,
     }
 end
 
@@ -512,19 +516,6 @@ end
 local function GetDamageBandPercent(row, band)
     if not row or not row.bandDamage or (tonumber(row.damageWeight) or 0) <= 0 then return 0 end
     return ((row.bandDamage[band] or 0) / row.damageWeight) * 100
-end
-
-local function FormatBandBreakdown(prefix, lowPercent, okPercent, highPercent)
-    return string.format(
-        "  %s %s %s  %s %s  %s %s",
-        prefix,
-        GetString(EZOM_DD_STATS_SUMMARY_LOW),
-        FormatPercent(lowPercent),
-        GetString(EZOM_DD_STATS_SUMMARY_OK),
-        FormatPercent(okPercent),
-        GetString(EZOM_DD_STATS_SUMMARY_HIGH),
-        FormatPercent(highPercent)
-    )
 end
 
 local function FormatCappedBreakdown(prefix, lowPercent, cappedPercent)
@@ -797,21 +788,22 @@ local function SetMoveMode(enabled)
 end
 
 local function ApplyStyle()
-    if EZOMetter_WindowStyle then
-        EZOMetter_WindowStyle.ApplyControlScale(control)
-    end
-    if not backdrop then return end
-
     local settings = GetSettings() or {}
     local opacity = tonumber(settings.backgroundOpacity) or 86
     if opacity < 0 then opacity = 0 end
     if opacity > 100 then opacity = 100 end
 
-    backdrop:SetCenterColor(0.03, 0.03, 0.03, opacity / 100)
-    if settings.showBorder == false then
-        backdrop:SetEdgeColor(0, 0, 0, 0)
-    else
-        backdrop:SetEdgeColor(0.45, 0.82, 0.35, 0.95)
+    if EZOMetter_WindowStyle and EZOMetter_WindowStyle.ApplyPanelStyle and panel then
+        EZOMetter_WindowStyle.ApplyPanelStyle(panel, {
+            backgroundOpacity = opacity,
+            showBorder = settings.showBorder,
+            borderColor = { r = 0.45, g = 0.82, b = 0.35, a = 0.76 },
+            accentColor = { r = 0.45, g = 0.82, b = 0.35, a = 0.92 },
+        })
+    elseif EZOMetter_WindowStyle then
+        EZOMetter_WindowStyle.ApplyControlScale(control)
+        backdrop:SetCenterColor(0.03, 0.03, 0.03, opacity / 100)
+        backdrop:SetEdgeColor(0.45, 0.82, 0.35, settings.showBorder == false and 0 or 0.95)
     end
 end
 
@@ -819,20 +811,27 @@ local function EnsureControl()
     if control then return control end
 
     local wm = WINDOW_MANAGER
-    control = wm:CreateTopLevelWindow(CONTROL_NAME)
-    control:SetDimensions(WIDTH, HEIGHT)
-    control:SetClampedToScreen(true)
-    control:SetDrawTier(DT_HIGH)
-    control:SetHidden(true)
+    panel = EZOMetter_WindowStyle and EZOMetter_WindowStyle.CreatePanel
+        and EZOMetter_WindowStyle.CreatePanel(CONTROL_NAME, WIDTH, HEIGHT, { drawTier = DT_HIGH })
+    if panel then
+        control = panel.control
+        backdrop = panel.backdrop
+    else
+        control = wm:CreateTopLevelWindow(CONTROL_NAME)
+        control:SetDimensions(WIDTH, HEIGHT)
+        control:SetClampedToScreen(true)
+        control:SetDrawTier(DT_HIGH)
+        control:SetHidden(true)
+        backdrop = wm:CreateControl(CONTROL_NAME .. "Backdrop", control, CT_BACKDROP)
+        backdrop:SetAnchorFill(control)
+        backdrop:SetEdgeTexture("EsoUI/Art/Tooltips/UI-Border.dds", 128, 16)
+    end
     EZOMetter_VisualContext.BindPrimaryDrag(control, function()
         return control.ezomMoveEnabled == true
     end, SavePosition)
     control:SetHandler("OnMouseEnter", ShowTooltip)
     control:SetHandler("OnMouseExit", HideTooltip)
 
-    backdrop = wm:CreateControl(CONTROL_NAME .. "Backdrop", control, CT_BACKDROP)
-    backdrop:SetAnchorFill(control)
-    backdrop:SetEdgeTexture("EsoUI/Art/Tooltips/UI-Border.dds", 128, 16)
     ApplyStyle()
 
     titleLabel = wm:CreateControl(CONTROL_NAME .. "Title", control, CT_LABEL)
@@ -842,50 +841,60 @@ local function EnsureControl()
     titleLabel:SetFont("ZoFontGameMedium")
     titleLabel:SetText(GetString(EZOM_DD_STATS_TITLE))
 
+    headerGrid = EZOMetter_WindowStyle and EZOMetter_WindowStyle.CreateGrid
+        and EZOMetter_WindowStyle.CreateGrid(control, {
+            left = PADDING,
+            top = HEADER_TOP,
+            columns = { NAME_WIDTH, VALUE_WIDTH, EFFECTIVE_WIDTH, MAX_WIDTH },
+            columnGap = COLUMN_GAP,
+            rowHeight = 18,
+        })
+    valueGrid = EZOMetter_WindowStyle and EZOMetter_WindowStyle.CreateGrid
+        and EZOMetter_WindowStyle.CreateGrid(control, {
+            left = PADDING,
+            top = ROWS_TOP,
+            columns = { NAME_WIDTH, VALUE_WIDTH, EFFECTIVE_WIDTH, MAX_WIDTH },
+            columnGap = COLUMN_GAP,
+            rowHeight = ROW_HEIGHT,
+        })
+
     ownHeaderLabel = wm:CreateControl(CONTROL_NAME .. "OwnHeader", control, CT_LABEL)
-    ownHeaderLabel:SetAnchor(TOPLEFT, control, TOPLEFT, PADDING + NAME_WIDTH + 6, HEADER_TOP)
-    ownHeaderLabel:SetDimensions(VALUE_WIDTH, 16)
+    headerGrid:Place(ownHeaderLabel, 2, 1)
     ownHeaderLabel:SetFont("ZoFontGameSmall")
     ownHeaderLabel:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
     ownHeaderLabel:SetColor(0.62, 0.66, 0.72, 1)
 
     effectiveHeaderLabel = wm:CreateControl(CONTROL_NAME .. "EffectiveHeader", control, CT_LABEL)
-    effectiveHeaderLabel:SetAnchor(TOPRIGHT, control, TOPRIGHT, -(PADDING + MAX_WIDTH + 8), HEADER_TOP)
-    effectiveHeaderLabel:SetDimensions(EFFECTIVE_WIDTH, 16)
+    headerGrid:Place(effectiveHeaderLabel, 3, 1)
     effectiveHeaderLabel:SetFont("ZoFontGameSmall")
     effectiveHeaderLabel:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
     effectiveHeaderLabel:SetColor(0.62, 0.66, 0.72, 1)
 
     maxHeaderLabel = wm:CreateControl(CONTROL_NAME .. "MaxHeader", control, CT_LABEL)
-    maxHeaderLabel:SetAnchor(TOPRIGHT, control, TOPRIGHT, -PADDING, HEADER_TOP)
-    maxHeaderLabel:SetDimensions(MAX_WIDTH, 16)
+    headerGrid:Place(maxHeaderLabel, 4, 1)
     maxHeaderLabel:SetFont("ZoFontGameSmall")
     maxHeaderLabel:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
     maxHeaderLabel:SetColor(0.62, 0.66, 0.72, 1)
 
     for index, def in ipairs(STAT_DEFS) do
-        local top = ROWS_TOP + ((index - 1) * ROW_HEIGHT)
         local row = {}
 
         row.name = wm:CreateControl(CONTROL_NAME .. def.key .. "Name", control, CT_LABEL)
-        row.name:SetAnchor(TOPLEFT, control, TOPLEFT, PADDING, top)
-        row.name:SetDimensions(NAME_WIDTH, ROW_HEIGHT)
+        valueGrid:Place(row.name, 1, index)
         row.name:SetFont("ZoFontGameSmall")
         row.name:SetColor(0.82, 0.82, 0.82, 1)
         row.name:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
         row.name:SetMaxLineCount(1)
 
         row.value = wm:CreateControl(CONTROL_NAME .. def.key .. "Value", control, CT_LABEL)
-        row.value:SetAnchor(TOPLEFT, row.name, TOPRIGHT, 6, 0)
-        row.value:SetDimensions(VALUE_WIDTH, ROW_HEIGHT)
+        valueGrid:Place(row.value, 2, index)
         row.value:SetFont("ZoFontGameSmall")
         row.value:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
         row.value:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
         row.value:SetMaxLineCount(1)
 
         row.effective = wm:CreateControl(CONTROL_NAME .. def.key .. "Effective", control, CT_LABEL)
-        row.effective:SetAnchor(TOPRIGHT, control, TOPRIGHT, -(PADDING + MAX_WIDTH + 8), top)
-        row.effective:SetDimensions(EFFECTIVE_WIDTH, ROW_HEIGHT)
+        valueGrid:Place(row.effective, 3, index)
         row.effective:SetFont("ZoFontGameSmall")
         row.effective:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
         row.effective:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
@@ -893,8 +902,7 @@ local function EnsureControl()
         row.effective:SetColor(EFFECTIVE_COLOR.r, EFFECTIVE_COLOR.g, EFFECTIVE_COLOR.b, EFFECTIVE_COLOR.a)
 
         row.max = wm:CreateControl(CONTROL_NAME .. def.key .. "Max", control, CT_LABEL)
-        row.max:SetAnchor(TOPRIGHT, control, TOPRIGHT, -PADDING, top)
-        row.max:SetDimensions(MAX_WIDTH, ROW_HEIGHT)
+        valueGrid:Place(row.max, 4, index)
         row.max:SetFont("ZoFontGameSmall")
         row.max:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
         row.max:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
@@ -1049,7 +1057,7 @@ local function CreateDamageWeightedTracker()
     end
 
     local function BuildSummary(self, nowMs)
-        local rows = {}
+        local summaryRows = {}
         local byKey = {}
         local durationMs = self.durationMs
         if self.started then
@@ -1074,7 +1082,7 @@ local function CreateDamageWeightedTracker()
                     maxOvercap = stat.maxOvercap,
                     bandDamage = stat.bandDamage,
                 }
-                table.insert(rows, row)
+                table.insert(summaryRows, row)
                 byKey[key] = row
             end
         end
@@ -1082,9 +1090,9 @@ local function CreateDamageWeightedTracker()
         return {
             durationMs = durationMs,
             totalDamage = self.totalDamage,
-            rows = rows,
+            rows = summaryRows,
             byKey = byKey,
-            hasData = #rows > 0,
+            hasData = #summaryRows > 0,
         }
     end
 

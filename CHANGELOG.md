@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.33 - DD Stats reference window
+
+- Reworks the DD Stats panel as the first shared EZO window-style reference.
+- Adds a reusable panel frame and fixed-column grid helper for future tracker migrations.
+- Expands the DD Stats data columns and applies a subtle semantic accent while its border is enabled.
+
 ## 0.1.32 - Shared HUD text scaling
 
 - Adds a common HUD text size setting for EZOMetter visual windows.
