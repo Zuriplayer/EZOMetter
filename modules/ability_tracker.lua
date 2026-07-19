@@ -428,8 +428,20 @@ local function ApplyStyle(activeStyle)
 
     if activeStyle ~= true then
         local idleAlpha = IsHudUnlocked() and INACTIVE_MOVE_BACKGROUND_ALPHA or INACTIVE_BACKGROUND_ALPHA
-        backdrop:SetCenterColor(0.03, 0.03, 0.03, idleAlpha)
-        backdrop:SetEdgeColor(0, 0, 0, 0)
+        if EZOMetter_WindowStyle and EZOMetter_WindowStyle.ApplyBackdropStyle then
+            EZOMetter_WindowStyle.ApplyBackdropStyle(backdrop, {
+                opacityMultiplier = idleAlpha,
+                hideBorder = true,
+            })
+        else
+            backdrop:SetCenterColor(0.03, 0.03, 0.03, idleAlpha)
+            backdrop:SetEdgeColor(0, 0, 0, 0)
+        end
+        return
+    end
+
+    if EZOMetter_WindowStyle and EZOMetter_WindowStyle.ApplyBackdropStyle then
+        EZOMetter_WindowStyle.ApplyBackdropStyle(backdrop)
         return
     end
 
@@ -493,7 +505,7 @@ local function EnsureControl()
 
     backdrop = wm:CreateControl(CONTROL_NAME .. "Backdrop", control, CT_BACKDROP)
     backdrop:SetAnchorFill(control)
-    backdrop:SetEdgeTexture("EsoUI/Art/Tooltips/UI-Border.dds", 128, 16)
+    backdrop:SetEdgeTexture("", 1, 1, 1)
     backdrop:SetDrawLevel(0)
     ApplyStyle()
 

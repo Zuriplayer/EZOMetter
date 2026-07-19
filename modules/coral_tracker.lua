@@ -244,6 +244,11 @@ local function ApplyStyle()
         control:SetScale(size / 100)
     end
 
+    if EZOMetter_WindowStyle and EZOMetter_WindowStyle.ApplyBackdropStyle then
+        EZOMetter_WindowStyle.ApplyBackdropStyle(backdrop)
+        return
+    end
+
     local opacity = tonumber(settings.backgroundOpacity) or 86
     if opacity < 0 then opacity = 0 end
     if opacity > 100 then opacity = 100 end
@@ -305,7 +310,7 @@ local function EnsureControl()
 
     backdrop = wm:CreateControl(CONTROL_NAME .. "Backdrop", control, CT_BACKDROP)
     backdrop:SetAnchorFill(control)
-    backdrop:SetEdgeTexture("EsoUI/Art/Tooltips/UI-Border.dds", 128, 16)
+    backdrop:SetEdgeTexture("", 1, 1, 1)
     ApplyStyle()
 
     stateLabel = wm:CreateControl(CONTROL_NAME .. "State", control, CT_LABEL)

@@ -11,7 +11,7 @@ For support, bug reports, and suggestions, join Discord: https://discord.gg/ekw8
 
 EZOMetter is in public beta. The addon is usable, but several combat metrics depend on ESO client events, visible target state, and optional libraries. Treat the numbers as practical helper information, not as a full replacement for dedicated combat log analysis.
 
-Current version: **0.1.34**.
+Current version: **0.1.35**.
 
 ## Requirements
 
@@ -45,6 +45,7 @@ Documents/Elder Scrolls Online/live/AddOns/
 - Optional automatic role detection based on equipped weapons and slotted skills. It uses conservative tank/healer scoring and falls back to DD.
 - One session-only global HUD unlock option that shows movable EZOMetter panels in normal HUD/HUD UI scenes. With EZOCore, the same aggregate surface participates in global or individual family layout control.
 - Common HUD text size setting that scales EZOMetter visual windows and text together so panel layouts remain proportional.
+- Shared HUD appearance controls for background opacity, border visibility, and border/accent color, applied consistently to every visual panel.
 - Optional post-combat report with date, character, content type, zone, boss/trash context, difficulty when available, and sections from active trackers.
 - Debug mode for technical output through `LibDebugLogger`/`DebugLogViewer` when installed.
 - The settings panel uses purple information headers for section-level help, while each field keeps its own tooltip for specific behavior.
@@ -55,16 +56,16 @@ Documents/Elder Scrolls Online/live/AddOns/
 - DD currently checks Major Brutality, Major Sorcery, Major Savagery, Major Prophecy, and Banner Bearer when a Banner skill is slotted.
 - Healer currently checks Major Sorcery and Major Prophecy.
 - Tank currently has no required self-buff list.
-- Configurable alert background opacity and border.
 - The alert records last-combat uptime for required checks when combat reporting is enabled.
 
 ### Off Balance Tracker
 
 - Separate movable Off Balance HUD for the current target or tracked boss.
 - Tracks real Off Balance separately from the estimated Off Balance cooldown/cycle.
+- Keeps an explicit Off Balance title in the live panel, with the active/cooldown timer and current or last-combat counters beneath it.
 - Boss focus can keep tracking known boss state when you briefly look away.
 - Optional boss-only and combat-only visibility.
-- Configurable background opacity, border, and colors for ready, active, and cooldown states.
+- Configurable colors for ready, active, and cooldown states.
 - Optional pulse when Off Balance starts.
 - Debug scan for current target buffs and Off Balance events.
 - Detects the Exploiter Champion Point star when available, checks whether it is slotted, reads points spent, and estimates its value from damage done during real Off Balance.
@@ -76,7 +77,7 @@ Documents/Elder Scrolls Online/live/AddOns/
 - Detects worn Coral Riptide or Perfected Coral Riptide pieces by set name matching and treats the bonus as active at 5 pieces.
 - Estimates the damage bonus from missing stamina, up to +600 at or below 50% stamina.
 - Shows state bands for cap, OK, medium, low, bad, and inactive.
-- Configurable size, background opacity, border, DD-only visibility, and combat-only visibility.
+- Configurable size, DD-only visibility, and combat-only visibility.
 - Optional equipment debug scan for set names and IDs.
 - Last-combat summary includes estimated average bonus and time in useful/bad/inactive bands.
 
@@ -90,7 +91,7 @@ Documents/Elder Scrolls Online/live/AddOns/
 - Shows equipped state, in-combat last proc, remaining duration capped to the 10-second set duration, efficiency against observed possible uptime, and affected target when ESO exposes a readable target.
 - Keeps the last valid efficiency visible after combat until new combat data replaces it; live proc and remaining time reset to neutral outside combat.
 - Provides Off, Warn, and Block warning modes. Block warning is visual only, appears only while a synergy prompt is visible, and does not intercept synergy input.
-- Configurable background opacity, border, and optional debug event logging.
+- Optional debug event logging.
 - Last-combat tooltip/report includes Alkosh efficiency, observed possible time, and last observed target/proc data.
 
 ### Z'en's Redress Tracker
@@ -101,7 +102,7 @@ Documents/Elder Scrolls Online/live/AddOns/
 - Counts your own damage-over-time effects on the tracked target as potential Z'en stacks, including fallback visibility below 5 set pieces.
 - Tracks Touch of Z'en by abilityId and shows effective value only when the 5-piece Touch is active.
 - Shows pieces, potential stacks, effective value, Touch remaining time, target, stack source, and a stack bar.
-- Configurable background opacity, border, and optional debug event logging.
+- Optional debug event logging.
 - Last-combat tooltip/report includes Touch uptime, potential/effective averages, cap time, and target data.
 
 ### DD Stats
@@ -114,7 +115,7 @@ Documents/Elder Scrolls Online/live/AddOns/
 - Shows own, effective, and max calculated values where applicable.
 - Effective penetration and critical damage include supported assumptions and detected target debuffs.
 - Configurable thresholds for offensive damage, critical chance, self penetration, critical damage, target resistance, Crusher, Alkosh, and Tremorscale.
-- Configurable background opacity, border, DD-only visibility, and combat-only visibility.
+- Configurable DD-only visibility and combat-only visibility.
 - Uses the first shared EZO multi-column window layout, with wider effective and maximum-value columns for readability.
 - Last-combat tooltip/report includes time-based and damage-weighted summaries when data is available.
 
@@ -123,7 +124,7 @@ Documents/Elder Scrolls Online/live/AddOns/
 - Optional `LibCombat` panels for observed outgoing damage and healing.
 - Observed Damage shows current DPS, average DPS, observed group share, and boss damage/share when available.
 - Observed Healing shows current HPS, average HPS, and observed group healing share when available.
-- Both panels support combat-only visibility, background opacity, border, and role-based visibility.
+- Both panels support combat-only and role-based visibility.
 - Group totals are client-observed values and depend on events received by the local client.
 
 ### Fatecarver Helper
@@ -131,7 +132,7 @@ Documents/Elder Scrolls Online/live/AddOns/
 - Horizontal Fatecarver channel bar for Arcanist Fatecarver, Exhausting Fatecarver, and Pragmatic Fatecarver.
 - Detects Fatecarver on either action bar.
 - Tracks active channel timing from combat events and player effects.
-- Configurable cancel-window warning in milliseconds, background opacity, and border.
+- Configurable cancel-window warning in milliseconds.
 - Last-combat summary reports casts, completed channels, OK cancels, early stops, and early-stop timing.
 
 ## Safety Limits

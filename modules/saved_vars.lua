@@ -12,6 +12,9 @@ function EZOMetter.savedVars.Init()
             unlockHud = false,
             combatReportEnabled = false,
             windowTextSize = 100,
+            hudBackgroundOpacity = 86,
+            hudShowBorder = true,
+            hudBorderColor = { r = 0.69, g = 0.25, b = 1, a = 0.92 },
         },
         alerts = {
             missingBuffAlerts = true,
@@ -143,6 +146,14 @@ function EZOMetter.savedVars.Init()
     EZOMetter.sv.general.windowTextSize = EZOMetter_WindowStyle
         and EZOMetter_WindowStyle.NormalizeTextSize(EZOMetter.sv.general.windowTextSize)
         or defaults.general.windowTextSize
+    EZOMetter.sv.general.hudBackgroundOpacity = math.max(
+        0,
+        math.min(100, tonumber(EZOMetter.sv.general.hudBackgroundOpacity) or defaults.general.hudBackgroundOpacity)
+    )
+    if EZOMetter.sv.general.hudShowBorder == nil then
+        EZOMetter.sv.general.hudShowBorder = defaults.general.hudShowBorder
+    end
+    EZOMetter.sv.general.hudBorderColor = EZOMetter.sv.general.hudBorderColor or defaults.general.hudBorderColor
     if EZOMetter.sv.alerts.missingBuffAlerts == nil then
         EZOMetter.sv.alerts.missingBuffAlerts = defaults.alerts.missingBuffAlerts
     end

@@ -794,16 +794,15 @@ local function ApplyStyle()
     if opacity > 100 then opacity = 100 end
 
     if EZOMetter_WindowStyle and EZOMetter_WindowStyle.ApplyPanelStyle and panel then
-        EZOMetter_WindowStyle.ApplyPanelStyle(panel, {
-            backgroundOpacity = opacity,
-            showBorder = settings.showBorder,
-            borderColor = { r = 0.45, g = 0.82, b = 0.35, a = 0.76 },
-            accentColor = { r = 0.45, g = 0.82, b = 0.35, a = 0.92 },
-        })
+        EZOMetter_WindowStyle.ApplyPanelStyle(panel)
     elseif EZOMetter_WindowStyle then
         EZOMetter_WindowStyle.ApplyControlScale(control)
-        backdrop:SetCenterColor(0.03, 0.03, 0.03, opacity / 100)
-        backdrop:SetEdgeColor(0.45, 0.82, 0.35, settings.showBorder == false and 0 or 0.95)
+        if EZOMetter_WindowStyle.ApplyBackdropStyle then
+            EZOMetter_WindowStyle.ApplyBackdropStyle(backdrop)
+        else
+            backdrop:SetCenterColor(0.03, 0.03, 0.03, opacity / 100)
+            backdrop:SetEdgeColor(0.45, 0.82, 0.35, settings.showBorder == false and 0 or 0.95)
+        end
     end
 end
 
@@ -824,7 +823,7 @@ local function EnsureControl()
         control:SetHidden(true)
         backdrop = wm:CreateControl(CONTROL_NAME .. "Backdrop", control, CT_BACKDROP)
         backdrop:SetAnchorFill(control)
-        backdrop:SetEdgeTexture("EsoUI/Art/Tooltips/UI-Border.dds", 128, 16)
+        backdrop:SetEdgeTexture("", 1, 1, 1)
     end
     EZOMetter_VisualContext.BindPrimaryDrag(control, function()
         return control.ezomMoveEnabled == true

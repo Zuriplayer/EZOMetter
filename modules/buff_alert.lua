@@ -163,6 +163,10 @@ end
 local function ApplyStyle()
     if EZOMetter_WindowStyle then
         EZOMetter_WindowStyle.ApplyControlScale(control)
+        if EZOMetter_WindowStyle.ApplyBackdropStyle then
+            EZOMetter_WindowStyle.ApplyBackdropStyle(backdrop)
+            return
+        end
     end
     if not backdrop then return end
 
@@ -217,7 +221,7 @@ local function EnsureControl()
 
     backdrop = wm:CreateControl(CONTROL_NAME .. "Backdrop", control, CT_BACKDROP)
     backdrop:SetAnchorFill(control)
-    backdrop:SetEdgeTexture("EsoUI/Art/Tooltips/UI-Border.dds", 128, 16)
+    backdrop:SetEdgeTexture("", 1, 1, 1)
     ApplyStyle()
 
     ApplyPosition()

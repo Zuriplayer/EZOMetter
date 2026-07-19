@@ -341,6 +341,10 @@ function Factory.Create(config)
     local function ApplyStyle()
         if EZOMetter_WindowStyle then
             EZOMetter_WindowStyle.ApplyControlScale(control)
+            if EZOMetter_WindowStyle.ApplyBackdropStyle then
+                EZOMetter_WindowStyle.ApplyBackdropStyle(backdrop)
+                return
+            end
         end
         if not backdrop then return end
 
@@ -457,7 +461,7 @@ function Factory.Create(config)
 
         backdrop = wm:CreateControl(controlName .. "Backdrop", control, CT_BACKDROP)
         backdrop:SetAnchorFill(control)
-        backdrop:SetEdgeTexture("EsoUI/Art/Tooltips/UI-Border.dds", 128, 16)
+        backdrop:SetEdgeTexture("", 1, 1, 1)
         ApplyStyle()
 
         for index, def in ipairs(ROW_DEFS) do

@@ -396,8 +396,9 @@ end
 
 local function SetMoveMode(enabled)
     if not control then return end
+    control.ezomMoveEnabled = enabled == true
     control:SetMouseEnabled(true)
-    control:SetMovable(enabled == true)
+    if control.ezomPrimaryDragRefresh then control.ezomPrimaryDragRefresh() end
 end
 
 local function SavePosition()
@@ -417,6 +418,10 @@ end
 local function ApplyBackdrop()
     if EZOMetter_WindowStyle then
         EZOMetter_WindowStyle.ApplyControlScale(control)
+        if EZOMetter_WindowStyle.ApplyBackdropStyle then
+            EZOMetter_WindowStyle.ApplyBackdropStyle(backdrop)
+            return
+        end
     end
     if not backdrop then return end
     local settings = GetSettings() or {}
@@ -441,7 +446,7 @@ local function EnsureControl()
     control:SetMovable(false)
 
     EZOMetter_VisualContext.BindPrimaryDrag(control, function()
-        return IsHudUnlocked()
+        return control.ezomMoveEnabled == true
     end, SavePosition)
     control:SetHandler("OnMouseEnter", ShowTooltip)
     control:SetHandler("OnMouseExit", HideTooltip)
@@ -450,7 +455,7 @@ local function EnsureControl()
     backdrop:SetAnchorFill(control)
     backdrop:SetCenterColor(0, 0, 0, 0.86)
     backdrop:SetEdgeColor(0.95, 0.78, 0.15, 1)
-    backdrop:SetEdgeTexture("EsoUI/Art/Tooltips/UI-Border.dds", 128, 16)
+    backdrop:SetEdgeTexture("", 1, 1, 1)
 
     titleLabel = wm:CreateControl(CONTROL_NAME .. "Title", control, CT_LABEL)
     titleLabel:SetAnchor(TOPLEFT, control, TOPLEFT, PADDING, PADDING - 2)

@@ -13,7 +13,7 @@ local HEIGHT = 58
 local ICON_SIZE = 18
 local PADDING = 8
 local TEXT_GAP = 8
-local TIMER_WIDTH = 48
+local TIMER_WIDTH = 66
 local PULSE_DURATION_MS = 650
 local PULSE_SCALE = 1.18
 local DEBUG_THROTTLE_MS = 750
@@ -171,12 +171,6 @@ local function MatchState(effectName, abilityId)
     if normalized == "" then return STATE_FREE end
 
     return GetNamesByState()[normalized] or STATE_FREE
-end
-
-local function GetStateName(state)
-    if state == STATE_ACTIVE then return GetString(EZOM_OFF_BALANCE_STATE_ACTIVE) end
-    if state == STATE_IMMUNE then return GetString(EZOM_OFF_BALANCE_STATE_IMMUNE) end
-    return GetString(EZOM_OFF_BALANCE_STATE_FREE)
 end
 
 local function GetStateColor(state)
@@ -556,6 +550,10 @@ end
 local function ApplyStyle()
     if EZOMetter_WindowStyle then
         EZOMetter_WindowStyle.ApplyControlScale(control)
+        if EZOMetter_WindowStyle.ApplyBackdropStyle then
+            EZOMetter_WindowStyle.ApplyBackdropStyle(backdrop)
+            return
+        end
     end
     if not backdrop then return end
 
@@ -604,7 +602,7 @@ local function EnsureControl()
 
     backdrop = wm:CreateControl(CONTROL_NAME .. "Backdrop", control, CT_BACKDROP)
     backdrop:SetAnchorFill(control)
-    backdrop:SetEdgeTexture("EsoUI/Art/Tooltips/UI-Border.dds", 128, 16)
+    backdrop:SetEdgeTexture("", 1, 1, 1)
     ApplyStyle()
 
     icon = wm:CreateControl(CONTROL_NAME .. "Icon", control, CT_TEXTURE)
@@ -707,19 +705,23 @@ local function UpdateVisuals(state, remainingMs, targetName, targetIsBoss, sourc
 
     local r, g, b, a = GetStateColor(state)
     icon:SetColor(r, g, b, a)
-    stateLabel:SetText(GetStateName(state))
+    stateLabel:SetText(GetString(EZOM_OFF_BALANCE_STATE_ACTIVE))
     stateLabel:SetColor(r, g, b, a)
     timerLabel:SetColor(r, g, b, a)
 
-    if state == STATE_FREE then
-        timerLabel:SetText("-")
-    else
+    if state == STATE_IMMUNE then
+        timerLabel:SetText(string.format(GetString(EZOM_OFF_BALANCE_TIMER_COOLDOWN), FormatSeconds(remainingMs)))
+    elseif state == STATE_ACTIVE then
         timerLabel:SetText(FormatSeconds(remainingMs))
+    else
+        timerLabel:SetText("--")
     end
 
     local panelCounterText = BuildPanelCounterText()
     if panelCounterText then
         targetLabel:SetText(panelCounterText)
+    elseif not isCombat then
+        targetLabel:SetText(GetString(EZOM_OFF_BALANCE_OUT_OF_COMBAT))
     elseif targetName and targetName ~= "" then
         targetLabel:SetText(targetName)
     else

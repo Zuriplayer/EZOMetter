@@ -149,6 +149,22 @@ function EZOMetter_Menu.Init()
                     default = false,
                 },
                 {
+                    type = "checkbox",
+                    name = GetString(EZOM_OPTION_COMBAT_REPORT),
+                    tooltip = GetString(EZOM_OPTION_COMBAT_REPORT_TOOLTIP),
+                    getFunc = function()
+                        return EZOMetter.sv.general.combatReportEnabled == true
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.general.combatReportEnabled = value == true
+                    end,
+                    default = false,
+                },
+                CreateInfoHeader(
+                    GetString(EZOM_OPTION_HUD_APPEARANCE),
+                    GetString(EZOM_OPTION_HUD_APPEARANCE_TOOLTIP)
+                ),
+                {
                     type = "slider",
                     name = GetString(EZOM_OPTION_WINDOW_TEXT_SIZE),
                     tooltip = GetString(EZOM_OPTION_WINDOW_TEXT_SIZE_TOOLTIP),
@@ -168,16 +184,55 @@ function EZOMetter_Menu.Init()
                     default = 100,
                 },
                 {
-                    type = "checkbox",
-                    name = GetString(EZOM_OPTION_COMBAT_REPORT),
-                    tooltip = GetString(EZOM_OPTION_COMBAT_REPORT_TOOLTIP),
+                    type = "slider",
+                    name = GetString(EZOM_OPTION_HUD_BACKGROUND_OPACITY),
+                    tooltip = GetString(EZOM_OPTION_HUD_BACKGROUND_OPACITY_TOOLTIP),
+                    min = 0,
+                    max = 100,
+                    step = 5,
                     getFunc = function()
-                        return EZOMetter.sv.general.combatReportEnabled == true
+                        return EZOMetter.sv.general.hudBackgroundOpacity or 86
                     end,
                     setFunc = function(value)
-                        EZOMetter.sv.general.combatReportEnabled = value == true
+                        EZOMetter.sv.general.hudBackgroundOpacity = math.max(0, math.min(100, tonumber(value) or 86))
+                        RefreshVisualModules()
                     end,
-                    default = false,
+                    default = 86,
+                },
+                {
+                    type = "checkbox",
+                    name = GetString(EZOM_OPTION_HUD_SHOW_BORDER),
+                    tooltip = GetString(EZOM_OPTION_HUD_SHOW_BORDER_TOOLTIP),
+                    getFunc = function()
+                        return EZOMetter.sv.general.hudShowBorder ~= false
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.general.hudShowBorder = value == true
+                        RefreshVisualModules()
+                    end,
+                    default = true,
+                },
+                {
+                    type = "colorpicker",
+                    name = GetString(EZOM_OPTION_HUD_BORDER_COLOR),
+                    tooltip = GetString(EZOM_OPTION_HUD_BORDER_COLOR_TOOLTIP),
+                    getFunc = function()
+                        local color = EZOMetter.sv.general.hudBorderColor or { r = 0.69, g = 0.25, b = 1, a = 0.92 }
+                        return color.r or 0.69, color.g or 0.25, color.b or 1, color.a or 0.92
+                    end,
+                    setFunc = function(red, green, blue, alpha)
+                        EZOMetter.sv.general.hudBorderColor = {
+                            r = red,
+                            g = green,
+                            b = blue,
+                            a = alpha or 0.92,
+                        }
+                        RefreshVisualModules()
+                    end,
+                    default = { r = 0.69, g = 0.25, b = 1, a = 0.92 },
+                    disabled = function()
+                        return EZOMetter.sv.general.hudShowBorder == false
+                    end,
                 },
             },
         },
@@ -195,39 +250,6 @@ function EZOMetter_Menu.Init()
                     end,
                     setFunc = function(value)
                         EZOMetter.sv.alerts.missingBuffAlerts = value == true
-                        if EZOMetter_BuffAlert and EZOMetter_BuffAlert.ApplySettings then
-                            EZOMetter_BuffAlert.ApplySettings()
-                        end
-                    end,
-                    default = true,
-                },
-                {
-                    type = "slider",
-                    name = GetString(EZOM_OPTION_ALERT_BACKGROUND_OPACITY),
-                    tooltip = GetString(EZOM_OPTION_ALERT_BACKGROUND_OPACITY_TOOLTIP),
-                    min = 0,
-                    max = 100,
-                    step = 5,
-                    getFunc = function()
-                        return EZOMetter.sv.alerts.backgroundOpacity or 86
-                    end,
-                    setFunc = function(value)
-                        EZOMetter.sv.alerts.backgroundOpacity = tonumber(value) or 86
-                        if EZOMetter_BuffAlert and EZOMetter_BuffAlert.ApplySettings then
-                            EZOMetter_BuffAlert.ApplySettings()
-                        end
-                    end,
-                    default = 86,
-                },
-                {
-                    type = "checkbox",
-                    name = GetString(EZOM_OPTION_ALERT_SHOW_BORDER),
-                    tooltip = GetString(EZOM_OPTION_ALERT_SHOW_BORDER_TOOLTIP),
-                    getFunc = function()
-                        return EZOMetter.sv.alerts.showBorder ~= false
-                    end,
-                    setFunc = function(value)
-                        EZOMetter.sv.alerts.showBorder = value == true
                         if EZOMetter_BuffAlert and EZOMetter_BuffAlert.ApplySettings then
                             EZOMetter_BuffAlert.ApplySettings()
                         end
@@ -285,39 +307,6 @@ function EZOMetter_Menu.Init()
                         end
                     end,
                     default = false,
-                },
-                {
-                    type = "slider",
-                    name = GetString(EZOM_OPTION_OFF_BALANCE_BACKGROUND_OPACITY),
-                    tooltip = GetString(EZOM_OPTION_OFF_BALANCE_BACKGROUND_OPACITY_TOOLTIP),
-                    min = 0,
-                    max = 100,
-                    step = 5,
-                    getFunc = function()
-                        return EZOMetter.sv.offBalance.backgroundOpacity or 86
-                    end,
-                    setFunc = function(value)
-                        EZOMetter.sv.offBalance.backgroundOpacity = tonumber(value) or 86
-                        if EZOMetter_OffBalance and EZOMetter_OffBalance.ApplySettings then
-                            EZOMetter_OffBalance.ApplySettings()
-                        end
-                    end,
-                    default = 86,
-                },
-                {
-                    type = "checkbox",
-                    name = GetString(EZOM_OPTION_OFF_BALANCE_SHOW_BORDER),
-                    tooltip = GetString(EZOM_OPTION_OFF_BALANCE_SHOW_BORDER_TOOLTIP),
-                    getFunc = function()
-                        return EZOMetter.sv.offBalance.showBorder ~= false
-                    end,
-                    setFunc = function(value)
-                        EZOMetter.sv.offBalance.showBorder = value == true
-                        if EZOMetter_OffBalance and EZOMetter_OffBalance.ApplySettings then
-                            EZOMetter_OffBalance.ApplySettings()
-                        end
-                    end,
-                    default = true,
                 },
                 {
                     type = "checkbox",
@@ -412,39 +401,6 @@ function EZOMetter_Menu.Init()
                     default = 100,
                 },
                 {
-                    type = "slider",
-                    name = GetString(EZOM_OPTION_CORAL_BACKGROUND_OPACITY),
-                    tooltip = GetString(EZOM_OPTION_CORAL_BACKGROUND_OPACITY_TOOLTIP),
-                    min = 0,
-                    max = 100,
-                    step = 5,
-                    getFunc = function()
-                        return EZOMetter.sv.coral.backgroundOpacity or 86
-                    end,
-                    setFunc = function(value)
-                        EZOMetter.sv.coral.backgroundOpacity = tonumber(value) or 86
-                        if EZOMetter_Coral and EZOMetter_Coral.ApplySettings then
-                            EZOMetter_Coral.ApplySettings()
-                        end
-                    end,
-                    default = 86,
-                },
-                {
-                    type = "checkbox",
-                    name = GetString(EZOM_OPTION_CORAL_SHOW_BORDER),
-                    tooltip = GetString(EZOM_OPTION_CORAL_SHOW_BORDER_TOOLTIP),
-                    getFunc = function()
-                        return EZOMetter.sv.coral.showBorder ~= false
-                    end,
-                    setFunc = function(value)
-                        EZOMetter.sv.coral.showBorder = value == true
-                        if EZOMetter_Coral and EZOMetter_Coral.ApplySettings then
-                            EZOMetter_Coral.ApplySettings()
-                        end
-                    end,
-                    default = true,
-                },
-                {
                     type = "checkbox",
                     name = GetString(EZOM_OPTION_CORAL_DEBUG_EQUIPMENT),
                     tooltip = GetString(EZOM_OPTION_CORAL_DEBUG_EQUIPMENT_TOOLTIP),
@@ -492,39 +448,6 @@ function EZOMetter_Menu.Init()
                     default = "off",
                 },
                 {
-                    type = "slider",
-                    name = GetString(EZOM_OPTION_ALKOSH_BACKGROUND_OPACITY),
-                    tooltip = GetString(EZOM_OPTION_ALKOSH_BACKGROUND_OPACITY_TOOLTIP),
-                    min = 0,
-                    max = 100,
-                    step = 5,
-                    getFunc = function()
-                        return EZOMetter.sv.alkosh.backgroundOpacity or 86
-                    end,
-                    setFunc = function(value)
-                        EZOMetter.sv.alkosh.backgroundOpacity = tonumber(value) or 86
-                        if EZOMetter_Alkosh and EZOMetter_Alkosh.ApplySettings then
-                            EZOMetter_Alkosh.ApplySettings()
-                        end
-                    end,
-                    default = 86,
-                },
-                {
-                    type = "checkbox",
-                    name = GetString(EZOM_OPTION_ALKOSH_SHOW_BORDER),
-                    tooltip = GetString(EZOM_OPTION_ALKOSH_SHOW_BORDER_TOOLTIP),
-                    getFunc = function()
-                        return EZOMetter.sv.alkosh.showBorder ~= false
-                    end,
-                    setFunc = function(value)
-                        EZOMetter.sv.alkosh.showBorder = value == true
-                        if EZOMetter_Alkosh and EZOMetter_Alkosh.ApplySettings then
-                            EZOMetter_Alkosh.ApplySettings()
-                        end
-                    end,
-                    default = true,
-                },
-                {
                     type = "checkbox",
                     name = GetString(EZOM_OPTION_ALKOSH_DEBUG_EVENTS),
                     tooltip = GetString(EZOM_OPTION_ALKOSH_DEBUG_EVENTS_TOOLTIP),
@@ -570,39 +493,6 @@ function EZOMetter_Menu.Init()
                         end
                     end,
                     default = "auto",
-                },
-                {
-                    type = "slider",
-                    name = GetString(EZOM_OPTION_ZEN_BACKGROUND_OPACITY),
-                    tooltip = GetString(EZOM_OPTION_ZEN_BACKGROUND_OPACITY_TOOLTIP),
-                    min = 0,
-                    max = 100,
-                    step = 5,
-                    getFunc = function()
-                        return EZOMetter.sv.zen.backgroundOpacity or 86
-                    end,
-                    setFunc = function(value)
-                        EZOMetter.sv.zen.backgroundOpacity = tonumber(value) or 86
-                        if EZOMetter_Zen and EZOMetter_Zen.ApplySettings then
-                            EZOMetter_Zen.ApplySettings()
-                        end
-                    end,
-                    default = 86,
-                },
-                {
-                    type = "checkbox",
-                    name = GetString(EZOM_OPTION_ZEN_SHOW_BORDER),
-                    tooltip = GetString(EZOM_OPTION_ZEN_SHOW_BORDER_TOOLTIP),
-                    getFunc = function()
-                        return EZOMetter.sv.zen.showBorder ~= false
-                    end,
-                    setFunc = function(value)
-                        EZOMetter.sv.zen.showBorder = value == true
-                        if EZOMetter_Zen and EZOMetter_Zen.ApplySettings then
-                            EZOMetter_Zen.ApplySettings()
-                        end
-                    end,
-                    default = true,
                 },
                 {
                     type = "checkbox",
@@ -667,39 +557,6 @@ function EZOMetter_Menu.Init()
                         end
                     end,
                     default = false,
-                },
-                {
-                    type = "slider",
-                    name = GetString(EZOM_OPTION_DD_STATS_BACKGROUND_OPACITY),
-                    tooltip = GetString(EZOM_OPTION_DD_STATS_BACKGROUND_OPACITY_TOOLTIP),
-                    min = 0,
-                    max = 100,
-                    step = 5,
-                    getFunc = function()
-                        return EZOMetter.sv.ddStats.backgroundOpacity or 86
-                    end,
-                    setFunc = function(value)
-                        EZOMetter.sv.ddStats.backgroundOpacity = tonumber(value) or 86
-                        if EZOMetter_DDStats and EZOMetter_DDStats.ApplySettings then
-                            EZOMetter_DDStats.ApplySettings()
-                        end
-                    end,
-                    default = 86,
-                },
-                {
-                    type = "checkbox",
-                    name = GetString(EZOM_OPTION_DD_STATS_SHOW_BORDER),
-                    tooltip = GetString(EZOM_OPTION_DD_STATS_SHOW_BORDER_TOOLTIP),
-                    getFunc = function()
-                        return EZOMetter.sv.ddStats.showBorder ~= false
-                    end,
-                    setFunc = function(value)
-                        EZOMetter.sv.ddStats.showBorder = value == true
-                        if EZOMetter_DDStats and EZOMetter_DDStats.ApplySettings then
-                            EZOMetter_DDStats.ApplySettings()
-                        end
-                    end,
-                    default = true,
                 },
                 {
                     type = "slider",
@@ -907,39 +764,6 @@ function EZOMetter_Menu.Init()
                     end,
                     default = true,
                 },
-                {
-                    type = "slider",
-                    name = GetString(EZOM_OPTION_DAMAGE_BACKGROUND_OPACITY),
-                    tooltip = GetString(EZOM_OPTION_DAMAGE_BACKGROUND_OPACITY_TOOLTIP),
-                    min = 0,
-                    max = 100,
-                    step = 5,
-                    getFunc = function()
-                        return EZOMetter.sv.observedDamage.backgroundOpacity or 86
-                    end,
-                    setFunc = function(value)
-                        EZOMetter.sv.observedDamage.backgroundOpacity = tonumber(value) or 86
-                        if EZOMetter_ObservedDamage and EZOMetter_ObservedDamage.ApplySettings then
-                            EZOMetter_ObservedDamage.ApplySettings()
-                        end
-                    end,
-                    default = 86,
-                },
-                {
-                    type = "checkbox",
-                    name = GetString(EZOM_OPTION_DAMAGE_SHOW_BORDER),
-                    tooltip = GetString(EZOM_OPTION_DAMAGE_SHOW_BORDER_TOOLTIP),
-                    getFunc = function()
-                        return EZOMetter.sv.observedDamage.showBorder ~= false
-                    end,
-                    setFunc = function(value)
-                        EZOMetter.sv.observedDamage.showBorder = value == true
-                        if EZOMetter_ObservedDamage and EZOMetter_ObservedDamage.ApplySettings then
-                            EZOMetter_ObservedDamage.ApplySettings()
-                        end
-                    end,
-                    default = true,
-                },
             },
         },
         {
@@ -992,39 +816,6 @@ function EZOMetter_Menu.Init()
                     end,
                     default = true,
                 },
-                {
-                    type = "slider",
-                    name = GetString(EZOM_OPTION_HEALING_BACKGROUND_OPACITY),
-                    tooltip = GetString(EZOM_OPTION_HEALING_BACKGROUND_OPACITY_TOOLTIP),
-                    min = 0,
-                    max = 100,
-                    step = 5,
-                    getFunc = function()
-                        return EZOMetter.sv.observedHealing.backgroundOpacity or 86
-                    end,
-                    setFunc = function(value)
-                        EZOMetter.sv.observedHealing.backgroundOpacity = tonumber(value) or 86
-                        if EZOMetter_ObservedHealing and EZOMetter_ObservedHealing.ApplySettings then
-                            EZOMetter_ObservedHealing.ApplySettings()
-                        end
-                    end,
-                    default = 86,
-                },
-                {
-                    type = "checkbox",
-                    name = GetString(EZOM_OPTION_HEALING_SHOW_BORDER),
-                    tooltip = GetString(EZOM_OPTION_HEALING_SHOW_BORDER_TOOLTIP),
-                    getFunc = function()
-                        return EZOMetter.sv.observedHealing.showBorder ~= false
-                    end,
-                    setFunc = function(value)
-                        EZOMetter.sv.observedHealing.showBorder = value == true
-                        if EZOMetter_ObservedHealing and EZOMetter_ObservedHealing.ApplySettings then
-                            EZOMetter_ObservedHealing.ApplySettings()
-                        end
-                    end,
-                    default = true,
-                },
             },
         },
         {
@@ -1064,39 +855,6 @@ function EZOMetter_Menu.Init()
                         end
                     end,
                     default = 800,
-                },
-                {
-                    type = "slider",
-                    name = GetString(EZOM_OPTION_ABILITIES_BACKGROUND_OPACITY),
-                    tooltip = GetString(EZOM_OPTION_ABILITIES_BACKGROUND_OPACITY_TOOLTIP),
-                    min = 0,
-                    max = 100,
-                    step = 5,
-                    getFunc = function()
-                        return EZOMetter.sv.abilities.backgroundOpacity or 22
-                    end,
-                    setFunc = function(value)
-                        EZOMetter.sv.abilities.backgroundOpacity = tonumber(value) or 22
-                        if EZOMetter_AbilityTracker and EZOMetter_AbilityTracker.ApplySettings then
-                            EZOMetter_AbilityTracker.ApplySettings()
-                        end
-                    end,
-                    default = 22,
-                },
-                {
-                    type = "checkbox",
-                    name = GetString(EZOM_OPTION_ABILITIES_SHOW_BORDER),
-                    tooltip = GetString(EZOM_OPTION_ABILITIES_SHOW_BORDER_TOOLTIP),
-                    getFunc = function()
-                        return EZOMetter.sv.abilities.showBorder == true
-                    end,
-                    setFunc = function(value)
-                        EZOMetter.sv.abilities.showBorder = value == true
-                        if EZOMetter_AbilityTracker and EZOMetter_AbilityTracker.ApplySettings then
-                            EZOMetter_AbilityTracker.ApplySettings()
-                        end
-                    end,
-                    default = false,
                 },
             },
         },

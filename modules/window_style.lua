@@ -6,6 +6,8 @@ local DEFAULT_TEXT_SIZE = 100
 local MIN_TEXT_SIZE = 70
 local MAX_TEXT_SIZE = 150
 local DEFAULT_BACKGROUND = { r = 0.03, g = 0.03, b = 0.03 }
+local DEFAULT_BACKGROUND_OPACITY = 86
+local DEFAULT_BORDER_COLOR = { r = 0.69, g = 0.25, b = 1, a = 0.92 }
 
 local function ClampPercent(value, fallback)
     value = tonumber(value) or fallback or DEFAULT_TEXT_SIZE
@@ -33,6 +35,45 @@ function WindowStyle.ApplyControlScale(control, extraPercent)
     control:SetScale(WindowStyle.GetTextScale() * extraScale)
 end
 
+function WindowStyle.GetHudAppearance()
+    local general = EZOMetter and EZOMetter.sv and EZOMetter.sv.general or {}
+    local opacity = tonumber(general.hudBackgroundOpacity) or DEFAULT_BACKGROUND_OPACITY
+    local storedColor = general.hudBorderColor or DEFAULT_BORDER_COLOR
+
+    return {
+        backgroundOpacity = math.max(0, math.min(100, opacity)),
+        showBorder = general.hudShowBorder ~= false,
+        borderColor = {
+            r = tonumber(storedColor.r) or DEFAULT_BORDER_COLOR.r,
+            g = tonumber(storedColor.g) or DEFAULT_BORDER_COLOR.g,
+            b = tonumber(storedColor.b) or DEFAULT_BORDER_COLOR.b,
+            a = tonumber(storedColor.a) or DEFAULT_BORDER_COLOR.a,
+        },
+    }
+end
+
+function WindowStyle.ApplyBackdropStyle(backdrop, options)
+    if not backdrop then return end
+    options = options or {}
+
+    local appearance = WindowStyle.GetHudAppearance()
+    local background = options.backgroundColor or DEFAULT_BACKGROUND
+    local opacityMultiplier = math.max(0, math.min(1, tonumber(options.opacityMultiplier) or 1))
+    backdrop:SetCenterColor(
+        background.r or 0,
+        background.g or 0,
+        background.b or 0,
+        (appearance.backgroundOpacity / 100) * opacityMultiplier
+    )
+
+    if appearance.showBorder and options.hideBorder ~= true then
+        local border = appearance.borderColor
+        backdrop:SetEdgeColor(border.r, border.g, border.b, border.a)
+    else
+        backdrop:SetEdgeColor(0, 0, 0, 0)
+    end
+end
+
 function WindowStyle.CreatePanel(name, width, height, options)
     if not WINDOW_MANAGER then return nil end
     options = options or {}
@@ -53,7 +94,7 @@ function WindowStyle.CreatePanel(name, width, height, options)
 
     local backdrop = WINDOW_MANAGER:CreateControl(name .. "Backdrop", control, CT_BACKDROP)
     backdrop:SetAnchorFill(control)
-    backdrop:SetEdgeTexture(options.edgeTexture or "EsoUI/Art/Tooltips/UI-Border.dds", 128, 16)
+    backdrop:SetEdgeTexture(options.edgeTexture or "", 1, 1, 1)
 
     local accent = WINDOW_MANAGER:CreateControl(name .. "Accent", control, CT_BACKDROP)
     accent:SetAnchor(TOPLEFT, control, TOPLEFT, 0, 0)
@@ -74,23 +115,14 @@ function WindowStyle.ApplyPanelStyle(panel, options)
 
     WindowStyle.ApplyControlScale(panel.control, options.extraScale)
 
-    local opacity = tonumber(options.backgroundOpacity) or 86
-    opacity = math.max(0, math.min(100, opacity))
-    local background = options.backgroundColor or DEFAULT_BACKGROUND
-    panel.backdrop:SetCenterColor(background.r or 0, background.g or 0, background.b or 0, opacity / 100)
-
-    local showBorder = options.showBorder ~= false
-    local border = options.borderColor or { r = 0.55, g = 0.55, b = 0.55, a = 0.65 }
-    if showBorder then
-        panel.backdrop:SetEdgeColor(border.r or 0, border.g or 0, border.b or 0, border.a or 1)
-    else
-        panel.backdrop:SetEdgeColor(0, 0, 0, 0)
-    end
+    WindowStyle.ApplyBackdropStyle(panel.backdrop, options)
 
     if panel.accent then
-        local accent = options.accentColor or border
-        panel.accent:SetCenterColor(accent.r or 0, accent.g or 0, accent.b or 0, accent.a or 1)
-        panel.accent:SetHidden(not showBorder or options.showAccent == false)
+        local appearance = WindowStyle.GetHudAppearance()
+        local accent = appearance.borderColor
+        panel.accent:SetCenterColor(accent.r, accent.g, accent.b, accent.a)
+        panel.accent:SetEdgeColor(accent.r, accent.g, accent.b, accent.a)
+        panel.accent:SetHidden(not appearance.showBorder or options.showAccent == false)
     end
 end
 

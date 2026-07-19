@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.35 - Shared HUD window appearance
+
+- Moves HUD background opacity, border visibility, and border color to shared General settings.
+- Applies the shared flat outline to every HUD panel and removes nested native tooltip frames.
+- Makes the DD Stats left accent use the selected border color instead of an unintended white edge.
+- Aligns Z'en movement with the shared drag helper so refreshes cannot enable free movement.
+- Groups HUD text size with the shared HUD appearance controls and keeps post-combat reporting in General.
+- Redesigns the Off Balance panel with a persistent title and an explicit out-of-combat state instead of an ambiguous "Ready" label.
+
 ## 0.1.34 - Alkosh panel visibility
 
 - Hides the Alkosh HUD automatically below three equipped Roar of Alkosh pieces.
