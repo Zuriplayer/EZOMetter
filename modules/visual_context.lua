@@ -2,7 +2,6 @@
 EZOMetter_VisualContext = EZOMetter_VisualContext or {}
 
 local VisualContext = EZOMetter_VisualContext
-local ADDON_NAME = "EZOMetter"
 local refreshCallbacks = {}
 local sceneCallbackRegistered = false
 

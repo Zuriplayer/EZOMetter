@@ -331,14 +331,14 @@ end
 local function BuildCombatSummary(stats, nowMs)
     if not stats then return nil end
 
-    local durationMs = math.max(0, (nowMs or GetNowMs()) - (stats.startMs or 0))
+    local summaryDurationMs = math.max(0, (nowMs or GetNowMs()) - (stats.startMs or 0))
     local successful = (stats.completed or 0) + (stats.safeCancelled or 0)
     local total = stats.total or 0
     local successRate = total > 0 and (successful / total) * 100 or 0
     local earlyAverageMs = stats.earlyStopped > 0 and stats.earlyMsTotal / stats.earlyStopped or 0
 
     return {
-        durationMs = durationMs,
+        durationMs = summaryDurationMs,
         hasData = total > 0,
         total = total,
         completed = stats.completed or 0,
@@ -882,7 +882,7 @@ function Tracker.DebugScan()
     end
 end
 
-local function OnCombatEvent(_, result, isError, abilityName, _, _, sourceName, sourceType, targetName, targetType, hitValue, powerType, damageType, log, sourceUnitId, targetUnitId, abilityId)
+local function OnCombatEvent(_, result, isError, abilityName, _, _, sourceName, sourceType, targetName, targetType, hitValue, _powerType, _damageType, _log, _sourceUnitId, _targetUnitId, abilityId)
     if isError or not IsEnabled() then return end
     if not IsFatecarverAbility(abilityId, abilityName) then return end
 
@@ -896,7 +896,7 @@ local function OnCombatEvent(_, result, isError, abilityName, _, _, sourceName, 
     end
 end
 
-function OnActiveCombatEvent(_, result, isError, abilityName, _, _, sourceName, sourceType, targetName, targetType, hitValue, powerType, damageType, log, sourceUnitId, targetUnitId, abilityId)
+function OnActiveCombatEvent(_, result, isError, abilityName, _, _, sourceName, sourceType, targetName, targetType, _hitValue, _powerType, _damageType, _log, _sourceUnitId, _targetUnitId, abilityId)
     if isError or not active or not IsEnabled() then return end
 
     if ACTIVE_TARGET_CANCEL_RESULTS[result] == true then

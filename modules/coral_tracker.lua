@@ -84,7 +84,7 @@ local function IsDebugEnabled()
     return settings and settings.debugEquipment == true and EZOMetter.sv and EZOMetter.sv.general and EZOMetter.sv.general.debugMode == true
 end
 
-local function IsCoralSet(setName, setId)
+local function IsCoralSet(setName, _setId)
     return EZOMetter_EquipmentSets and EZOMetter_EquipmentSets.NameMatches(setName, CORAL_ALIASES)
 end
 
@@ -125,15 +125,6 @@ local function GetBand(staminaPct, active)
     if staminaPct <= MID_STAMINA_PCT then return BAND_MID end
     if staminaPct <= LOW_STAMINA_PCT then return BAND_LOW end
     return BAND_BAD
-end
-
-local function GetBandName(band)
-    if band == BAND_CAP then return GetString(EZOM_CORAL_STATE_CAP) end
-    if band == BAND_OK then return GetString(EZOM_CORAL_STATE_OK) end
-    if band == BAND_MID then return GetString(EZOM_CORAL_STATE_MID) end
-    if band == BAND_LOW then return GetString(EZOM_CORAL_STATE_LOW) end
-    if band == BAND_BAD then return GetString(EZOM_CORAL_STATE_BAD) end
-    return GetString(EZOM_CORAL_STATE_INACTIVE)
 end
 
 local function GetBandColor(band)

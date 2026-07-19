@@ -26,12 +26,7 @@ Versión actual: **0.1.35**.
 ## Instalación
 
 1. Descarga la última beta desde GitHub o clona este repositorio.
-2. Copia la carpeta `EZOMetter` dentro de la carpeta de addons de ESO:
-
-```text
-Documents/Elder Scrolls Online/live/AddOns/
-```
-
+2. Copia la carpeta `EZOMetter` dentro de la carpeta de addons de ESO.
 3. Instala y activa `LibAddonMenu-2.0`.
 4. Activa `EZOMetter` desde la pantalla de complementos del juego.
 5. Con EZOCore activo, configura el addon desde Ajustes > EZO > EZOMetter. Sin EZOCore, usa Ajustes > Addons > EZOMetter.

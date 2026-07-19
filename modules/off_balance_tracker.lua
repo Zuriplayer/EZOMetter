@@ -692,7 +692,7 @@ local function UpdateVisibility()
     control:SetHidden(hidden)
 end
 
-local function UpdateVisuals(state, remainingMs, targetName, targetIsBoss, source)
+local function UpdateVisuals(state, remainingMs, targetName, _targetIsBoss, source)
     EnsureControl()
 
     local nowMs = GetNowMs()
@@ -728,7 +728,8 @@ local function UpdateVisuals(state, remainingMs, targetName, targetIsBoss, sourc
         targetLabel:SetText(GetString(EZOM_OFF_BALANCE_NO_TARGET))
     end
 
-    sourceLabel:SetText("")
+    sourceLabel:SetText(GetSourceName(source))
+    sourceLabel:SetHidden(source == nil or source == SOURCE_NONE)
 end
 
 local function IsTargetBossOrDummy(unitTag, unitName)
@@ -857,7 +858,7 @@ local function OnUpdate()
     local endTime = 0
     local targetName = ""
     local targetIsBoss = false
-    local source = SOURCE_NONE
+    local source
 
     if reticleActive then
         targetName = CleanUnitName(GetUnitName("reticleover"))
@@ -915,6 +916,7 @@ local function OnUpdate()
     if nowMs > endTime then
         state = STATE_FREE
         endTime = 0
+        source = SOURCE_NONE
     end
 
     isTrackingBoss = targetIsBoss

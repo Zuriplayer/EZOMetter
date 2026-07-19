@@ -74,22 +74,6 @@ local function GetEffectIcon(effect)
     return ""
 end
 
-local function GetSummaryEffects()
-    local effects = {}
-    if not lastCombatSummary or not lastCombatSummary.hasIssues then
-        return effects
-    end
-
-    local required = EZOMetter.Effects and EZOMetter.Effects.GetRequiredForRole(GetRole()) or {}
-    for _, effect in ipairs(required) do
-        if lastCombatSummary.byKey and lastCombatSummary.byKey[effect.key] then
-            table.insert(effects, effect)
-        end
-    end
-
-    return effects
-end
-
 local function BuildTooltipText()
     if not lastCombatSummary or not lastCombatSummary.rows then
         return GetString(EZOM_LAST_COMBAT_NO_DATA)
