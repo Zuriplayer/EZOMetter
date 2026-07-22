@@ -34,12 +34,16 @@ function EZOMetter.savedVars.Init()
             backgroundOpacity = 86,
             showBorder = true,
             pulseOnActive = true,
+            iconSize = 18,
+            onlyExploiter = false,
             debugEvents = false,
             readyColor = { r = 0.9, g = 0.9, b = 0.9, a = 1 },
             activeColor = { r = 0.15, g = 1, b = 0.35, a = 1 },
             cooldownColor = { r = 1, g = 0.25, b = 0.2, a = 1 },
             x = 0,
             y = -80,
+            iconX = 0,
+            iconY = -140,
         },
         coral = {
             enabled = true,
@@ -52,6 +56,18 @@ function EZOMetter.savedVars.Init()
             debugEquipment = false,
             x = 0,
             y = 40,
+        },
+        highland = {
+            enabled = true,
+            ddOnly = true,
+            onlyCombat = true,
+            unlock = false,
+            size = 100,
+            backgroundOpacity = 86,
+            showBorder = true,
+            debugEvents = false,
+            x = 0,
+            y = 80,
         },
         alkosh = {
             mode = "off",
@@ -96,6 +112,7 @@ function EZOMetter.savedVars.Init()
             enabled = true,
             ddOnly = true,
             onlyCombat = true,
+            layout = "detailed",
             backgroundOpacity = 86,
             showBorder = true,
             x = 0,
@@ -105,6 +122,7 @@ function EZOMetter.savedVars.Init()
             enabled = true,
             healerOnly = true,
             onlyCombat = true,
+            layout = "detailed",
             backgroundOpacity = 86,
             showBorder = true,
             x = 0,
@@ -126,6 +144,7 @@ function EZOMetter.savedVars.Init()
     EZOMetter.sv.alerts = EZOMetter.sv.alerts or defaults.alerts
     EZOMetter.sv.offBalance = EZOMetter.sv.offBalance or defaults.offBalance
     EZOMetter.sv.coral = EZOMetter.sv.coral or defaults.coral
+    EZOMetter.sv.highland = EZOMetter.sv.highland or defaults.highland
     EZOMetter.sv.alkosh = EZOMetter.sv.alkosh or defaults.alkosh
     EZOMetter.sv.zen = EZOMetter.sv.zen or defaults.zen
     EZOMetter.sv.ddStats = EZOMetter.sv.ddStats or defaults.ddStats
@@ -175,12 +194,16 @@ function EZOMetter.savedVars.Init()
     if EZOMetter.sv.offBalance.onlyBosses == nil then
         EZOMetter.sv.offBalance.onlyBosses = defaults.offBalance.onlyBosses
     end
+    if EZOMetter.sv.offBalance.onlyExploiter == nil then
+        EZOMetter.sv.offBalance.onlyExploiter = defaults.offBalance.onlyExploiter
+    end
     EZOMetter.sv.offBalance.unlock = false
     EZOMetter.sv.offBalance.backgroundOpacity = EZOMetter.sv.offBalance.backgroundOpacity or defaults.offBalance.backgroundOpacity
     if EZOMetter.sv.offBalance.showBorder == nil then
         EZOMetter.sv.offBalance.showBorder = defaults.offBalance.showBorder
     end
     EZOMetter.sv.offBalance.pulseOnActive = defaults.offBalance.pulseOnActive
+    EZOMetter.sv.offBalance.iconSize = tonumber(EZOMetter.sv.offBalance.iconSize) or defaults.offBalance.iconSize
     if EZOMetter.sv.offBalance.debugEvents == nil then
         EZOMetter.sv.offBalance.debugEvents = defaults.offBalance.debugEvents
     end
@@ -189,6 +212,8 @@ function EZOMetter.savedVars.Init()
     EZOMetter.sv.offBalance.cooldownColor = EZOMetter.sv.offBalance.cooldownColor or defaults.offBalance.cooldownColor
     EZOMetter.sv.offBalance.x = EZOMetter.sv.offBalance.x or defaults.offBalance.x
     EZOMetter.sv.offBalance.y = EZOMetter.sv.offBalance.y or defaults.offBalance.y
+    EZOMetter.sv.offBalance.iconX = EZOMetter.sv.offBalance.iconX or defaults.offBalance.iconX
+    EZOMetter.sv.offBalance.iconY = EZOMetter.sv.offBalance.iconY or defaults.offBalance.iconY
     if EZOMetter.sv.coral.enabled == nil then
         EZOMetter.sv.coral.enabled = defaults.coral.enabled
     end
@@ -209,6 +234,26 @@ function EZOMetter.savedVars.Init()
     end
     EZOMetter.sv.coral.x = EZOMetter.sv.coral.x or defaults.coral.x
     EZOMetter.sv.coral.y = EZOMetter.sv.coral.y or defaults.coral.y
+    if EZOMetter.sv.highland.enabled == nil then
+        EZOMetter.sv.highland.enabled = defaults.highland.enabled
+    end
+    if EZOMetter.sv.highland.ddOnly == nil then
+        EZOMetter.sv.highland.ddOnly = defaults.highland.ddOnly
+    end
+    if EZOMetter.sv.highland.onlyCombat == nil then
+        EZOMetter.sv.highland.onlyCombat = defaults.highland.onlyCombat
+    end
+    EZOMetter.sv.highland.unlock = false
+    EZOMetter.sv.highland.size = EZOMetter.sv.highland.size or defaults.highland.size
+    EZOMetter.sv.highland.backgroundOpacity = EZOMetter.sv.highland.backgroundOpacity or defaults.highland.backgroundOpacity
+    if EZOMetter.sv.highland.showBorder == nil then
+        EZOMetter.sv.highland.showBorder = defaults.highland.showBorder
+    end
+    if EZOMetter.sv.highland.debugEvents == nil then
+        EZOMetter.sv.highland.debugEvents = defaults.highland.debugEvents
+    end
+    EZOMetter.sv.highland.x = EZOMetter.sv.highland.x or defaults.highland.x
+    EZOMetter.sv.highland.y = EZOMetter.sv.highland.y or defaults.highland.y
     if EZOMetter.sv.alkosh.mode ~= "warn" and EZOMetter.sv.alkosh.mode ~= "block" then
         EZOMetter.sv.alkosh.mode = defaults.alkosh.mode
     end
@@ -270,6 +315,9 @@ function EZOMetter.savedVars.Init()
     if EZOMetter.sv.observedDamage.onlyCombat == nil then
         EZOMetter.sv.observedDamage.onlyCombat = defaults.observedDamage.onlyCombat
     end
+    if EZOMetter.sv.observedDamage.layout ~= "compact" then
+        EZOMetter.sv.observedDamage.layout = defaults.observedDamage.layout
+    end
     EZOMetter.sv.observedDamage.backgroundOpacity = EZOMetter.sv.observedDamage.backgroundOpacity or defaults.observedDamage.backgroundOpacity
     if EZOMetter.sv.observedDamage.showBorder == nil then
         EZOMetter.sv.observedDamage.showBorder = defaults.observedDamage.showBorder
@@ -284,6 +332,9 @@ function EZOMetter.savedVars.Init()
     end
     if EZOMetter.sv.observedHealing.onlyCombat == nil then
         EZOMetter.sv.observedHealing.onlyCombat = defaults.observedHealing.onlyCombat
+    end
+    if EZOMetter.sv.observedHealing.layout ~= "compact" then
+        EZOMetter.sv.observedHealing.layout = defaults.observedHealing.layout
     end
     EZOMetter.sv.observedHealing.backgroundOpacity = EZOMetter.sv.observedHealing.backgroundOpacity or defaults.observedHealing.backgroundOpacity
     if EZOMetter.sv.observedHealing.showBorder == nil then

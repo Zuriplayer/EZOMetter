@@ -179,6 +179,7 @@ function EZOM.RefreshVisualModules()
         "EZOMetter_BuffAlert",
         "EZOMetter_OffBalance",
         "EZOMetter_Coral",
+        "EZOMetter_Highland",
         "EZOMetter_Alkosh",
         "EZOMetter_Zen",
         "EZOMetter_DDStats",
@@ -275,6 +276,10 @@ function EZOM:Initialize()
 
     if EZOMetter_Coral and EZOMetter_Coral.Init then
         EZOMetter_Coral.Init()
+    end
+
+    if EZOMetter_Highland and EZOMetter_Highland.Init then
+        EZOMetter_Highland.Init()
     end
 
     if EZOMetter_Alkosh and EZOMetter_Alkosh.Init then

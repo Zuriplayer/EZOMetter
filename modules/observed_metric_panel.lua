@@ -339,16 +339,29 @@ function Factory.Create(config)
     end
 
     local function ApplyStyle()
+        local settings = GetSettings() or {}
+        local isCompact = settings.layout == "compact"
+
         if EZOMetter_WindowStyle then
             EZOMetter_WindowStyle.ApplyControlScale(control)
             if EZOMetter_WindowStyle.ApplyBackdropStyle then
                 EZOMetter_WindowStyle.ApplyBackdropStyle(backdrop)
-                return
             end
         end
+
         if not backdrop then return end
 
-        local settings = GetSettings() or {}
+        if isCompact then
+            backdrop:SetHidden(true)
+            return
+        else
+            backdrop:SetHidden(false)
+        end
+
+        if EZOMetter_WindowStyle and EZOMetter_WindowStyle.ApplyBackdropStyle then
+            return
+        end
+
         local opacity = tonumber(settings.backgroundOpacity) or 86
         if opacity < 0 then opacity = 0 end
         if opacity > 100 then opacity = 100 end
@@ -422,6 +435,7 @@ function Factory.Create(config)
     local function CreateRow(parent, key, top)
         local wm = WINDOW_MANAGER
         local row = {}
+        row.top = top
 
         row.name = wm:CreateControl(controlName .. key .. "Name", parent, CT_LABEL)
         row.name:SetAnchor(TOPLEFT, parent, TOPLEFT, PADDING, top)
@@ -480,9 +494,27 @@ function Factory.Create(config)
     local function UpdateVisuals()
         EnsureControl()
 
+        local settings = GetSettings() or {}
+        local isCompact = settings.layout == "compact"
+
         for _, def in ipairs(ROW_DEFS) do
-            rows[def.key].name:SetText(GetStringByName(config[def.labelKey]))
-            rows[def.key].value:SetColor(0.9, 0.9, 0.9, 1)
+            local row = rows[def.key]
+            row.name:SetText(GetStringByName(config[def.labelKey]))
+            row.value:SetColor(0.9, 0.9, 0.9, 1)
+
+            if isCompact then
+                row.name:SetHidden(true)
+                row.value:ClearAnchors()
+                row.value:SetAnchor(TOPLEFT, control, TOPLEFT, PADDING, row.top)
+                row.value:SetAnchor(TOPRIGHT, control, TOPRIGHT, -PADDING, row.top)
+                row.value:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
+            else
+                row.name:SetHidden(false)
+                row.value:ClearAnchors()
+                row.value:SetAnchor(TOPLEFT, row.name, TOPRIGHT, 6, 0)
+                row.value:SetDimensions(VALUE_WIDTH, ROW_HEIGHT)
+                row.value:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
+            end
         end
         rows.instant.value:SetColor(0.35, 1, 0.45, 1)
         rows.group.value:SetColor(0.55, 0.8, 1, 1)
@@ -498,7 +530,7 @@ function Factory.Create(config)
         if not data then
             rows.instant.value:SetText("--")
             rows.average.value:SetText("--")
-            rows.group.value:SetText(GetStringByName(config.groupUnavailableShortString))
+            rows.group.value:SetText("--")
             return
         end
 
@@ -508,9 +540,13 @@ function Factory.Create(config)
 
         if IsGroupObserved(data) then
             local groupShare = Share(data.rate, data.groupRate)
-            rows.group.value:SetText(FormatPercent(groupShare or 0) .. " | " .. FormatRate(data.groupRate))
+            if isCompact then
+                rows.group.value:SetText(FormatPercent(groupShare or 0))
+            else
+                rows.group.value:SetText(FormatPercent(groupShare or 0) .. " | " .. FormatRate(data.groupRate))
+            end
         else
-            rows.group.value:SetText(GetStringByName(config.groupUnavailableShortString))
+            rows.group.value:SetText("--")
         end
     end
 
@@ -547,7 +583,9 @@ function Factory.Create(config)
             AddSnapshot(currentData)
             local recentCombatEnd = lastCombatEndMs > 0 and (GetNowMs() - lastCombatEndMs) <= 3000
             if isCombat or recentCombatEnd then
-                lastCombatData = currentData
+                if not lastCombatData or Number(currentData.total) > 0 or Number(currentData.groupTotal) > 0 then
+                    lastCombatData = currentData
+                end
             end
         end
         Refresh()
@@ -576,7 +614,9 @@ function Factory.Create(config)
             end
             if currentData then
                 currentData.combatDurationMs = combatDurationMs
-                lastCombatData = currentData
+                if not lastCombatData or Number(currentData.total) > 0 or Number(currentData.groupTotal) > 0 then
+                    lastCombatData = currentData
+                end
             end
             ResetSnapshots()
         end

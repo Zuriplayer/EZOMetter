@@ -11,7 +11,7 @@ For support, bug reports, and suggestions, join Discord: https://discord.gg/ekw8
 
 EZOMetter is in public beta. The addon is usable, but several combat metrics depend on ESO client events, visible target state, and optional libraries. Treat the numbers as practical helper information, not as a full replacement for dedicated combat log analysis.
 
-Current version: **0.1.35**.
+Current version: **0.1.43**.
 
 ## Requirements
 
@@ -75,6 +75,14 @@ Current version: **0.1.35**.
 - Configurable size, DD-only visibility, and combat-only visibility.
 - Optional equipment debug scan for set names and IDs.
 - Last-combat summary includes estimated average bonus and time in useful/bad/inactive bands.
+
+### Highland Sentinel Tracker
+
+- Separate movable Highland Sentinel panel.
+- Detects worn Highland Sentinel pieces by set name matching and treats the bonus as active at 5 pieces.
+- Reads "Sentinel's Eye" stacks to calculate and display the real-time critical chance bonus.
+- Configurable size, DD-only visibility, and combat-only visibility.
+- Optional event debug log to verify stack events and ability IDs.
 
 ### Roar of Alkosh Tracker
 

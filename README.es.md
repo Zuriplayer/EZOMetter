@@ -11,7 +11,7 @@ Para soporte, errores y sugerencias, únete a Discord: https://discord.gg/ekw8zU
 
 EZOMetter está en beta pública. El addon es utilizable, pero varias métricas de combate dependen de eventos del cliente de ESO, del estado visible del objetivo y de librerías opcionales. Trata los valores como información práctica de apoyo, no como sustituto completo de un analizador de logs de combate.
 
-Versión actual: **0.1.35**.
+Versión actual: **0.1.43**.
 
 ## Requisitos
 
@@ -75,6 +75,14 @@ Versión actual: **0.1.35**.
 - Tamaño, visibilidad solo DD y visibilidad solo en combate configurables.
 - Escaneo debug opcional de equipo para nombres e IDs de set.
 - El resumen del último combate incluye bonus medio estimado y tiempo en bandas útiles, malas o inactivas.
+
+### Tracker de Centinela de las Tierras Altas (Highland Sentinel)
+
+- Panel movible separado para Highland Sentinel.
+- Detecta piezas equipadas mediante coincidencia de nombres de set y considera activo el bonus con 5 piezas.
+- Lee los stacks de "Ojo del centinela" para calcular y mostrar en tiempo real el bono de probabilidad de crítico.
+- Tamaño, visibilidad solo DD y visibilidad solo en combate configurables.
+- Registro debug opcional para verificar eventos de stacks e IDs de habilidad.
 
 ### Tracker de Rugido de Alkosh
 

@@ -17,7 +17,6 @@ local TEXT_GAP = 10
 local DEFAULT_BACKGROUND_OPACITY = 22
 local CHANNEL_EFFECT_GRACE_MS = 250
 local INACTIVE_BACKGROUND_ALPHA = 0.03
-local INACTIVE_MOVE_BACKGROUND_ALPHA = 0.10
 local BAR_IDLE_ALPHA = 0.06
 local BAR_ACTIVE_ALPHA = 0.24
 local BAR_WARNING_ALPHA = 0.30
@@ -426,8 +425,22 @@ local function ApplyStyle(activeStyle)
     if opacity < 0 then opacity = 0 end
     if opacity > 100 then opacity = 100 end
 
+    if IsHudUnlocked() then
+        if EZOMetter_WindowStyle and EZOMetter_WindowStyle.ApplyBackdropStyle then
+            EZOMetter_WindowStyle.ApplyBackdropStyle(backdrop)
+            return
+        end
+        backdrop:SetCenterColor(0.03, 0.03, 0.03, opacity / 100)
+        if settings.showBorder == false then
+            backdrop:SetEdgeColor(0, 0, 0, 0)
+        else
+            backdrop:SetEdgeColor(0.2, 0.9, 0.75, 0.95)
+        end
+        return
+    end
+
     if activeStyle ~= true then
-        local idleAlpha = IsHudUnlocked() and INACTIVE_MOVE_BACKGROUND_ALPHA or INACTIVE_BACKGROUND_ALPHA
+        local idleAlpha = INACTIVE_BACKGROUND_ALPHA
         if EZOMetter_WindowStyle and EZOMetter_WindowStyle.ApplyBackdropStyle then
             EZOMetter_WindowStyle.ApplyBackdropStyle(backdrop, {
                 opacityMultiplier = idleAlpha,
@@ -461,9 +474,15 @@ local function SetVisualMode(mode)
         ApplyStyle(false)
         timerLabel:SetColor(0.7, 0.75, 0.82, 0.78)
         stateLabel:SetColor(0.7, 0.75, 0.82, 1)
-        barBack:SetCenterColor(0, 0, 0, BAR_IDLE_ALPHA)
-        barBack:SetEdgeColor(0, 0, 0, 0)
-        barFill:SetColor(0.35, 0.35, 0.35, IsHudUnlocked() and 0.35 or 0.12)
+        if IsHudUnlocked() then
+            barBack:SetCenterColor(0.02, 0.08, 0.12, 0.45)
+            barBack:SetEdgeColor(0, 0, 0, 0)
+            barFill:SetColor(0.2, 0.7, 0.9, 0.45)
+        else
+            barBack:SetCenterColor(0, 0, 0, BAR_IDLE_ALPHA)
+            barBack:SetEdgeColor(0, 0, 0, 0)
+            barFill:SetColor(0.35, 0.35, 0.35, 0.12)
+        end
     elseif mode == "ready" then
         ApplyStyle(true)
         stateLabel:SetColor(0.25, 1, 0.35, 1)
@@ -568,10 +587,13 @@ end
 local function UpdateVisibility()
     EnsureControl()
 
+    local isUnlocked = IsHudUnlocked()
+    SetMoveMode(isUnlocked)
+
     local hidden = false
     if not CanShowHud() then
         hidden = true
-    elseif IsHudUnlocked() then
+    elseif isUnlocked then
         hidden = false
     elseif not IsEnabled() then
         hidden = true
@@ -580,6 +602,10 @@ local function UpdateVisibility()
     end
 
     control:SetHidden(hidden)
+    if not hidden then
+        lastVisualMode = nil
+        UpdateVisuals()
+    end
 end
 
 local function StopUpdate()
@@ -714,9 +740,15 @@ function UpdateVisuals()
     SetLabelText(titleLabel, activeName ~= "" and activeName or GetString(EZOM_ABILITY_FATECARVER_NAME), "title")
 
     if not active then
-        SetLabelText(timerLabel, "", "timer")
-        SetLabelText(stateLabel, GetString(EZOM_ABILITY_FATECARVER_READY), "state")
-        SetBarProgress(0)
+        if IsHudUnlocked() then
+            SetLabelText(timerLabel, "4.0s", "timer")
+            SetLabelText(stateLabel, GetString(EZOM_ABILITY_FATECARVER_READY), "state")
+            SetBarProgress(1.0)
+        else
+            SetLabelText(timerLabel, "", "timer")
+            SetLabelText(stateLabel, GetString(EZOM_ABILITY_FATECARVER_READY), "state")
+            SetBarProgress(0)
+        end
         SetVisualMode("idle")
         return
     end

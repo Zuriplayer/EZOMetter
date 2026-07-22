@@ -1,5 +1,40 @@
 # Changelog
 
+## 0.1.43 - Highland and Off Balance HUD polish
+
+- Fixed an issue where the Highland Sentinel tracker panel could not be moved when the HUD was unlocked.
+- Added active/cooldown labels and remaining time directly on the independent Off Balance icon.
+
+## 0.1.42 - Highland Sentinel tracker
+
+- Added a new tracker for the Highland Sentinel set. It detects when 5 pieces are equipped and tracks the "Sentinel's Eye" buff stacks to estimate the real-time critical chance bonus.
+
+## 0.1.41 - Exploiter CP visibility option
+
+- Added an option to the Off Balance tracker to automatically hide itself if the Exploiter Champion Point is not currently slotted.
+
+## 0.1.40 - Adjustable Off Balance icon size
+
+- Added a setting to LibAddonMenu to adjust the size of the independent Off Balance icon.
+
+## 0.1.39 - Independent Off Balance icon
+
+- Separated the Off Balance tracker's icon into its own independently movable window.
+- The new standalone icon hides when the effect is not active or immune, reducing screen clutter out of combat.
+
+## 0.1.38 - Fix empty combat readings and unavailable text
+
+- Prevents brief empty combat sessions (with 0 data) from overriding the last valid reading when exiting combat.
+- Replaces the "unavailable" text for the group metric with a simpler "--" dash.
+
+## 0.1.37 - Compact layout for observed metrics
+
+- Adds a compact layout option to the observed damage and healing trackers that hides row labels, centers the values, and removes the background and border.
+
+## 0.1.36 - Fatecarver HUD move mode preview
+
+- Ensures the Fatecarver meter displays a full backdrop, border, and preview bar/timer when HUD movement is unlocked.
+
 ## 0.1.35 - Shared HUD window appearance
 
 - Moves HUD background opacity, border visibility, and border color to shared General settings.

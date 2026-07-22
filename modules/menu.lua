@@ -294,6 +294,24 @@ function EZOMetter_Menu.Init()
                     default = true,
                 },
                 {
+                    type = "slider",
+                    name = GetString(EZOM_OPTION_OFF_BALANCE_ICON_SIZE),
+                    tooltip = GetString(EZOM_OPTION_OFF_BALANCE_ICON_SIZE_TOOLTIP),
+                    min = 16,
+                    max = 64,
+                    step = 2,
+                    getFunc = function()
+                        return EZOMetter.sv.offBalance and tonumber(EZOMetter.sv.offBalance.iconSize) or 18
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.offBalance.iconSize = value
+                        if EZOMetter_OffBalance and EZOMetter_OffBalance.ApplySettings then
+                            EZOMetter_OffBalance.ApplySettings()
+                        end
+                    end,
+                    default = 18,
+                },
+                {
                     type = "checkbox",
                     name = GetString(EZOM_OPTION_OFF_BALANCE_ONLY_BOSSES),
                     tooltip = GetString(EZOM_OPTION_OFF_BALANCE_ONLY_BOSSES_TOOLTIP),
@@ -302,6 +320,21 @@ function EZOMetter_Menu.Init()
                     end,
                     setFunc = function(value)
                         EZOMetter.sv.offBalance.onlyBosses = value == true
+                        if EZOMetter_OffBalance and EZOMetter_OffBalance.ApplySettings then
+                            EZOMetter_OffBalance.ApplySettings()
+                        end
+                    end,
+                    default = false,
+                },
+                {
+                    type = "checkbox",
+                    name = GetString(EZOM_OPTION_OFF_BALANCE_ONLY_EXPLOITER),
+                    tooltip = GetString(EZOM_OPTION_OFF_BALANCE_ONLY_EXPLOITER_TOOLTIP),
+                    getFunc = function()
+                        return EZOMetter.sv.offBalance and EZOMetter.sv.offBalance.onlyExploiter == true
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.offBalance.onlyExploiter = value == true
                         if EZOMetter_OffBalance and EZOMetter_OffBalance.ApplySettings then
                             EZOMetter_OffBalance.ApplySettings()
                         end
@@ -409,6 +442,121 @@ function EZOMetter_Menu.Init()
                     end,
                     setFunc = function(value)
                         EZOMetter.sv.coral.debugEquipment = value == true
+                    end,
+                    default = false,
+                },
+            },
+        },
+        {
+            type = "submenu",
+            name = GetString(EZOM_OPTION_HIGHLAND),
+            controls = {
+                CreateInfoHeader(GetString(EZOM_OPTION_HIGHLAND), GetString(EZOM_OPTION_HIGHLAND_HEADER_TOOLTIP)),
+                {
+                    type = "checkbox",
+                    name = GetString(EZOM_OPTION_HIGHLAND_ENABLED),
+                    tooltip = GetString(EZOM_OPTION_HIGHLAND_ENABLED_TOOLTIP),
+                    getFunc = function()
+                        return EZOMetter.sv.highland and EZOMetter.sv.highland.enabled == true
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.highland.enabled = value == true
+                        if EZOMetter_Highland and EZOMetter_Highland.ApplySettings then
+                            EZOMetter_Highland.ApplySettings()
+                        end
+                    end,
+                    default = true,
+                },
+                {
+                    type = "checkbox",
+                    name = GetString(EZOM_OPTION_HIGHLAND_DD_ONLY),
+                    tooltip = GetString(EZOM_OPTION_HIGHLAND_DD_ONLY_TOOLTIP),
+                    getFunc = function()
+                        return EZOMetter.sv.highland and EZOMetter.sv.highland.ddOnly ~= false
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.highland.ddOnly = value == true
+                        if EZOMetter_Highland and EZOMetter_Highland.ApplySettings then
+                            EZOMetter_Highland.ApplySettings()
+                        end
+                    end,
+                    default = true,
+                },
+                {
+                    type = "checkbox",
+                    name = GetString(EZOM_OPTION_HIGHLAND_ONLY_COMBAT),
+                    tooltip = GetString(EZOM_OPTION_HIGHLAND_ONLY_COMBAT_TOOLTIP),
+                    getFunc = function()
+                        return EZOMetter.sv.highland and EZOMetter.sv.highland.onlyCombat ~= false
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.highland.onlyCombat = value == true
+                        if EZOMetter_Highland and EZOMetter_Highland.ApplySettings then
+                            EZOMetter_Highland.ApplySettings()
+                        end
+                    end,
+                    default = true,
+                },
+                {
+                    type = "slider",
+                    name = GetString(EZOM_OPTION_HIGHLAND_SIZE),
+                    tooltip = GetString(EZOM_OPTION_HIGHLAND_SIZE_TOOLTIP),
+                    min = 70,
+                    max = 140,
+                    step = 5,
+                    getFunc = function()
+                        return EZOMetter.sv.highland.size or 100
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.highland.size = tonumber(value) or 100
+                        if EZOMetter_Highland and EZOMetter_Highland.ApplySettings then
+                            EZOMetter_Highland.ApplySettings()
+                        end
+                    end,
+                    default = 100,
+                },
+                {
+                    type = "slider",
+                    name = GetString(EZOM_OPTION_HIGHLAND_BACKGROUND_OPACITY),
+                    tooltip = GetString(EZOM_OPTION_HIGHLAND_BACKGROUND_OPACITY_TOOLTIP),
+                    min = 0,
+                    max = 100,
+                    step = 5,
+                    getFunc = function()
+                        return EZOMetter.sv.highland.backgroundOpacity or 86
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.highland.backgroundOpacity = tonumber(value) or 86
+                        if EZOMetter_Highland and EZOMetter_Highland.ApplySettings then
+                            EZOMetter_Highland.ApplySettings()
+                        end
+                    end,
+                    default = 86,
+                },
+                {
+                    type = "checkbox",
+                    name = GetString(EZOM_OPTION_HIGHLAND_SHOW_BORDER),
+                    tooltip = GetString(EZOM_OPTION_HIGHLAND_SHOW_BORDER_TOOLTIP),
+                    getFunc = function()
+                        return EZOMetter.sv.highland.showBorder ~= false
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.highland.showBorder = value == true
+                        if EZOMetter_Highland and EZOMetter_Highland.ApplySettings then
+                            EZOMetter_Highland.ApplySettings()
+                        end
+                    end,
+                    default = true,
+                },
+                {
+                    type = "checkbox",
+                    name = GetString(EZOM_OPTION_HIGHLAND_DEBUG_EVENTS),
+                    tooltip = GetString(EZOM_OPTION_HIGHLAND_DEBUG_EVENTS_TOOLTIP),
+                    getFunc = function()
+                        return EZOMetter.sv.highland and EZOMetter.sv.highland.debugEvents == true
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.highland.debugEvents = value == true
                     end,
                     default = false,
                 },
@@ -764,6 +912,29 @@ function EZOMetter_Menu.Init()
                     end,
                     default = true,
                 },
+                {
+                    type = "dropdown",
+                    name = GetString(EZOM_OPTION_OBSERVED_LAYOUT),
+                    tooltip = GetString(EZOM_OPTION_OBSERVED_LAYOUT_TOOLTIP),
+                    choices = {
+                        GetString(EZOM_OPTION_OBSERVED_LAYOUT_DETAILED),
+                        GetString(EZOM_OPTION_OBSERVED_LAYOUT_COMPACT),
+                    },
+                    choicesValues = {
+                        "detailed",
+                        "compact",
+                    },
+                    getFunc = function()
+                        return EZOMetter.sv.observedDamage and EZOMetter.sv.observedDamage.layout or "detailed"
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.observedDamage.layout = value
+                        if EZOMetter_ObservedDamage and EZOMetter_ObservedDamage.ApplySettings then
+                            EZOMetter_ObservedDamage.ApplySettings()
+                        end
+                    end,
+                    default = "detailed",
+                },
             },
         },
         {
@@ -815,6 +986,29 @@ function EZOMetter_Menu.Init()
                         end
                     end,
                     default = true,
+                },
+                {
+                    type = "dropdown",
+                    name = GetString(EZOM_OPTION_OBSERVED_LAYOUT),
+                    tooltip = GetString(EZOM_OPTION_OBSERVED_LAYOUT_TOOLTIP),
+                    choices = {
+                        GetString(EZOM_OPTION_OBSERVED_LAYOUT_DETAILED),
+                        GetString(EZOM_OPTION_OBSERVED_LAYOUT_COMPACT),
+                    },
+                    choicesValues = {
+                        "detailed",
+                        "compact",
+                    },
+                    getFunc = function()
+                        return EZOMetter.sv.observedHealing and EZOMetter.sv.observedHealing.layout or "detailed"
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.observedHealing.layout = value
+                        if EZOMetter_ObservedHealing and EZOMetter_ObservedHealing.ApplySettings then
+                            EZOMetter_ObservedHealing.ApplySettings()
+                        end
+                    end,
+                    default = "detailed",
                 },
             },
         },

@@ -54,8 +54,11 @@ local OFF_BALANCE_ALIASES = {
 }
 
 local control
+local iconControl
 local backdrop
 local icon
+local iconStatusLabel
+local iconTimerLabel
 local stateLabel
 local timerLabel
 local targetLabel
@@ -525,39 +528,74 @@ end
 
 local function SavePosition()
     local settings = GetSettings()
-    if not settings or not control then return end
+    if not settings then return end
 
-    settings.x = control:GetLeft() - GuiRoot:GetWidth() / 2 + control:GetWidth() / 2
-    settings.y = control:GetTop() - GuiRoot:GetHeight() / 2 + control:GetHeight() / 2
+    if control then
+        settings.x = control:GetLeft() - GuiRoot:GetWidth() / 2 + control:GetWidth() / 2
+        settings.y = control:GetTop() - GuiRoot:GetHeight() / 2 + control:GetHeight() / 2
+    end
+    if iconControl then
+        settings.iconX = iconControl:GetLeft() - GuiRoot:GetWidth() / 2 + iconControl:GetWidth() / 2
+        settings.iconY = iconControl:GetTop() - GuiRoot:GetHeight() / 2 + iconControl:GetHeight() / 2
+    end
 end
 
 local function ApplyPosition()
-    if not control then return end
-
     local settings = GetSettings() or {}
-    control:ClearAnchors()
-    control:SetAnchor(CENTER, GuiRoot, CENTER, tonumber(settings.x) or 0, tonumber(settings.y) or -80)
+
+    if control then
+        control:ClearAnchors()
+        control:SetAnchor(CENTER, GuiRoot, CENTER, tonumber(settings.x) or 0, tonumber(settings.y) or -80)
+    end
+    if iconControl then
+        iconControl:ClearAnchors()
+        iconControl:SetAnchor(CENTER, GuiRoot, CENTER, tonumber(settings.iconX) or 0, tonumber(settings.iconY) or -140)
+    end
 end
 
 local function SetMoveMode(enabled)
-    if not control then return end
+    local moveEnabled = enabled == true
 
-    control.ezomMoveEnabled = enabled == true
-    control:SetMouseEnabled(true)
-    if control.ezomPrimaryDragRefresh then control.ezomPrimaryDragRefresh() end
+    if control then
+        control.ezomMoveEnabled = moveEnabled
+        control:SetMouseEnabled(true)
+        if control.ezomPrimaryDragRefresh then control.ezomPrimaryDragRefresh() end
+    end
+
+    if iconControl then
+        iconControl.ezomMoveEnabled = moveEnabled
+        iconControl:SetMouseEnabled(true)
+        if iconControl.ezomPrimaryDragRefresh then iconControl.ezomPrimaryDragRefresh() end
+    end
 end
 
 local function ApplyStyle()
+    local settings = GetSettings() or {}
+    local iconSize = tonumber(settings.iconSize) or ICON_SIZE
+
+    if icon then
+        icon:SetDimensions(iconSize, iconSize)
+    end
+    if iconControl then
+        iconControl:SetDimensions(iconSize + PADDING * 2, iconSize + PADDING * 2)
+    end
+    if iconStatusLabel then
+        iconStatusLabel:SetHeight(14)
+    end
+    if iconTimerLabel then
+        iconTimerLabel:SetHeight(14)
+    end
+
     if EZOMetter_WindowStyle then
-        EZOMetter_WindowStyle.ApplyControlScale(control)
-        if EZOMetter_WindowStyle.ApplyBackdropStyle then
+        if control then EZOMetter_WindowStyle.ApplyControlScale(control) end
+        if iconControl then EZOMetter_WindowStyle.ApplyControlScale(iconControl) end
+        if backdrop and EZOMetter_WindowStyle.ApplyBackdropStyle then
             EZOMetter_WindowStyle.ApplyBackdropStyle(backdrop)
             return
         end
     end
     if not backdrop then return end
 
-    local settings = GetSettings() or {}
     local opacity = tonumber(settings.backgroundOpacity) or 86
     if opacity < 0 then opacity = 0 end
     if opacity > 100 then opacity = 100 end
@@ -589,8 +627,9 @@ local function EnsureControl()
     if control then return control end
 
     local wm = WINDOW_MANAGER
+
     control = wm:CreateTopLevelWindow(CONTROL_NAME)
-    control:SetDimensions(WIDTH, HEIGHT)
+    control:SetDimensions(WIDTH - (ICON_SIZE + TEXT_GAP), HEIGHT)
     control:SetClampedToScreen(true)
     control:SetDrawTier(DT_HIGH)
     control:SetHidden(true)
@@ -603,23 +642,49 @@ local function EnsureControl()
     backdrop = wm:CreateControl(CONTROL_NAME .. "Backdrop", control, CT_BACKDROP)
     backdrop:SetAnchorFill(control)
     backdrop:SetEdgeTexture("", 1, 1, 1)
-    ApplyStyle()
 
-    icon = wm:CreateControl(CONTROL_NAME .. "Icon", control, CT_TEXTURE)
+    iconControl = wm:CreateTopLevelWindow(CONTROL_NAME .. "IconContainer")
+    iconControl:SetDimensions(ICON_SIZE + PADDING * 2, ICON_SIZE + PADDING * 2)
+    iconControl:SetClampedToScreen(true)
+    iconControl:SetDrawTier(DT_HIGH)
+    iconControl:SetHidden(true)
+    EZOMetter_VisualContext.BindPrimaryDrag(iconControl, function()
+        return iconControl.ezomMoveEnabled == true
+    end, SavePosition)
+
+    icon = wm:CreateControl(CONTROL_NAME .. "Icon", iconControl, CT_TEXTURE)
     icon:SetDimensions(ICON_SIZE, ICON_SIZE)
-    icon:SetAnchor(TOPLEFT, control, TOPLEFT, PADDING, 11)
+    icon:SetAnchor(CENTER, iconControl, CENTER, 0, 0)
     icon:SetTexture("esoui/art/icons/ability_debuff_offbalance.dds")
 
+    iconStatusLabel = wm:CreateControl(CONTROL_NAME .. "IconStatus", iconControl, CT_LABEL)
+    iconStatusLabel:SetAnchor(TOPLEFT, iconControl, TOPLEFT, 0, 1)
+    iconStatusLabel:SetAnchor(TOPRIGHT, iconControl, TOPRIGHT, 0, 1)
+    iconStatusLabel:SetFont("ZoFontGameSmall")
+    iconStatusLabel:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
+    iconStatusLabel:SetVerticalAlignment(TEXT_ALIGN_CENTER)
+    iconStatusLabel:SetMaxLineCount(1)
+
+    iconTimerLabel = wm:CreateControl(CONTROL_NAME .. "IconTimer", iconControl, CT_LABEL)
+    iconTimerLabel:SetAnchor(BOTTOMLEFT, iconControl, BOTTOMLEFT, 0, -1)
+    iconTimerLabel:SetAnchor(BOTTOMRIGHT, iconControl, BOTTOMRIGHT, 0, -1)
+    iconTimerLabel:SetFont("ZoFontGameSmall")
+    iconTimerLabel:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
+    iconTimerLabel:SetVerticalAlignment(TEXT_ALIGN_CENTER)
+    iconTimerLabel:SetMaxLineCount(1)
+
+    ApplyStyle()
+
     stateLabel = wm:CreateControl(CONTROL_NAME .. "State", control, CT_LABEL)
-    stateLabel:SetAnchor(TOPLEFT, icon, TOPRIGHT, TEXT_GAP, -1)
-    stateLabel:SetAnchor(TOPRIGHT, control, TOPRIGHT, -(PADDING + TIMER_WIDTH + 8), -1)
+    stateLabel:SetAnchor(TOPLEFT, control, TOPLEFT, PADDING, 10)
+    stateLabel:SetAnchor(TOPRIGHT, control, TOPRIGHT, -(PADDING + TIMER_WIDTH + 8), 10)
     stateLabel:SetHeight(24)
     stateLabel:SetFont("ZoFontGameMedium")
     stateLabel:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
     stateLabel:SetMaxLineCount(1)
 
     timerLabel = wm:CreateControl(CONTROL_NAME .. "Timer", control, CT_LABEL)
-    timerLabel:SetAnchor(TOPRIGHT, control, TOPRIGHT, -PADDING, 4)
+    timerLabel:SetAnchor(TOPRIGHT, control, TOPRIGHT, -PADDING, 10)
     timerLabel:SetDimensions(TIMER_WIDTH, 24)
     timerLabel:SetFont("ZoFontGameLargeBold")
     timerLabel:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
@@ -648,6 +713,7 @@ local function EnsureControl()
     SetMoveMode(IsHudUnlocked())
     if EZOMetter_VisualContext and EZOMetter_VisualContext.AddHudFragment then
         EZOMetter_VisualContext.AddHudFragment(control)
+        EZOMetter_VisualContext.AddHudFragment(iconControl)
     end
     return control
 end
@@ -685,11 +751,20 @@ local function UpdateVisibility()
         hidden = true
     elseif settings.onlyBosses == true and not isTrackingBoss and not (lastCombatSummary and lastCombatSummary.durationMs and lastCombatSummary.durationMs > 0) then
         hidden = true
+    elseif settings.onlyExploiter == true and EZOMetter_ChampionPoints and EZOMetter_ChampionPoints.GetExploiter().slotted ~= true then
+        hidden = true
     elseif not hasVisibleData and not allowIdle then
         hidden = true
     end
 
-    control:SetHidden(hidden)
+    if control then control:SetHidden(hidden) end
+    if iconControl then
+        if hidden or (not IsHudUnlocked() and not forceShow and lastVisualState == STATE_FREE) then
+            iconControl:SetHidden(true)
+        else
+            iconControl:SetHidden(false)
+        end
+    end
 end
 
 local function UpdateVisuals(state, remainingMs, targetName, _targetIsBoss, source)
@@ -705,16 +780,24 @@ local function UpdateVisuals(state, remainingMs, targetName, _targetIsBoss, sour
 
     local r, g, b, a = GetStateColor(state)
     icon:SetColor(r, g, b, a)
+    iconStatusLabel:SetColor(r, g, b, a)
+    iconTimerLabel:SetColor(1, 1, 1, state == STATE_FREE and 0.65 or 1)
     stateLabel:SetText(GetString(EZOM_OFF_BALANCE_STATE_ACTIVE))
     stateLabel:SetColor(r, g, b, a)
     timerLabel:SetColor(r, g, b, a)
 
     if state == STATE_IMMUNE then
         timerLabel:SetText(string.format(GetString(EZOM_OFF_BALANCE_TIMER_COOLDOWN), FormatSeconds(remainingMs)))
+        iconStatusLabel:SetText("DC")
+        iconTimerLabel:SetText(FormatSeconds(remainingMs))
     elseif state == STATE_ACTIVE then
         timerLabel:SetText(FormatSeconds(remainingMs))
+        iconStatusLabel:SetText("OB")
+        iconTimerLabel:SetText(FormatSeconds(remainingMs))
     else
         timerLabel:SetText("--")
+        iconStatusLabel:SetText("--")
+        iconTimerLabel:SetText("")
     end
 
     local panelCounterText = BuildPanelCounterText()
@@ -730,6 +813,8 @@ local function UpdateVisuals(state, remainingMs, targetName, _targetIsBoss, sour
 
     sourceLabel:SetText(GetSourceName(source))
     sourceLabel:SetHidden(source == nil or source == SOURCE_NONE)
+
+    UpdateVisibility()
 end
 
 local function IsTargetBossOrDummy(unitTag, unitName)
