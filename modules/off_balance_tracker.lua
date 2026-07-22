@@ -623,6 +623,12 @@ local function ApplyPulse(nowMs)
     if icon.SetScale then icon:SetScale(scale) end
 end
 
+local function DisableMouseInput(controlToDisable)
+    if controlToDisable and controlToDisable.SetMouseEnabled then
+        controlToDisable:SetMouseEnabled(false)
+    end
+end
+
 local function EnsureControl()
     if control then return control end
 
@@ -642,6 +648,7 @@ local function EnsureControl()
     backdrop = wm:CreateControl(CONTROL_NAME .. "Backdrop", control, CT_BACKDROP)
     backdrop:SetAnchorFill(control)
     backdrop:SetEdgeTexture("", 1, 1, 1)
+    DisableMouseInput(backdrop)
 
     iconControl = wm:CreateTopLevelWindow(CONTROL_NAME .. "IconContainer")
     iconControl:SetDimensions(ICON_SIZE + PADDING * 2, ICON_SIZE + PADDING * 2)
@@ -656,6 +663,7 @@ local function EnsureControl()
     icon:SetDimensions(ICON_SIZE, ICON_SIZE)
     icon:SetAnchor(CENTER, iconControl, CENTER, 0, 0)
     icon:SetTexture("esoui/art/icons/ability_debuff_offbalance.dds")
+    DisableMouseInput(icon)
 
     iconStatusLabel = wm:CreateControl(CONTROL_NAME .. "IconStatus", iconControl, CT_LABEL)
     iconStatusLabel:SetAnchor(TOPLEFT, iconControl, TOPLEFT, 0, 1)
@@ -664,6 +672,7 @@ local function EnsureControl()
     iconStatusLabel:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
     iconStatusLabel:SetVerticalAlignment(TEXT_ALIGN_CENTER)
     iconStatusLabel:SetMaxLineCount(1)
+    DisableMouseInput(iconStatusLabel)
 
     iconTimerLabel = wm:CreateControl(CONTROL_NAME .. "IconTimer", iconControl, CT_LABEL)
     iconTimerLabel:SetAnchor(BOTTOMLEFT, iconControl, BOTTOMLEFT, 0, -1)
@@ -672,6 +681,7 @@ local function EnsureControl()
     iconTimerLabel:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
     iconTimerLabel:SetVerticalAlignment(TEXT_ALIGN_CENTER)
     iconTimerLabel:SetMaxLineCount(1)
+    DisableMouseInput(iconTimerLabel)
 
     ApplyStyle()
 
@@ -682,6 +692,7 @@ local function EnsureControl()
     stateLabel:SetFont("ZoFontGameMedium")
     stateLabel:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
     stateLabel:SetMaxLineCount(1)
+    DisableMouseInput(stateLabel)
 
     timerLabel = wm:CreateControl(CONTROL_NAME .. "Timer", control, CT_LABEL)
     timerLabel:SetAnchor(TOPRIGHT, control, TOPRIGHT, -PADDING, 10)
@@ -689,6 +700,7 @@ local function EnsureControl()
     timerLabel:SetFont("ZoFontGameLargeBold")
     timerLabel:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
     timerLabel:SetVerticalAlignment(TEXT_ALIGN_CENTER)
+    DisableMouseInput(timerLabel)
 
     targetLabel = wm:CreateControl(CONTROL_NAME .. "Target", control, CT_LABEL)
     targetLabel:SetAnchor(TOPLEFT, control, TOPLEFT, PADDING, 34)
@@ -698,6 +710,7 @@ local function EnsureControl()
     targetLabel:SetColor(0.82, 0.82, 0.82, 1)
     targetLabel:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
     targetLabel:SetMaxLineCount(1)
+    DisableMouseInput(targetLabel)
 
     sourceLabel = wm:CreateControl(CONTROL_NAME .. "Source", control, CT_LABEL)
     sourceLabel:SetAnchor(TOPLEFT, control, TOPLEFT, PADDING, 50)
@@ -708,6 +721,7 @@ local function EnsureControl()
     sourceLabel:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
     sourceLabel:SetMaxLineCount(1)
     sourceLabel:SetHidden(true)
+    DisableMouseInput(sourceLabel)
 
     ApplyPosition()
     SetMoveMode(IsHudUnlocked())
