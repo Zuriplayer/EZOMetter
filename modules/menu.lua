@@ -4,6 +4,10 @@ EZOMetter_Menu = EZOMetter_Menu or {}
 local ADDON_NAME = "EZOMetter"
 local PANEL_ID = ADDON_NAME .. "_Options"
 local INFO_HEADER_TEXTURE = "EsoUI/Art/Miscellaneous/help_icon.dds"
+local OFF_BALANCE_DISPLAY_OFF = "off"
+local OFF_BALANCE_DISPLAY_PANEL = "panel"
+local OFF_BALANCE_DISPLAY_ICON = "icon"
+local OFF_BALANCE_DISPLAY_BOTH = "both"
 
 local function CreateInfoHeader(name, tooltip)
     return {
@@ -23,6 +27,45 @@ local function RefreshLanguage()
     elseif EZOMetter_Lang and EZOMetter_Lang.Apply and EZOMetter.sv and EZOMetter.sv.general then
         EZOMetter_Lang.Apply(EZOMetter.sv.general.language or EZOMetter.GetDefaultLanguage())
     end
+end
+
+local function GetOffBalanceDisplayMode()
+    local settings = EZOMetter.sv and EZOMetter.sv.offBalance
+    local mode = settings and settings.displayMode
+    if mode == OFF_BALANCE_DISPLAY_OFF
+        or mode == OFF_BALANCE_DISPLAY_PANEL
+        or mode == OFF_BALANCE_DISPLAY_ICON
+        or mode == OFF_BALANCE_DISPLAY_BOTH then
+        return mode
+    end
+
+    return settings and settings.enabled == false and OFF_BALANCE_DISPLAY_OFF or OFF_BALANCE_DISPLAY_BOTH
+end
+
+local function SetOffBalanceDisplayMode(value)
+    if not (EZOMetter.sv and EZOMetter.sv.offBalance) then return end
+
+    if value ~= OFF_BALANCE_DISPLAY_OFF
+        and value ~= OFF_BALANCE_DISPLAY_PANEL
+        and value ~= OFF_BALANCE_DISPLAY_ICON
+        and value ~= OFF_BALANCE_DISPLAY_BOTH then
+        value = OFF_BALANCE_DISPLAY_BOTH
+    end
+
+    EZOMetter.sv.offBalance.displayMode = value
+    EZOMetter.sv.offBalance.enabled = value ~= OFF_BALANCE_DISPLAY_OFF
+    if EZOMetter_OffBalance and EZOMetter_OffBalance.ApplySettings then
+        EZOMetter_OffBalance.ApplySettings()
+    end
+end
+
+local function IsOffBalanceDisplayEnabled()
+    return GetOffBalanceDisplayMode() ~= OFF_BALANCE_DISPLAY_OFF
+end
+
+local function IsOffBalanceIconEnabled()
+    local mode = GetOffBalanceDisplayMode()
+    return mode == OFF_BALANCE_DISPLAY_ICON or mode == OFF_BALANCE_DISPLAY_BOTH
 end
 
 function EZOMetter_Menu.Init()
@@ -264,19 +307,24 @@ function EZOMetter_Menu.Init()
             controls = {
                 CreateInfoHeader(GetString(EZOM_OPTION_OFF_BALANCE), GetString(EZOM_OPTION_OFF_BALANCE_HEADER_TOOLTIP)),
                 {
-                    type = "checkbox",
-                    name = GetString(EZOM_OPTION_OFF_BALANCE_ENABLED),
-                    tooltip = GetString(EZOM_OPTION_OFF_BALANCE_ENABLED_TOOLTIP),
-                    getFunc = function()
-                        return EZOMetter.sv.offBalance and EZOMetter.sv.offBalance.enabled == true
-                    end,
-                    setFunc = function(value)
-                        EZOMetter.sv.offBalance.enabled = value == true
-                        if EZOMetter_OffBalance and EZOMetter_OffBalance.ApplySettings then
-                            EZOMetter_OffBalance.ApplySettings()
-                        end
-                    end,
-                    default = true,
+                    type = "dropdown",
+                    name = GetString(EZOM_OPTION_OFF_BALANCE_DISPLAY_MODE),
+                    tooltip = GetString(EZOM_OPTION_OFF_BALANCE_DISPLAY_MODE_TOOLTIP),
+                    choices = {
+                        GetString(EZOM_OPTION_OFF_BALANCE_DISPLAY_OFF),
+                        GetString(EZOM_OPTION_OFF_BALANCE_DISPLAY_PANEL),
+                        GetString(EZOM_OPTION_OFF_BALANCE_DISPLAY_ICON),
+                        GetString(EZOM_OPTION_OFF_BALANCE_DISPLAY_BOTH),
+                    },
+                    choicesValues = {
+                        OFF_BALANCE_DISPLAY_OFF,
+                        OFF_BALANCE_DISPLAY_PANEL,
+                        OFF_BALANCE_DISPLAY_ICON,
+                        OFF_BALANCE_DISPLAY_BOTH,
+                    },
+                    getFunc = GetOffBalanceDisplayMode,
+                    setFunc = SetOffBalanceDisplayMode,
+                    default = OFF_BALANCE_DISPLAY_BOTH,
                 },
                 {
                     type = "checkbox",
@@ -291,6 +339,7 @@ function EZOMetter_Menu.Init()
                             EZOMetter_OffBalance.ApplySettings()
                         end
                     end,
+                    disabled = function() return not IsOffBalanceDisplayEnabled() end,
                     default = true,
                 },
                 {
@@ -309,6 +358,7 @@ function EZOMetter_Menu.Init()
                             EZOMetter_OffBalance.ApplySettings()
                         end
                     end,
+                    disabled = function() return not IsOffBalanceIconEnabled() end,
                     default = 18,
                 },
                 {
@@ -324,6 +374,7 @@ function EZOMetter_Menu.Init()
                             EZOMetter_OffBalance.ApplySettings()
                         end
                     end,
+                    disabled = function() return not IsOffBalanceDisplayEnabled() end,
                     default = false,
                 },
                 {
@@ -339,6 +390,7 @@ function EZOMetter_Menu.Init()
                             EZOMetter_OffBalance.ApplySettings()
                         end
                     end,
+                    disabled = function() return not IsOffBalanceDisplayEnabled() end,
                     default = false,
                 },
                 {

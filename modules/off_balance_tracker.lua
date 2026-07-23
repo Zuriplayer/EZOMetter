@@ -25,6 +25,11 @@ local STATE_FREE = 0
 local STATE_ACTIVE = 1
 local STATE_IMMUNE = 2
 
+local DISPLAY_MODE_OFF = "off"
+local DISPLAY_MODE_PANEL = "panel"
+local DISPLAY_MODE_ICON = "icon"
+local DISPLAY_MODE_BOTH = "both"
+
 local SOURCE_NONE = 0
 local SOURCE_DIRECT = 1
 local SOURCE_EVENT = 2
@@ -115,6 +120,31 @@ end
 
 local function GetRole()
     return EZOMetter.sv and EZOMetter.sv.general and EZOMetter.sv.general.role or "dd"
+end
+
+local function GetDisplayMode()
+    local settings = GetSettings()
+    local mode = settings and settings.displayMode
+    if mode == DISPLAY_MODE_OFF
+        or mode == DISPLAY_MODE_PANEL
+        or mode == DISPLAY_MODE_ICON
+        or mode == DISPLAY_MODE_BOTH then
+        return mode
+    end
+
+    return settings and settings.enabled == false and DISPLAY_MODE_OFF or DISPLAY_MODE_BOTH
+end
+
+local function IsDisplayModeEnabled()
+    return GetDisplayMode() ~= DISPLAY_MODE_OFF
+end
+
+local function DisplayModeShowsPanel(mode)
+    return mode == DISPLAY_MODE_PANEL or mode == DISPLAY_MODE_BOTH
+end
+
+local function DisplayModeShowsIcon(mode)
+    return mode == DISPLAY_MODE_ICON or mode == DISPLAY_MODE_BOTH
 end
 
 local function CleanUnitName(name)
@@ -734,7 +764,7 @@ end
 
 local function IsEnabled()
     local settings = GetSettings()
-    if not settings or settings.enabled ~= true then return false end
+    if not settings or not IsDisplayModeEnabled() then return false end
     if settings.ddOnly ~= false and GetRole() ~= "dd" then return false end
     return true
 end
@@ -751,7 +781,11 @@ local function UpdateVisibility()
     EnsureControl()
 
     local settings = GetSettings() or {}
+    local displayMode = GetDisplayMode()
     local allowIdle = settings.onlyCombat == false and settings.onlyBosses ~= true
+    local showAllForEdit = IsHudUnlocked() or forceShow
+    local showPanel = showAllForEdit or DisplayModeShowsPanel(displayMode)
+    local showIcon = showAllForEdit or DisplayModeShowsIcon(displayMode)
     local hidden = false
     if not CanShowHud() then
         hidden = true
@@ -771,10 +805,10 @@ local function UpdateVisibility()
         hidden = true
     end
 
-    if control then control:SetHidden(hidden) end
+    if control then control:SetHidden(hidden or not showPanel) end
     if iconControl then
         local hideIdleIcon = lastVisualState == STATE_FREE and not allowIdle
-        if hidden or (not IsHudUnlocked() and not forceShow and hideIdleIcon) then
+        if hidden or not showIcon or (not showAllForEdit and hideIdleIcon) then
             iconControl:SetHidden(true)
         else
             iconControl:SetHidden(false)

@@ -26,6 +26,7 @@ function EZOMetter.savedVars.Init()
         },
         offBalance = {
             enabled = true,
+            displayMode = "both",
             ddOnly = true,
             onlyCombat = true,
             bossFocus = true,
@@ -186,6 +187,15 @@ function EZOMetter.savedVars.Init()
     if EZOMetter.sv.offBalance.enabled == nil then
         EZOMetter.sv.offBalance.enabled = defaults.offBalance.enabled
     end
+    if EZOMetter.sv.offBalance.displayMode == nil then
+        EZOMetter.sv.offBalance.displayMode = EZOMetter.sv.offBalance.enabled == false and "off" or defaults.offBalance.displayMode
+    elseif EZOMetter.sv.offBalance.displayMode ~= "off"
+        and EZOMetter.sv.offBalance.displayMode ~= "panel"
+        and EZOMetter.sv.offBalance.displayMode ~= "icon"
+        and EZOMetter.sv.offBalance.displayMode ~= "both" then
+        EZOMetter.sv.offBalance.displayMode = defaults.offBalance.displayMode
+    end
+    EZOMetter.sv.offBalance.enabled = EZOMetter.sv.offBalance.displayMode ~= "off"
     if EZOMetter.sv.offBalance.ddOnly == nil then
         EZOMetter.sv.offBalance.ddOnly = defaults.offBalance.ddOnly
     end

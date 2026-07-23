@@ -11,7 +11,7 @@ For support, bug reports, and suggestions, join Discord: https://discord.gg/ekw8
 
 EZOMetter is in public beta. The addon is usable, but several combat metrics depend on ESO client events, visible target state, and optional libraries. Treat the numbers as practical helper information, not as a full replacement for dedicated combat log analysis.
 
-Current version: **0.1.44**.
+Current version: **0.1.45**.
 
 ## Requirements
 
@@ -59,8 +59,9 @@ Current version: **0.1.44**.
 - Tracks real Off Balance separately from the estimated Off Balance cooldown/cycle.
 - Keeps an explicit Off Balance title in the live panel, with the active/cooldown timer and current or last-combat counters beneath it.
 - Boss focus can keep tracking known boss state when you briefly look away.
+- Display mode selector can turn Off Balance off, show only the panel, show only the independent icon, or show both panel and icon.
 - Optional boss-only and combat-only visibility.
-- The independent floating icon follows the same idle visibility as the tracker: if combat-only and boss-only visibility are disabled, the icon remains visible in the ready state outside combat.
+- The selected Off Balance surface follows the combat, boss, role-profile, and Exploiter CP filters. If combat-only and boss-only visibility are disabled, selected surfaces remain visible in the ready state outside combat.
 - Configurable colors for ready, active, and cooldown states.
 - Optional pulse when Off Balance starts.
 - Debug scan for current target buffs and Off Balance events.

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.45 - Off Balance Display Mode
+
+- Replaced the Off Balance on/off checkbox with a display mode selector: Off, Panel, Icon, or Panel and icon.
+- Kept the combat, boss, role, and Exploiter filters applying to whichever Off Balance surface is selected.
+
 ## 0.1.44 - Off Balance Icon Idle Visibility
 
 - Fixed the independent Off Balance icon hiding while the tracker was otherwise allowed to show outside combat.
