@@ -186,11 +186,15 @@ function EZOMetter.savedVars.Init()
     if EZOMetter.sv.offBalance.enabled == nil then
         EZOMetter.sv.offBalance.enabled = defaults.offBalance.enabled
     end
-    EZOMetter.sv.offBalance.ddOnly = defaults.offBalance.ddOnly
+    if EZOMetter.sv.offBalance.ddOnly == nil then
+        EZOMetter.sv.offBalance.ddOnly = defaults.offBalance.ddOnly
+    end
     if EZOMetter.sv.offBalance.onlyCombat == nil then
         EZOMetter.sv.offBalance.onlyCombat = defaults.offBalance.onlyCombat
     end
-    EZOMetter.sv.offBalance.bossFocus = defaults.offBalance.bossFocus
+    if EZOMetter.sv.offBalance.bossFocus == nil then
+        EZOMetter.sv.offBalance.bossFocus = defaults.offBalance.bossFocus
+    end
     if EZOMetter.sv.offBalance.onlyBosses == nil then
         EZOMetter.sv.offBalance.onlyBosses = defaults.offBalance.onlyBosses
     end
@@ -202,7 +206,9 @@ function EZOMetter.savedVars.Init()
     if EZOMetter.sv.offBalance.showBorder == nil then
         EZOMetter.sv.offBalance.showBorder = defaults.offBalance.showBorder
     end
-    EZOMetter.sv.offBalance.pulseOnActive = defaults.offBalance.pulseOnActive
+    if EZOMetter.sv.offBalance.pulseOnActive == nil then
+        EZOMetter.sv.offBalance.pulseOnActive = defaults.offBalance.pulseOnActive
+    end
     EZOMetter.sv.offBalance.iconSize = tonumber(EZOMetter.sv.offBalance.iconSize) or defaults.offBalance.iconSize
     if EZOMetter.sv.offBalance.debugEvents == nil then
         EZOMetter.sv.offBalance.debugEvents = defaults.offBalance.debugEvents

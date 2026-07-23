@@ -773,7 +773,8 @@ local function UpdateVisibility()
 
     if control then control:SetHidden(hidden) end
     if iconControl then
-        if hidden or (not IsHudUnlocked() and not forceShow and lastVisualState == STATE_FREE) then
+        local hideIdleIcon = lastVisualState == STATE_FREE and not allowIdle
+        if hidden or (not IsHudUnlocked() and not forceShow and hideIdleIcon) then
             iconControl:SetHidden(true)
         else
             iconControl:SetHidden(false)

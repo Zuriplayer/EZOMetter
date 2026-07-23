@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.44 - Off Balance Icon Idle Visibility
+
+- Fixed the independent Off Balance icon hiding while the tracker was otherwise allowed to show outside combat.
+- Fixed Off Balance boolean settings for DD-only, boss focus, and active pulse so saved user choices are not reset to defaults on reload.
+
 ## 0.1.43 - Highland and Off Balance HUD polish
 
 - Fixed an issue where the Highland Sentinel tracker panel could not be moved when the HUD was unlocked.
