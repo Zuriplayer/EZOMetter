@@ -135,6 +135,9 @@ local function ReadPlayerStatByName(name)
     if statType == nil or type(GetPlayerStat) ~= "function" then
         return nil
     end
+    if STAT_BONUS_OPTION_APPLY_BONUS ~= nil then
+        return tonumber(GetPlayerStat(statType, STAT_BONUS_OPTION_APPLY_BONUS))
+    end
     return tonumber(GetPlayerStat(statType))
 end
 
@@ -154,6 +157,10 @@ local function NormalizeCritChance(raw)
     if not raw then return nil end
     if raw <= 1 then return raw * 100 end
     if raw <= 100 then return raw end
+    if type(GetCriticalStrikeChance) == "function" then
+        local value = tonumber(GetCriticalStrikeChance(raw))
+        if value then return value end
+    end
     return (raw / CRIT_RATING_PER_100_PERCENT) * 100
 end
 
@@ -162,7 +169,7 @@ local function NormalizeCritDamage(raw)
     if not raw then return nil end
     if raw <= 1 then raw = raw * 100 end
 
-    -- ESO often exposes critical damage as bonus over the base 50%.
+    -- ESO exposes advanced critical damage as bonus over the base 50%.
     if raw <= 75 then
         return CRIT_DAMAGE_BASE_PERCENT + raw
     end
@@ -198,7 +205,8 @@ end
 
 local function ReadStatValue(key)
     if key == "damage" then
-        return ReadBestPlayerStat({ "STAT_WEAPON_POWER", "STAT_SPELL_POWER" })
+        return ReadBestPlayerStat({ "STAT_POWER", "STAT_SPELL_POWER" })
+            or ReadBestPlayerStat({ "STAT_WEAPON_POWER" })
     end
     if key == "crit" then
         return NormalizeCritChance(ReadBestPlayerStat({ "STAT_CRITICAL_STRIKE", "STAT_SPELL_CRITICAL" }))
@@ -318,7 +326,8 @@ end
 
 local function FormatMaxValue(def, data)
     if not data then return "--" end
-    return FormatValue(def, data.uncappedEffectiveValue or data.effectiveValue or data.value)
+    -- Max Calc refleja solo el maximo del ultimo combate; vacio si no hay datos.
+    return FormatValue(def, data.uncappedEffectiveValue)
 end
 
 local function GetOvercapValue(def, data)
@@ -487,11 +496,41 @@ BuildLastCombatValues = function()
     return values
 end
 
-local function GetDisplayValues()
-    if not isCombat and lastCombatValues and lastCombatSummary and lastCombatSummary.hasData == true then
-        return lastCombatValues
+-- Panel coherente por columna:
+--   Own       = lectura instantanea en vivo (currentValues).
+--   Effective = ultimo combate; si no hay datos, igual que Own.
+--   Max Calc  = ultimo combate; si no hay datos, vacio.
+-- En modo test/preview (forceShow) se muestran los valores de currentValues tal cual.
+local function BuildDisplayData()
+    local live = currentValues or {}
+    if forceShow then
+        return live
     end
-    return currentValues
+
+    local hasLast = lastCombatSummary and lastCombatSummary.hasData == true
+        and lastCombatValues ~= nil and next(lastCombatValues) ~= nil
+
+    local out = {}
+    for _, def in ipairs(STAT_DEFS) do
+        local liveData = live[def.key]
+        local ownValue = liveData and liveData.ownValue or nil
+        local lastData = hasLast and lastCombatValues[def.key] or nil
+
+        local effectiveValue = lastData and lastData.effectiveValue or nil
+        local uncappedEffectiveValue = lastData and lastData.uncappedEffectiveValue or nil
+        if effectiveValue == nil then
+            effectiveValue = ownValue
+        end
+
+        out[def.key] = {
+            value = ownValue,
+            ownValue = ownValue,
+            effectiveValue = effectiveValue,
+            uncappedEffectiveValue = uncappedEffectiveValue,
+            available = ownValue ~= nil,
+        }
+    end
+    return out
 end
 
 local function FormatSeconds(ms)
@@ -965,9 +1004,10 @@ local function UpdateVisuals()
     effectiveHeaderLabel:SetText(GetString(EZOM_DD_STATS_SUMMARY_EFFECTIVE))
     maxHeaderLabel:SetText(GetString(EZOM_DD_STATS_SUMMARY_MAX_CALC))
 
+    local displayValues = BuildDisplayData()
     for _, def in ipairs(STAT_DEFS) do
         local row = rows[def.key]
-        local data = (GetDisplayValues()[def.key]) or {}
+        local data = displayValues[def.key] or {}
         local ownBand = GetBand(def, data.ownValue or data.value)
         local effectiveBand = GetEffectiveDisplayBand(def, data)
         local maxOvercap = GetOvercapValue(def, data) or 0
@@ -994,9 +1034,7 @@ local function UpdateVisuals()
 end
 
 local function OnUpdate()
-    if isCombat or not HasSummary() then
-        RefreshCurrentValues()
-    end
+    RefreshCurrentValues()
     UpdateVisuals()
 
     if isCombat and statsTracker then
@@ -1264,6 +1302,7 @@ local function OnCombatState(_, inCombat)
             lastCombatValues = BuildLastCombatValues()
             SaveLastCombat()
         end
+        RefreshCurrentValues()
     end
 
     UpdateVisuals()

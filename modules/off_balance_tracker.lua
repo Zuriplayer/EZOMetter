@@ -782,10 +782,12 @@ local function UpdateVisibility()
 
     local settings = GetSettings() or {}
     local displayMode = GetDisplayMode()
-    local allowIdle = settings.onlyCombat == false and settings.onlyBosses ~= true
     local showAllForEdit = IsHudUnlocked() or forceShow
     local showPanel = showAllForEdit or DisplayModeShowsPanel(displayMode)
     local showIcon = showAllForEdit or DisplayModeShowsIcon(displayMode)
+
+    -- Base comun: HUD valido, addon activo y perfil de rol. El panel no tiene
+    -- filtros propios: si su superficie esta seleccionada, se muestra siempre.
     local hidden = false
     if not CanShowHud() then
         hidden = true
@@ -795,24 +797,24 @@ local function UpdateVisibility()
         hidden = false
     elseif not IsEnabled() then
         hidden = true
-    elseif settings.onlyCombat ~= false and not isCombat and not (lastCombatSummary and lastCombatSummary.durationMs and lastCombatSummary.durationMs > 0) then
-        hidden = true
-    elseif settings.onlyBosses == true and not isTrackingBoss and not (lastCombatSummary and lastCombatSummary.durationMs and lastCombatSummary.durationMs > 0) then
-        hidden = true
-    elseif settings.onlyExploiter == true and EZOMetter_ChampionPoints and EZOMetter_ChampionPoints.GetExploiter().slotted ~= true then
-        hidden = true
-    elseif not hasVisibleData and not allowIdle then
-        hidden = true
     end
 
     if control then control:SetHidden(hidden or not showPanel) end
+
     if iconControl then
-        local hideIdleIcon = lastVisualState == STATE_FREE and not allowIdle
-        if hidden or not showIcon or (not showAllForEdit and hideIdleIcon) then
-            iconControl:SetHidden(true)
-        else
-            iconControl:SetHidden(false)
+        local iconHidden = hidden or not showIcon
+        if not iconHidden and not showAllForEdit then
+            -- Filtros exclusivos del icono (se combinan: todos los activos deben cumplirse).
+            if settings.iconOnlyCombat == true and not isCombat then
+                iconHidden = true
+            elseif settings.iconOnlyBosses == true and not isTrackingBoss then
+                iconHidden = true
+            elseif settings.iconOnlyExploiter == true
+                and not (EZOMetter_ChampionPoints and EZOMetter_ChampionPoints.GetExploiter().slotted == true) then
+                iconHidden = true
+            end
         end
+        iconControl:SetHidden(iconHidden)
     end
 end
 
@@ -1054,7 +1056,7 @@ local function OnUpdate()
     end
 
     isTrackingBoss = targetIsBoss
-    hasVisibleData = reticleActive or targetIsBoss or state ~= STATE_FREE or (settings.onlyCombat == false and settings.onlyBosses ~= true)
+    hasVisibleData = reticleActive or targetIsBoss or state ~= STATE_FREE
     currentState = state
     UpdateVisuals(state, math.max(0, endTime - nowMs), targetName, targetIsBoss, source)
     UpdateVisibility()
@@ -1089,8 +1091,7 @@ local function UnregisterUpdate()
 end
 
 local function RefreshUpdateRegistration()
-    local settings = GetSettings() or {}
-    if IsHudUnlocked() or forceShow or (IsEnabled() and (settings.onlyCombat == false or isCombat)) then
+    if IsHudUnlocked() or forceShow or IsEnabled() then
         RegisterUpdate()
         if forceShow then
             UpdateVisibility()

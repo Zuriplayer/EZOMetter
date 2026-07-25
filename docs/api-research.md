@@ -129,20 +129,22 @@ Investigacion adicional hecha el 2026-06-13.
 
 Conclusiones actuales:
 
-- La primera ventana de stats DD usa solo stats propios del jugador, no escanea debuffs del target ni intenta calcular penetracion efectiva final del grupo.
-- Dano ofensivo usa el mayor entre `STAT_WEAPON_POWER` y `STAT_SPELL_POWER`, porque el escalado hibrido usa el stat ofensivo mas alto para la mayoria de habilidades.
-- Critico usa el mayor entre `STAT_CRITICAL_STRIKE` y `STAT_SPELL_CRITICAL` cuando `GetPlayerStat` los expone. Si el valor llega como rating, se normaliza con el divisor documentado publicamente de `21918` rating para 100 puntos porcentuales.
+- El panel de stats DD es coherente por columna: `Own` muestra la lectura instantanea en vivo del jugador; `Effective` y `Max Calc` reflejan el ultimo combate. Si aun no hay datos de combate, `Effective` iguala a `Own` y `Max Calc` queda vacio. Los resumenes completos siguen en tooltip/reporte.
+- Las lecturas instantaneas usan `GetPlayerStat(stat, STAT_BONUS_OPTION_APPLY_BONUS)` para coincidir con la hoja de personaje.
+- Dano ofensivo usa el mayor entre `STAT_POWER` y `STAT_SPELL_POWER`, porque la hoja de personaje expone Weapon Damage mediante `STAT_POWER`; `STAT_WEAPON_POWER` queda solo como fallback defensivo si `STAT_POWER` no existe.
+- Critico usa el mayor entre `STAT_CRITICAL_STRIKE` y `STAT_SPELL_CRITICAL` y convierte el rating con `GetCriticalStrikeChance` cuando la API existe. Si no existe, mantiene un fallback defensivo con el divisor `21918` rating para 100 puntos porcentuales.
 - Penetracion usa el mayor entre `STAT_PHYSICAL_PENETRATION` y `STAT_SPELL_PENETRATION`. El objetivo por defecto `7200` representa un DD en trial veterana organizada donde soportes/debuffs cubren el resto hasta la armadura PvE instanciada de `18200`.
-- Dano critico se lee primero desde `GetAdvancedStatValue(ADVANCED_STAT_DISPLAY_TYPE_CRITICAL_DAMAGE)`, siguiendo el patron de LibCombat/Combat Metrics. Ese valor avanzado es bonus sobre el 50% base, asi que el tracker lo convierte a total con `50 + percentValue`. Si la API no existe, queda un fallback defensivo con constantes `STAT_*`.
+- Dano critico se lee primero desde `GetAdvancedStatValue(ADVANCED_STAT_DISPLAY_TYPE_CRITICAL_DAMAGE)`, siguiendo el patron de LibCombat/Combat Metrics. Ese valor avanzado es bonus sobre el 50% base, asi que el tracker lo muestra como total con `50 + percentValue`. Si la API no existe, queda un fallback defensivo con constantes `STAT_*`.
 - Defaults de corte:
   - dano ofensivo: objetivo `5000`, sin cap duro;
   - critico: objetivo `50%`, alto contextual `70%`;
   - penetracion: objetivo `7200`, alto `7700`;
-  - dano critico: objetivo/cap `125%`.
+  - dano critico: objetivo/cap `125%` total.
 
 Fuentes revisadas:
 
 - UESP ESO Data `GetPlayerStat`.
+- Addons locales `Overview` y `LibCombat`, que usan `STAT_BONUS_OPTION_APPLY_BONUS`; `Overview` tambien usa `STAT_POWER` para Weapon Damage y `GetCriticalStrikeChance` para critico.
 - UESP ESO Data `self.SetupAdvancedStats()`.
 - LibCombat/Combat Metrics, que usan `GetAdvancedStatValue(ADVANCED_STAT_DISPLAY_TYPE_CRITICAL_DAMAGE)` para crit damage.
 - ESOUI `Dynamic Stats`, que muestra mayor Weapon/Spell Damage, critico, penetracion y dano critico.

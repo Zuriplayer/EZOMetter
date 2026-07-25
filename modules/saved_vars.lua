@@ -28,15 +28,15 @@ function EZOMetter.savedVars.Init()
             enabled = true,
             displayMode = "both",
             ddOnly = true,
-            onlyCombat = true,
             bossFocus = true,
-            onlyBosses = false,
             unlock = false,
             backgroundOpacity = 86,
             showBorder = true,
             pulseOnActive = true,
             iconSize = 18,
-            onlyExploiter = false,
+            iconOnlyCombat = true,
+            iconOnlyBosses = false,
+            iconOnlyExploiter = false,
             debugEvents = false,
             readyColor = { r = 0.9, g = 0.9, b = 0.9, a = 1 },
             activeColor = { r = 0.15, g = 1, b = 0.35, a = 1 },
@@ -199,18 +199,35 @@ function EZOMetter.savedVars.Init()
     if EZOMetter.sv.offBalance.ddOnly == nil then
         EZOMetter.sv.offBalance.ddOnly = defaults.offBalance.ddOnly
     end
-    if EZOMetter.sv.offBalance.onlyCombat == nil then
-        EZOMetter.sv.offBalance.onlyCombat = defaults.offBalance.onlyCombat
-    end
     if EZOMetter.sv.offBalance.bossFocus == nil then
         EZOMetter.sv.offBalance.bossFocus = defaults.offBalance.bossFocus
     end
-    if EZOMetter.sv.offBalance.onlyBosses == nil then
-        EZOMetter.sv.offBalance.onlyBosses = defaults.offBalance.onlyBosses
+    -- Migracion: los filtros generales antiguos pasan a ser exclusivos del icono.
+    if EZOMetter.sv.offBalance.iconOnlyCombat == nil then
+        if EZOMetter.sv.offBalance.onlyCombat ~= nil then
+            EZOMetter.sv.offBalance.iconOnlyCombat = EZOMetter.sv.offBalance.onlyCombat == true
+        else
+            EZOMetter.sv.offBalance.iconOnlyCombat = defaults.offBalance.iconOnlyCombat
+        end
     end
-    if EZOMetter.sv.offBalance.onlyExploiter == nil then
-        EZOMetter.sv.offBalance.onlyExploiter = defaults.offBalance.onlyExploiter
+    if EZOMetter.sv.offBalance.iconOnlyBosses == nil then
+        if EZOMetter.sv.offBalance.onlyBosses ~= nil then
+            EZOMetter.sv.offBalance.iconOnlyBosses = EZOMetter.sv.offBalance.onlyBosses == true
+        else
+            EZOMetter.sv.offBalance.iconOnlyBosses = defaults.offBalance.iconOnlyBosses
+        end
     end
+    if EZOMetter.sv.offBalance.iconOnlyExploiter == nil then
+        if EZOMetter.sv.offBalance.onlyExploiter ~= nil then
+            EZOMetter.sv.offBalance.iconOnlyExploiter = EZOMetter.sv.offBalance.onlyExploiter == true
+        else
+            EZOMetter.sv.offBalance.iconOnlyExploiter = defaults.offBalance.iconOnlyExploiter
+        end
+    end
+    EZOMetter.sv.offBalance.onlyCombat = nil
+    EZOMetter.sv.offBalance.onlyBosses = nil
+    EZOMetter.sv.offBalance.onlyExploiter = nil
+    EZOMetter.sv.offBalance.hideIconInCombat = nil
     EZOMetter.sv.offBalance.unlock = false
     EZOMetter.sv.offBalance.backgroundOpacity = EZOMetter.sv.offBalance.backgroundOpacity or defaults.offBalance.backgroundOpacity
     if EZOMetter.sv.offBalance.showBorder == nil then

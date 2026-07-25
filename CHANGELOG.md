@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.47 - Off Balance panel/icon visibility split
+
+- The Off Balance panel no longer has combat, boss, or Exploiter filters: whenever the panel surface is selected in the display mode, it is always shown.
+- Moved the combat, boss, and Exploiter visibility filters onto the floating icon as three icon-only options that combine: show only in combat, show only on bosses, and show only while the Exploiter Champion Point star is slotted.
+- Removed the previous "hide icon in combat" option in favor of the clearer "icon: show only in combat".
+
+## 0.1.46 - DD stats panel coherence and Off Balance icon combat visibility
+
+- DD stats panel is now coherent per column: the Own column shows live instant player stats, while the Effective and Max Calc columns reflect your last combat. When there is no combat data yet, Effective mirrors Own and Max Calc stays empty.
+- Added an Off Balance icon-only option, "Hide icon in combat", that hides the floating icon while you are in combat without affecting the panel.
+
 ## 0.1.45 - Off Balance Display Mode
 
 - Replaced the Off Balance on/off checkbox with a display mode selector: Off, Panel, Icon, or Panel and icon.

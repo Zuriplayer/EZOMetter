@@ -327,22 +327,6 @@ function EZOMetter_Menu.Init()
                     default = OFF_BALANCE_DISPLAY_BOTH,
                 },
                 {
-                    type = "checkbox",
-                    name = GetString(EZOM_OPTION_OFF_BALANCE_ONLY_COMBAT),
-                    tooltip = GetString(EZOM_OPTION_OFF_BALANCE_ONLY_COMBAT_TOOLTIP),
-                    getFunc = function()
-                        return EZOMetter.sv.offBalance and EZOMetter.sv.offBalance.onlyCombat ~= false
-                    end,
-                    setFunc = function(value)
-                        EZOMetter.sv.offBalance.onlyCombat = value == true
-                        if EZOMetter_OffBalance and EZOMetter_OffBalance.ApplySettings then
-                            EZOMetter_OffBalance.ApplySettings()
-                        end
-                    end,
-                    disabled = function() return not IsOffBalanceDisplayEnabled() end,
-                    default = true,
-                },
-                {
                     type = "slider",
                     name = GetString(EZOM_OPTION_OFF_BALANCE_ICON_SIZE),
                     tooltip = GetString(EZOM_OPTION_OFF_BALANCE_ICON_SIZE_TOOLTIP),
@@ -363,34 +347,50 @@ function EZOMetter_Menu.Init()
                 },
                 {
                     type = "checkbox",
-                    name = GetString(EZOM_OPTION_OFF_BALANCE_ONLY_BOSSES),
-                    tooltip = GetString(EZOM_OPTION_OFF_BALANCE_ONLY_BOSSES_TOOLTIP),
+                    name = GetString(EZOM_OPTION_OFF_BALANCE_ICON_ONLY_COMBAT),
+                    tooltip = GetString(EZOM_OPTION_OFF_BALANCE_ICON_ONLY_COMBAT_TOOLTIP),
                     getFunc = function()
-                        return EZOMetter.sv.offBalance and EZOMetter.sv.offBalance.onlyBosses == true
+                        return EZOMetter.sv.offBalance and EZOMetter.sv.offBalance.iconOnlyCombat == true
                     end,
                     setFunc = function(value)
-                        EZOMetter.sv.offBalance.onlyBosses = value == true
+                        EZOMetter.sv.offBalance.iconOnlyCombat = value == true
                         if EZOMetter_OffBalance and EZOMetter_OffBalance.ApplySettings then
                             EZOMetter_OffBalance.ApplySettings()
                         end
                     end,
-                    disabled = function() return not IsOffBalanceDisplayEnabled() end,
+                    disabled = function() return not IsOffBalanceIconEnabled() end,
+                    default = true,
+                },
+                {
+                    type = "checkbox",
+                    name = GetString(EZOM_OPTION_OFF_BALANCE_ICON_ONLY_BOSSES),
+                    tooltip = GetString(EZOM_OPTION_OFF_BALANCE_ICON_ONLY_BOSSES_TOOLTIP),
+                    getFunc = function()
+                        return EZOMetter.sv.offBalance and EZOMetter.sv.offBalance.iconOnlyBosses == true
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.offBalance.iconOnlyBosses = value == true
+                        if EZOMetter_OffBalance and EZOMetter_OffBalance.ApplySettings then
+                            EZOMetter_OffBalance.ApplySettings()
+                        end
+                    end,
+                    disabled = function() return not IsOffBalanceIconEnabled() end,
                     default = false,
                 },
                 {
                     type = "checkbox",
-                    name = GetString(EZOM_OPTION_OFF_BALANCE_ONLY_EXPLOITER),
-                    tooltip = GetString(EZOM_OPTION_OFF_BALANCE_ONLY_EXPLOITER_TOOLTIP),
+                    name = GetString(EZOM_OPTION_OFF_BALANCE_ICON_ONLY_EXPLOITER),
+                    tooltip = GetString(EZOM_OPTION_OFF_BALANCE_ICON_ONLY_EXPLOITER_TOOLTIP),
                     getFunc = function()
-                        return EZOMetter.sv.offBalance and EZOMetter.sv.offBalance.onlyExploiter == true
+                        return EZOMetter.sv.offBalance and EZOMetter.sv.offBalance.iconOnlyExploiter == true
                     end,
                     setFunc = function(value)
-                        EZOMetter.sv.offBalance.onlyExploiter = value == true
+                        EZOMetter.sv.offBalance.iconOnlyExploiter = value == true
                         if EZOMetter_OffBalance and EZOMetter_OffBalance.ApplySettings then
                             EZOMetter_OffBalance.ApplySettings()
                         end
                     end,
-                    disabled = function() return not IsOffBalanceDisplayEnabled() end,
+                    disabled = function() return not IsOffBalanceIconEnabled() end,
                     default = false,
                 },
                 {

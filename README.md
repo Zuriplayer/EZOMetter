@@ -60,7 +60,8 @@ Current version: **0.1.45**.
 - Keeps an explicit Off Balance title in the live panel, with the active/cooldown timer and current or last-combat counters beneath it.
 - Boss focus can keep tracking known boss state when you briefly look away.
 - Display mode selector can turn Off Balance off, show only the panel, show only the independent icon, or show both panel and icon.
-- Optional boss-only and combat-only visibility.
+- The panel has no visibility filters: whenever the panel surface is selected in the display mode, it is always shown.
+- The floating icon has three icon-only filters that combine: show only in combat, show only on bosses, and show only while the Exploiter Champion Point star is slotted.
 - The selected Off Balance surface follows the combat, boss, role-profile, and Exploiter CP filters. If combat-only and boss-only visibility are disabled, selected surfaces remain visible in the ready state outside combat.
 - Configurable colors for ready, active, and cooldown states.
 - Optional pulse when Off Balance starts.
@@ -117,7 +118,7 @@ Current version: **0.1.45**.
   - Critical Chance,
   - Penetration,
   - Critical Damage.
-- Shows own, effective, and max calculated values where applicable.
+- Own column shows live instant player stats; the Effective and Max Calc columns reflect your last combat. Without combat data yet, Effective mirrors Own and Max Calc stays empty.
 - Effective penetration and critical damage include supported assumptions and detected target debuffs.
 - Configurable thresholds for offensive damage, critical chance, self penetration, critical damage, target resistance, Crusher, Alkosh, and Tremorscale.
 - Configurable DD-only visibility and combat-only visibility.

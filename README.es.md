@@ -60,7 +60,8 @@ Versión actual: **0.1.45**.
 - Mantiene un título explícito de Off Balance en el panel, con el temporizador activo/cooldown y los contadores del combate actual o del último debajo.
 - El foco en boss puede seguir el estado de bosses conocidos aunque apartes brevemente la mirada.
 - Selector de visualización para desactivar Off Balance, mostrar solo el panel, mostrar solo el icono independiente o mostrar panel e icono.
-- Visibilidad opcional solo en bosses y solo en combate.
+- El panel no tiene filtros de visibilidad: si su superficie está seleccionada en el modo de visualización, se muestra siempre.
+- El icono flotante tiene tres filtros exclusivos que se combinan: mostrar solo en combate, mostrar solo en bosses y mostrar solo si la estrella de Puntos de Campeón Explotador está equipada.
 - La superficie seleccionada de Off Balance sigue los filtros de combate, boss, perfil de rol y CP Explotador. Si la visibilidad solo en combate y solo en bosses están desactivadas, las superficies seleccionadas permanecen visibles en estado listo fuera de combate.
 - Colores configurables para estado listo, activo y cooldown.
 - Pulso opcional cuando empieza Off Balance.
@@ -117,7 +118,7 @@ Versión actual: **0.1.45**.
   - probabilidad de crítico,
   - penetración,
   - daño crítico.
-- Muestra valores propios, efectivos y máximos calculados cuando procede.
+- La columna Own muestra las estadísticas instantáneas del jugador en vivo; las columnas Effective y Max Calc reflejan tu último combate. Si aún no hay datos de combate, Effective iguala a Own y Max Calc queda vacío.
 - La penetración efectiva y el daño crítico efectivo incluyen supuestos configurados y debuffs detectados en el objetivo.
 - Umbrales configurables de daño ofensivo, crítico, penetración propia, daño crítico, resistencia del objetivo, Crusher, Alkosh y Tremorscale.
 - Visibilidad solo DD y visibilidad solo en combate configurables.
