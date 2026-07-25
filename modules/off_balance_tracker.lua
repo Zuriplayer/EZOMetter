@@ -71,7 +71,6 @@ local sourceLabel
 local updateRegistered = false
 local forceShow = false
 local isCombat = false
-local hasVisibleData = false
 local isTrackingBoss = false
 local namesByState
 local lastVisualState = STATE_FREE
@@ -1056,7 +1055,6 @@ local function OnUpdate()
     end
 
     isTrackingBoss = targetIsBoss
-    hasVisibleData = reticleActive or targetIsBoss or state ~= STATE_FREE
     currentState = state
     UpdateVisuals(state, math.max(0, endTime - nowMs), targetName, targetIsBoss, source)
     UpdateVisibility()
@@ -1136,9 +1134,9 @@ local function OnCombatState(_, inCombat)
         knownBosses = {}
         memory = { state = STATE_FREE, endTime = 0, isBoss = false, targetName = "", source = SOURCE_NONE }
         isTrackingBoss = false
-        hasVisibleData = lastCombatSummary and lastCombatSummary.durationMs and lastCombatSummary.durationMs > 0
+        local lastCombatHasData = lastCombatSummary and lastCombatSummary.durationMs and lastCombatSummary.durationMs > 0
         currentState = STATE_FREE
-        UpdateVisuals(STATE_FREE, 0, hasVisibleData and GetString(EZOM_LAST_COMBAT_TITLE) or "", false, SOURCE_NONE)
+        UpdateVisuals(STATE_FREE, 0, lastCombatHasData and GetString(EZOM_LAST_COMBAT_TITLE) or "", false, SOURCE_NONE)
     end
 
     RefreshUpdateRegistration()
@@ -1203,7 +1201,6 @@ function Tracker.ShowTest()
     forceShow = true
     EnsureControl()
     SetMoveMode(true)
-    hasVisibleData = true
     isTrackingBoss = false
     UpdateVisuals(STATE_ACTIVE, 7000, GetString(EZOM_OFF_BALANCE_TEST_TARGET), false, SOURCE_DIRECT)
     RefreshUpdateRegistration()
