@@ -6,6 +6,9 @@ EZOMetter_ObservedHealing = EZOMetter_ObservedMetricPanel.Create({
     roleOnlyKey = "healerOnly",
     roleOnlyValue = "healer",
     defaultY = 315,
+    previewRate = 8200,
+    previewAverage = 14600,
+    previewGroupShare = 21.5,
 
     rateKeys = "HPSOut",
     groupRateKeys = "groupHPSOut",

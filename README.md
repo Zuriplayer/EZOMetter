@@ -11,7 +11,7 @@ For support, bug reports, and suggestions, join Discord: https://discord.gg/ekw8
 
 EZOMetter is in public beta. The addon is usable, but several combat metrics depend on ESO client events, visible target state, and optional libraries. Treat the numbers as practical helper information, not as a full replacement for dedicated combat log analysis.
 
-Current version: **0.1.45**.
+Current version: **0.1.49**.
 
 ## Requirements
 
@@ -94,11 +94,17 @@ Current version: **0.1.45**.
 - Automatically hides below three equipped Roar of Alkosh pieces, while HUD layout editing and preview remain available.
 - Tracks Alkosh by abilityId, using Line Breaker and the Trial Dummy aura as the primary 10-second timing sources.
 - Uses CombatMetrics penetration IDs as observed proc/calculation signals, not as the primary uptime clock.
-- Shows equipped state, in-combat last proc, remaining duration capped to the 10-second set duration, efficiency against observed possible uptime, and affected target when ESO exposes a readable target.
-- Keeps the last valid efficiency visible after combat until new combat data replaces it; live proc and remaining time reset to neutral outside combat.
-- Provides Off, Warn, and Block warning modes. Block warning is visual only, appears only while a synergy prompt is visible, and does not intercept synergy input.
+- Uses `EVENT_SYNERGY_ABILITY_CHANGED` and the current synergy-list API to observe every usable offer with its name and ability ID, with a current-prompt fallback on older API versions.
+- Provides configurable activation-window start/end values. The progress bar fills from the last proc to the 10-second Line-Breaker expiry and changes state between Wait, Window, Activate now, Late, and Expired.
+- Correlates a proc with the recently removed primary synergy offer. Unmatched procs are reported explicitly as an unknown synergy instead of inventing a type.
+- Counts, per combat and per synergy type, offers, activations inside/outside the configured window, and offers observed in the window that disappeared without a correlated proc.
+- The live `Win received/used` counter shows how many usable offers overlapped the window and how many activations were completed there; `Out` and `Lost` remain separate.
+- Reports combat uptime as active Line-Breaker time divided by the complete combat time.
+- Simulates possible uptime from the usable synergies actually offered, respecting the configured window and one use per observed offer. Offer efficiency is actual active time divided by this possible active time.
+- Keeps the last valid combat metrics and per-type counts visible in the tooltip/report until new combat data replaces them.
+- Provides Off, Monitor, and Cycle assistant modes. Cycle assistant is visual only and never intercepts or activates synergy input.
 - Optional debug event logging.
-- Last-combat tooltip/report includes Alkosh efficiency, observed possible time, and last observed target/proc data.
+- Last-combat tooltip/report includes actual/possible uptime, offer efficiency, target/proc data, and the per-synergy breakdown.
 
 ### Z'en's Redress Tracker
 
@@ -148,7 +154,7 @@ Current version: **0.1.45**.
 - It does not replace vanilla UI elements.
 - HUD elements are designed to appear only in normal HUD/HUD UI scenes and not in menus such as inventory, map, crafting, Champion Points, or Tales of Tribute.
 - Observed group damage/healing and Exploiter value are estimates based on events available to the client.
-- Alkosh Block warning mode is advisory only; EZOMetter does not block, consume, or cancel synergy input.
+- Alkosh Cycle assistant is advisory only; EZOMetter observes the available synergy list but does not block, consume, activate, or cancel synergy input.
 - The addon includes Discord publication scripts for project maintenance, but nothing is posted to Discord without explicit authorization.
 
 ## Recommended Testing
@@ -173,7 +179,7 @@ Recommended in-game checks:
 - Banner Bearer alert when a Banner skill is slotted and when no Banner skill is slotted.
 - Off Balance on dummy/boss, including real active time, cooldown/cycle, and Exploiter reporting.
 - Coral Riptide with fewer than 5 pieces, 5 pieces, and different stamina levels.
-- Roar of Alkosh with 0-2 pieces (hidden), 3-4 pieces (visible without the 5-piece bonus), 5 pieces, Warn mode, Block warning mode, Trial Dummy debuff, and a normal target when available.
+- Roar of Alkosh with 0-2 pieces (hidden), 3-4 pieces (visible without the 5-piece bonus), 5 pieces, Monitor/Cycle modes, multiple simultaneous synergy offers, activations before/inside/after the window, offers lost in the window, Trial Dummy debuff, and a normal target when available.
 - Z'en's Redress with 3-4 pieces, 5 pieces, multiple DoTs, Touch refreshes, target changes, weapon swaps, and with/without `LibCombat`.
 - DD Stats own/effective/max values and tooltip after combat.
 - Observed Damage/Healing with `LibCombat` installed and with `LibCombat` missing.

@@ -11,7 +11,7 @@ Para soporte, errores y sugerencias, únete a Discord: https://discord.gg/ekw8zU
 
 EZOMetter está en beta pública. El addon es utilizable, pero varias métricas de combate dependen de eventos del cliente de ESO, del estado visible del objetivo y de librerías opcionales. Trata los valores como información práctica de apoyo, no como sustituto completo de un analizador de logs de combate.
 
-Versión actual: **0.1.45**.
+Versión actual: **0.1.49**.
 
 ## Requisitos
 
@@ -94,11 +94,17 @@ Versión actual: **0.1.45**.
 - Se oculta automáticamente por debajo de tres piezas equipadas de Rugido de Alkosh; la edición de HUD y la previsualización siguen disponibles.
 - Sigue Alkosh por abilityId, usando Line Breaker y el aura del Trial Dummy como fuentes principales de timing de 10 segundos.
 - Usa los IDs de penetración usados por CombatMetrics como señales observadas de proc/cálculo, no como reloj principal de uptime.
-- Muestra estado equipado, último proc en combate, duración restante limitada a los 10 segundos del set, eficiencia frente al uptime posible observado y objetivo afectado cuando ESO expone un objetivo legible.
-- Mantiene visible la última eficiencia válida después del combate hasta que nuevos datos de combate la sustituyen; el proc vivo y el tiempo restante se reinician a estado neutro fuera de combate.
-- Ofrece modos Off, Avisar y Bloqueo visual. Bloqueo visual es solo un aviso, aparece únicamente cuando hay una sinergia visible y no intercepta el input de sinergias.
+- Usa `EVENT_SYNERGY_ABILITY_CHANGED` y la API de lista de sinergias actual para observar cada oferta utilizable con su nombre y abilityId, con fallback al aviso actual en versiones anteriores de la API.
+- Permite configurar el inicio y final de la ventana de activación. La barra se llena desde el último proc hasta que Line-Breaker expira a los 10 segundos y cambia entre Espera, Ventana, Activa ahora, Tarde y Expirado.
+- Correlaciona cada proc con la oferta principal que acaba de desaparecer. Los procs sin coincidencia se muestran como sinergia desconocida sin inventar el tipo.
+- Cuenta por combate y tipo de sinergia las ofertas, activaciones dentro/fuera de la ventana y ofertas observadas en la ventana que desaparecen sin un proc correlacionado.
+- El contador en vivo `Ven recibidas/usadas` muestra cuántas ofertas utilizables coincidieron con la ventana y cuántas activaciones se completaron dentro; `Fuera` y `Perdidas` se mantienen separados.
+- Calcula el uptime de combate como tiempo activo de Line-Breaker dividido entre todo el tiempo de combate.
+- Simula el uptime posible usando las sinergias utilizables recibidas realmente, respetando la ventana configurada y un uso por oferta observada. La eficiencia de ofertas es el tiempo activo real dividido entre ese tiempo activo posible.
+- Mantiene las últimas métricas y contadores por tipo en el tooltip/informe hasta que otro combate los sustituye.
+- Ofrece modos Off, Monitor y Asistente de ciclo. El asistente es únicamente visual y nunca intercepta ni activa sinergias.
 - Registro debug opcional de eventos.
-- El tooltip/informe del último combate incluye eficiencia de Alkosh, tiempo posible observado y los últimos datos observados de objetivo/proc.
+- El tooltip/informe del último combate incluye uptime real/posible, eficiencia de ofertas, datos de objetivo/proc y el desglose por sinergia.
 
 ### Tracker de Reparación de Z'en
 
@@ -148,7 +154,7 @@ Versión actual: **0.1.45**.
 - No reemplaza elementos de la interfaz original del juego.
 - Los elementos HUD están diseñados para aparecer solo en escenas normales de HUD/HUD UI y no en menús como inventario, mapa, crafting, Champion Points o Tales of Tribute.
 - El daño/curación de grupo observados y el valor de Exploiter son estimaciones basadas en eventos disponibles para el cliente.
-- El modo Bloqueo visual de Alkosh es solo informativo; EZOMetter no bloquea, consume ni cancela el input de sinergias.
+- El Asistente de ciclo de Alkosh es solo informativo; EZOMetter observa la lista de sinergias disponibles, pero no bloquea, consume, activa ni cancela su input.
 - El addon incluye scripts de publicación en Discord para mantenimiento del proyecto, pero no se publica nada en Discord sin autorización explícita.
 
 ## Pruebas recomendadas
@@ -173,7 +179,7 @@ Comprobaciones recomendadas dentro del juego:
 - Aviso de Banner Bearer cuando hay una habilidad de Banner sloteada y cuando no hay ninguna.
 - Off Balance en dummy/boss, incluyendo tiempo activo real, cooldown/ciclo e informe de Exploiter.
 - Coral Riptide con menos de 5 piezas, con 5 piezas y con distintos niveles de stamina.
-- Rugido de Alkosh con 0-2 piezas (oculto), con 3-4 piezas (visible sin el bonus de 5 piezas), con 5 piezas, modo Avisar, modo Bloqueo visual, debuff de Trial Dummy y objetivo normal cuando esté disponible.
+- Rugido de Alkosh con 0-2 piezas (oculto), con 3-4 piezas (visible sin el bonus de 5 piezas), con 5 piezas, modos Monitor/Asistente, varias ofertas simultáneas, activaciones antes/dentro/después de la ventana, ofertas perdidas dentro de la ventana, debuff de Trial Dummy y objetivo normal cuando esté disponible.
 - Reparación de Z'en con 3-4 piezas, con 5 piezas, varios DoTs, refrescos de Touch, cambios de objetivo, cambios de barra y con/sin `LibCombat`.
 - Valores propios/efectivos/máximos de Estadísticas DD y tooltip después del combate.
 - Daño/curación observados con `LibCombat` instalado y sin `LibCombat`.

@@ -184,6 +184,38 @@ function Factory.Create(config)
             and (Number(data.groupTotal) > 0 or Number(data.groupRate) > 0)
     end
 
+    local function BuildPreviewData()
+        local rate = Number(config.previewRate)
+        if rate <= 0 then rate = 18500 end
+
+        local average = Number(config.previewAverage)
+        if average <= 0 then average = rate end
+
+        local groupShare = Number(config.previewGroupShare)
+        if groupShare <= 0 then groupShare = 16.5 end
+
+        local groupRate = Number(config.previewGroupRate)
+        if groupRate <= 0 and groupShare > 0 then
+            groupRate = average / (groupShare / 100)
+        end
+
+        local seconds = Number(config.previewSeconds)
+        if seconds <= 0 then seconds = 12 end
+
+        return {
+            rate = average,
+            previewInstantRate = rate,
+            groupRate = groupRate,
+            total = average * seconds,
+            groupTotal = groupRate * seconds,
+            activeTime = seconds,
+            activeDurationMs = seconds * 1000,
+            combatDurationMs = seconds * 1000,
+            group = true,
+            preview = true,
+        }
+    end
+
     local function CopyData(rawData)
         if not rawData then return nil end
 
@@ -341,12 +373,15 @@ function Factory.Create(config)
     local function ApplyStyle()
         local settings = GetSettings() or {}
         local isCompact = settings.layout == "compact"
+        local compactValueSize = tonumber(settings.compactValueSize) or 100
 
         if EZOMetter_WindowStyle then
-            EZOMetter_WindowStyle.ApplyControlScale(control)
+            EZOMetter_WindowStyle.ApplyControlScale(control, isCompact and compactValueSize or nil)
             if EZOMetter_WindowStyle.ApplyBackdropStyle then
                 EZOMetter_WindowStyle.ApplyBackdropStyle(backdrop)
             end
+        elseif control and control.SetScale then
+            control:SetScale(isCompact and (compactValueSize / 100) or 1)
         end
 
         if not backdrop then return end
@@ -527,6 +562,9 @@ function Factory.Create(config)
         end
 
         local data = isCombat and currentData or lastCombatData
+        if not data and isCompact and IsHudUnlocked() then
+            data = BuildPreviewData()
+        end
         if not data then
             rows.instant.value:SetText("--")
             rows.average.value:SetText("--")
@@ -534,7 +572,7 @@ function Factory.Create(config)
             return
         end
 
-        local instantRate = isCombat and GetWindowRate("total") or Number(data.rate)
+        local instantRate = data.previewInstantRate or (isCombat and GetWindowRate("total") or Number(data.rate))
         rows.instant.value:SetText(FormatRate(instantRate))
         rows.average.value:SetText(FormatRate(data.rate))
 

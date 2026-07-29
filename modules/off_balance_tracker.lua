@@ -225,6 +225,13 @@ local function GetStateColor(state)
     return 0.9, 0.9, 0.9, 1
 end
 
+local function GetStateName(state)
+    if state == STATE_ACTIVE then return "ACTIVE" end
+    if state == STATE_IMMUNE then return "IMMUNE" end
+    if state == STATE_FREE then return "FREE" end
+    return tostring(state)
+end
+
 local function GetSourceName(source)
     if source == SOURCE_DIRECT then return GetString(EZOM_OFF_BALANCE_SOURCE_DIRECT) end
     if source == SOURCE_EVENT then return GetString(EZOM_OFF_BALANCE_SOURCE_EVENT) end

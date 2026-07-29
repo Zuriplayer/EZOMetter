@@ -6,6 +6,9 @@ EZOMetter_ObservedDamage = EZOMetter_ObservedMetricPanel.Create({
     roleOnlyKey = "ddOnly",
     roleOnlyValue = "dd",
     defaultY = 315,
+    previewRate = 18500,
+    previewAverage = 32400,
+    previewGroupShare = 16.5,
 
     rateKeys = "DPSOut",
     groupRateKeys = "groupDPSOut",

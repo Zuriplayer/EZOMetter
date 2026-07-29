@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.1.49 - Alkosh synergy cycle assistant
+
+- Added configurable Alkosh activation-window timing and a progress bar that fills toward the 10-second Line-Breaker expiry.
+- Tracks usable synergy offers by name and ability ID, correlates activations with Alkosh procs, and reports in-window, outside-window, and lost-window counts per synergy type.
+- Separates full-combat Alkosh uptime, achievable uptime from the synergies actually offered, and efficiency against that achievable time.
+- Replaced the visual block-warning mode with a non-intercepting cycle assistant.
+- Reduced the informational Alkosh panel and moved detailed synergy counts to its tooltip and post-combat report.
+- Added an independently movable activation alert shown only when the configured window is open and a usable synergy is available, with alert-only size, opacity, and border settings.
+
+## 0.1.48 - Off Balance tracking debug fix
+
+- Fixed a Lua error (function expected instead of nil) caused by a missing `GetStateName` function in the Off Balance tracker when debug mode is enabled.
+
 ## 0.1.47 - Off Balance panel/icon visibility split
 
 - The Off Balance panel no longer has combat, boss, or Exploiter filters: whenever the panel surface is selected in the display mode, it is always shown.

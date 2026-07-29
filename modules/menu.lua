@@ -29,6 +29,17 @@ local function RefreshLanguage()
     end
 end
 
+local function RefreshSettingsPanel()
+    if EZOCore and type(EZOCore.RefreshSettingsPanel) == "function" then
+        EZOCore:RefreshSettingsPanel()
+    elseif LibAddonMenu2
+        and LibAddonMenu2.util
+        and type(LibAddonMenu2.util.RequestRefreshIfNeeded) == "function"
+        and EZOMetter._lamPanel then
+        LibAddonMenu2.util.RequestRefreshIfNeeded(EZOMetter._lamPanel)
+    end
+end
+
 local function GetOffBalanceDisplayMode()
     local settings = EZOMetter.sv and EZOMetter.sv.offBalance
     local mode = settings and settings.displayMode
@@ -626,26 +637,139 @@ function EZOMetter_Menu.Init()
                     choices = {
                         GetString(EZOM_OPTION_ALKOSH_MODE_OFF),
                         GetString(EZOM_OPTION_ALKOSH_MODE_WARN),
-                        GetString(EZOM_OPTION_ALKOSH_MODE_BLOCK),
+                        GetString(EZOM_OPTION_ALKOSH_MODE_CYCLE),
                     },
                     choicesValues = {
                         "off",
                         "warn",
-                        "block",
+                        "cycle",
                     },
                     getFunc = function()
                         return EZOMetter.sv.alkosh and EZOMetter.sv.alkosh.mode or "off"
                     end,
                     setFunc = function(value)
-                        if value ~= "warn" and value ~= "block" then
+                        if value ~= "warn" and value ~= "cycle" then
                             value = "off"
                         end
                         EZOMetter.sv.alkosh.mode = value
                         if EZOMetter_Alkosh and EZOMetter_Alkosh.ApplySettings then
                             EZOMetter_Alkosh.ApplySettings()
                         end
+                        RefreshSettingsPanel()
                     end,
                     default = "off",
+                },
+                {
+                    type = "slider",
+                    name = GetString(EZOM_OPTION_ALKOSH_WINDOW_START),
+                    tooltip = GetString(EZOM_OPTION_ALKOSH_WINDOW_START_TOOLTIP),
+                    min = 4,
+                    max = 9,
+                    step = 0.5,
+                    decimals = 1,
+                    getFunc = function()
+                        return EZOMetter.sv.alkosh and EZOMetter.sv.alkosh.windowStartSeconds or 6
+                    end,
+                    setFunc = function(value)
+                        local settings = EZOMetter.sv.alkosh
+                        local endSeconds = tonumber(settings.windowEndSeconds) or 9
+                        settings.windowStartSeconds = math.min(tonumber(value) or 6, endSeconds - 0.5)
+                        if EZOMetter_Alkosh and EZOMetter_Alkosh.ApplySettings then
+                            EZOMetter_Alkosh.ApplySettings()
+                        end
+                    end,
+                    disabled = function()
+                        return not EZOMetter.sv.alkosh or EZOMetter.sv.alkosh.mode == "off"
+                    end,
+                    default = 6,
+                },
+                {
+                    type = "slider",
+                    name = GetString(EZOM_OPTION_ALKOSH_WINDOW_END),
+                    tooltip = GetString(EZOM_OPTION_ALKOSH_WINDOW_END_TOOLTIP),
+                    min = 5,
+                    max = 10,
+                    step = 0.5,
+                    decimals = 1,
+                    getFunc = function()
+                        return EZOMetter.sv.alkosh and EZOMetter.sv.alkosh.windowEndSeconds or 9
+                    end,
+                    setFunc = function(value)
+                        local settings = EZOMetter.sv.alkosh
+                        local startSeconds = tonumber(settings.windowStartSeconds) or 6
+                        settings.windowEndSeconds = math.max(tonumber(value) or 9, startSeconds + 0.5)
+                        if EZOMetter_Alkosh and EZOMetter_Alkosh.ApplySettings then
+                            EZOMetter_Alkosh.ApplySettings()
+                        end
+                    end,
+                    disabled = function()
+                        return not EZOMetter.sv.alkosh or EZOMetter.sv.alkosh.mode == "off"
+                    end,
+                    default = 9,
+                },
+                CreateInfoHeader(
+                    GetString(EZOM_OPTION_ALKOSH_ALERT_HEADER),
+                    GetString(EZOM_OPTION_ALKOSH_ALERT_HEADER_TOOLTIP)
+                ),
+                {
+                    type = "slider",
+                    name = GetString(EZOM_OPTION_ALKOSH_ALERT_SIZE),
+                    tooltip = GetString(EZOM_OPTION_ALKOSH_ALERT_SIZE_TOOLTIP),
+                    min = 70,
+                    max = 180,
+                    step = 5,
+                    getFunc = function()
+                        return EZOMetter.sv.alkosh and EZOMetter.sv.alkosh.alertSize or 100
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.alkosh.alertSize = math.max(70, math.min(180, tonumber(value) or 100))
+                        if EZOMetter_Alkosh and EZOMetter_Alkosh.ApplySettings then
+                            EZOMetter_Alkosh.ApplySettings()
+                        end
+                    end,
+                    disabled = function()
+                        return not EZOMetter.sv.alkosh or EZOMetter.sv.alkosh.mode ~= "cycle"
+                    end,
+                    default = 100,
+                },
+                {
+                    type = "slider",
+                    name = GetString(EZOM_OPTION_ALKOSH_ALERT_BACKGROUND_OPACITY),
+                    tooltip = GetString(EZOM_OPTION_ALKOSH_ALERT_BACKGROUND_OPACITY_TOOLTIP),
+                    min = 0,
+                    max = 100,
+                    step = 5,
+                    getFunc = function()
+                        return EZOMetter.sv.alkosh and EZOMetter.sv.alkosh.alertBackgroundOpacity or 72
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.alkosh.alertBackgroundOpacity = math.max(0, math.min(100, tonumber(value) or 72))
+                        if EZOMetter_Alkosh and EZOMetter_Alkosh.ApplySettings then
+                            EZOMetter_Alkosh.ApplySettings()
+                        end
+                    end,
+                    disabled = function()
+                        return not EZOMetter.sv.alkosh or EZOMetter.sv.alkosh.mode ~= "cycle"
+                    end,
+                    default = 72,
+                },
+                {
+                    type = "checkbox",
+                    name = GetString(EZOM_OPTION_ALKOSH_ALERT_SHOW_BORDER),
+                    tooltip = GetString(EZOM_OPTION_ALKOSH_ALERT_SHOW_BORDER_TOOLTIP),
+                    getFunc = function()
+                        return not EZOMetter.sv.alkosh or EZOMetter.sv.alkosh.alertShowBorder ~= false
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.alkosh.alertShowBorder = value == true
+                        if EZOMetter_Alkosh and EZOMetter_Alkosh.ApplySettings then
+                            EZOMetter_Alkosh.ApplySettings()
+                        end
+                    end,
+                    disabled = function()
+                        return not EZOMetter.sv.alkosh or EZOMetter.sv.alkosh.mode ~= "cycle"
+                    end,
+                    default = true,
                 },
                 {
                     type = "checkbox",
@@ -987,6 +1111,29 @@ function EZOMetter_Menu.Init()
                     end,
                     default = "detailed",
                 },
+                {
+                    type = "slider",
+                    name = GetString(EZOM_OPTION_OBSERVED_COMPACT_VALUE_SIZE),
+                    tooltip = GetString(EZOM_OPTION_OBSERVED_COMPACT_VALUE_SIZE_TOOLTIP),
+                    min = 70,
+                    max = 150,
+                    step = 5,
+                    getFunc = function()
+                        return EZOMetter.sv.observedDamage and EZOMetter.sv.observedDamage.compactValueSize or 100
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.observedDamage.compactValueSize = EZOMetter_WindowStyle
+                            and EZOMetter_WindowStyle.NormalizeTextSize(value)
+                            or tonumber(value) or 100
+                        if EZOMetter_ObservedDamage and EZOMetter_ObservedDamage.ApplySettings then
+                            EZOMetter_ObservedDamage.ApplySettings()
+                        end
+                    end,
+                    disabled = function()
+                        return not EZOMetter.sv.observedDamage or EZOMetter.sv.observedDamage.layout ~= "compact"
+                    end,
+                    default = 100,
+                },
             },
         },
         {
@@ -1061,6 +1208,29 @@ function EZOMetter_Menu.Init()
                         end
                     end,
                     default = "detailed",
+                },
+                {
+                    type = "slider",
+                    name = GetString(EZOM_OPTION_OBSERVED_COMPACT_VALUE_SIZE),
+                    tooltip = GetString(EZOM_OPTION_OBSERVED_COMPACT_VALUE_SIZE_TOOLTIP),
+                    min = 70,
+                    max = 150,
+                    step = 5,
+                    getFunc = function()
+                        return EZOMetter.sv.observedHealing and EZOMetter.sv.observedHealing.compactValueSize or 100
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.observedHealing.compactValueSize = EZOMetter_WindowStyle
+                            and EZOMetter_WindowStyle.NormalizeTextSize(value)
+                            or tonumber(value) or 100
+                        if EZOMetter_ObservedHealing and EZOMetter_ObservedHealing.ApplySettings then
+                            EZOMetter_ObservedHealing.ApplySettings()
+                        end
+                    end,
+                    disabled = function()
+                        return not EZOMetter.sv.observedHealing or EZOMetter.sv.observedHealing.layout ~= "compact"
+                    end,
+                    default = 100,
                 },
             },
         },

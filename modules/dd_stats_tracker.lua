@@ -326,7 +326,7 @@ end
 
 local function FormatMaxValue(def, data)
     if not data then return "--" end
-    -- Max Calc refleja solo el maximo del ultimo combate; vacio si no hay datos.
+    -- Max Calc refleja el ultimo combate; si no hay datos, copia el valor efectivo visible.
     return FormatValue(def, data.uncappedEffectiveValue)
 end
 
@@ -499,7 +499,7 @@ end
 -- Panel coherente por columna:
 --   Own       = lectura instantanea en vivo (currentValues).
 --   Effective = ultimo combate; si no hay datos, igual que Own.
---   Max Calc  = ultimo combate; si no hay datos, vacio.
+--   Max Calc  = ultimo combate; si no hay datos, igual que Effective/Own.
 -- En modo test/preview (forceShow) se muestran los valores de currentValues tal cual.
 local function BuildDisplayData()
     local live = currentValues or {}
@@ -520,6 +520,9 @@ local function BuildDisplayData()
         local uncappedEffectiveValue = lastData and lastData.uncappedEffectiveValue or nil
         if effectiveValue == nil then
             effectiveValue = ownValue
+        end
+        if uncappedEffectiveValue == nil then
+            uncappedEffectiveValue = effectiveValue
         end
 
         out[def.key] = {

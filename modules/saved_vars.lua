@@ -72,8 +72,15 @@ function EZOMetter.savedVars.Init()
         },
         alkosh = {
             mode = "off",
+            windowStartSeconds = 6,
+            windowEndSeconds = 9,
             backgroundOpacity = 86,
             showBorder = true,
+            alertSize = 100,
+            alertBackgroundOpacity = 72,
+            alertShowBorder = true,
+            alertX = 0,
+            alertY = -220,
             debugEvents = false,
             x = 260,
             y = -160,
@@ -114,6 +121,7 @@ function EZOMetter.savedVars.Init()
             ddOnly = true,
             onlyCombat = true,
             layout = "detailed",
+            compactValueSize = 100,
             backgroundOpacity = 86,
             showBorder = true,
             x = 0,
@@ -124,6 +132,7 @@ function EZOMetter.savedVars.Init()
             healerOnly = true,
             onlyCombat = true,
             layout = "detailed",
+            compactValueSize = 100,
             backgroundOpacity = 86,
             showBorder = true,
             x = 0,
@@ -287,13 +296,33 @@ function EZOMetter.savedVars.Init()
     end
     EZOMetter.sv.highland.x = EZOMetter.sv.highland.x or defaults.highland.x
     EZOMetter.sv.highland.y = EZOMetter.sv.highland.y or defaults.highland.y
-    if EZOMetter.sv.alkosh.mode ~= "warn" and EZOMetter.sv.alkosh.mode ~= "block" then
+    if EZOMetter.sv.alkosh.mode == "block" then
+        EZOMetter.sv.alkosh.mode = "cycle"
+    elseif EZOMetter.sv.alkosh.mode ~= "warn" and EZOMetter.sv.alkosh.mode ~= "cycle" then
         EZOMetter.sv.alkosh.mode = defaults.alkosh.mode
     end
+    EZOMetter.sv.alkosh.windowStartSeconds = math.max(4, math.min(9,
+        tonumber(EZOMetter.sv.alkosh.windowStartSeconds) or defaults.alkosh.windowStartSeconds
+    ))
+    EZOMetter.sv.alkosh.windowEndSeconds = math.max(
+        EZOMetter.sv.alkosh.windowStartSeconds + 0.5,
+        math.min(10, tonumber(EZOMetter.sv.alkosh.windowEndSeconds) or defaults.alkosh.windowEndSeconds)
+    )
     EZOMetter.sv.alkosh.backgroundOpacity = EZOMetter.sv.alkosh.backgroundOpacity or defaults.alkosh.backgroundOpacity
     if EZOMetter.sv.alkosh.showBorder == nil then
         EZOMetter.sv.alkosh.showBorder = defaults.alkosh.showBorder
     end
+    EZOMetter.sv.alkosh.alertSize = math.max(70, math.min(180,
+        tonumber(EZOMetter.sv.alkosh.alertSize) or defaults.alkosh.alertSize
+    ))
+    EZOMetter.sv.alkosh.alertBackgroundOpacity = math.max(0, math.min(100,
+        tonumber(EZOMetter.sv.alkosh.alertBackgroundOpacity) or defaults.alkosh.alertBackgroundOpacity
+    ))
+    if EZOMetter.sv.alkosh.alertShowBorder == nil then
+        EZOMetter.sv.alkosh.alertShowBorder = defaults.alkosh.alertShowBorder
+    end
+    EZOMetter.sv.alkosh.alertX = tonumber(EZOMetter.sv.alkosh.alertX) or defaults.alkosh.alertX
+    EZOMetter.sv.alkosh.alertY = tonumber(EZOMetter.sv.alkosh.alertY) or defaults.alkosh.alertY
     if EZOMetter.sv.alkosh.debugEvents == nil then
         EZOMetter.sv.alkosh.debugEvents = defaults.alkosh.debugEvents
     end
@@ -351,6 +380,9 @@ function EZOMetter.savedVars.Init()
     if EZOMetter.sv.observedDamage.layout ~= "compact" then
         EZOMetter.sv.observedDamage.layout = defaults.observedDamage.layout
     end
+    EZOMetter.sv.observedDamage.compactValueSize = EZOMetter_WindowStyle
+        and EZOMetter_WindowStyle.NormalizeTextSize(EZOMetter.sv.observedDamage.compactValueSize)
+        or tonumber(EZOMetter.sv.observedDamage.compactValueSize) or defaults.observedDamage.compactValueSize
     EZOMetter.sv.observedDamage.backgroundOpacity = EZOMetter.sv.observedDamage.backgroundOpacity or defaults.observedDamage.backgroundOpacity
     if EZOMetter.sv.observedDamage.showBorder == nil then
         EZOMetter.sv.observedDamage.showBorder = defaults.observedDamage.showBorder
@@ -369,6 +401,9 @@ function EZOMetter.savedVars.Init()
     if EZOMetter.sv.observedHealing.layout ~= "compact" then
         EZOMetter.sv.observedHealing.layout = defaults.observedHealing.layout
     end
+    EZOMetter.sv.observedHealing.compactValueSize = EZOMetter_WindowStyle
+        and EZOMetter_WindowStyle.NormalizeTextSize(EZOMetter.sv.observedHealing.compactValueSize)
+        or tonumber(EZOMetter.sv.observedHealing.compactValueSize) or defaults.observedHealing.compactValueSize
     EZOMetter.sv.observedHealing.backgroundOpacity = EZOMetter.sv.observedHealing.backgroundOpacity or defaults.observedHealing.backgroundOpacity
     if EZOMetter.sv.observedHealing.showBorder == nil then
         EZOMetter.sv.observedHealing.showBorder = defaults.observedHealing.showBorder
