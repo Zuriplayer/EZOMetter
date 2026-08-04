@@ -451,7 +451,7 @@ function Factory.Create(config)
     end
 
     function Tracker.GetReportSection()
-        if not lastCombatData then return nil end
+        if not IsEnabled() or not lastCombatData then return nil end
         return BuildTooltipText()
     end
 

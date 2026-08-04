@@ -1,5 +1,72 @@
 # Changelog
 
+## 0.1.59 - Magma Fist Stack Expiry Warning
+
+- Keeps the max-stack alert active during the internal six-second bonus limit instead of returning the icon to a neutral state.
+- Changes the timer, outer border, and stack badge to red during the final 1.5 seconds before the three Heat Shock stacks expire.
+
+## 0.1.58 - Magma Fist Border Visibility
+
+- Changes the active 6-second empowered-window color from orange to green while preserving red for the final 1.5 seconds.
+- Doubles the outer alert-border thickness for better visibility.
+
+## 0.1.57 - Larger Magma Fist Countdown
+
+- Increases the centered Magma Fist countdown font for better readability.
+- Documents the border-state legend: grey below 3 stacks, amber at 3, orange during the empowered window, and red during its final 1.5 seconds.
+
+## 0.1.56 - Unified Magma Fist Countdown
+
+- Uses one centered countdown for both Heat Shock expiry and the subsequent 6-second empowered-cast window.
+- Removes the separate lower timer and exclamation mark; stack count and border color now identify the current phase without moving the countdown.
+
+## 0.1.55 - Magma Fist Stack Expiry Timer
+
+- Adds a small lower countdown for the directly observed Heat Shock expiry while stacks are active.
+- Keeps the exclamation mark and central 6-second countdown reserved for the max-stack hit and the subsequent empowered-cast window, respectively.
+- Clarifies that reaching 3 stacks alone does not start the empowered window; the additional hit must land before Heat Shock expires.
+
+## 0.1.54 - Persistent Magma Fist Icon and Window Fix
+
+- Keeps the Magma Fist icon visible in normal HUD scenes whenever the ability is slotted, including outside combat and below 3 Heat Shock stacks.
+- Shows the currently observed `0-3` Heat Shock stack count in the icon badge.
+- Opens the empowered window from a deduplicated direct gained/updated Heat Shock event at an already observed 3 stacks instead of requiring `endTime` to advance.
+- Preserves direct effect expiry when ESO provides it and falls back to the documented 7-second Heat Shock duration when an effect event has no usable `endTime`.
+
+## 0.1.53 - Ability Settings Grouping
+
+- Split the Abilities settings into clearly labelled Fatecarver and Magma Fist groups, each with its own informational tooltip.
+- Keeps the last-combat report option inside the Fatecarver group because Magma Fist currently provides an alert rather than a report section.
+
+## 0.1.52 - Magma Fist Empowered-Cast Alert
+
+- Added an independently movable Magma Fist icon that appears when the player's Heat Shock reaches 3 stacks.
+- Uses an exclamation state for the max-stack hit that arms Magma Fist, then shows the 6-second countdown for the empowered next cast.
+- Reads Heat Shock stacks and expiry directly from `abilityId 134340`; because no separate public 6-second buff ID is currently documented, the empowered window is derived only from a subsequent direct 3-stack refresh and is consumed by the next observed Magma Fist impact.
+- Added configurable icon size, a positioning preview, and optional diagnostics for direct Heat Shock events, Magma Fist impacts, and candidate 6-second player effects.
+
+## 0.1.51 - Direct Azureblight Reaper and Alkosh Timing
+
+- Added a movable Azureblight Reaper panel that directly reads Blight Seed (`abilityId 126631`) stacks and remaining duration from the reticle target and boss unit tags.
+- Keeps a valid observed seed visible across weapon swaps and does not gate the reading on the currently active weapon bar.
+- Shows raw stacks without assuming a fixed 20-stack threshold and does not infer DoT ownership or Azureblight damage.
+- Added configurable size, combat-only visibility, preview values for HUD positioning, and optional direct-event diagnostics.
+- Raises last-combat summary tooltips above EZOMetter HUD panels so ability bars cannot cover their text.
+- Makes Alkosh's directly observed Line-Breaker `beginTime`/`endTime` authoritative, so repeated effect updates and unrelated penetration IDs cannot restart the cycle bar.
+- Changes the Alkosh bar to remaining duration, draining to zero on expiry, and restores the activation warning whenever a usable synergy is present without an active proc.
+- Ignores duplicate combat-state notifications and only accepts scanned Trial Dummy timing effects when ESO attributes them to the player.
+
+## 0.1.50 - Alkosh Warning and Z'en Weapon-Swap Persistence
+
+- Changed the independent Alkosh activation alert from green confirmation styling to a red/orange warning treatment.
+- Prompts for the first usable combat synergy and the first late synergy when no offer appeared inside the preceding activation window.
+- Replaced the live possible-uptime value with offer efficiency and shows current synergy availability plus the cumulative in-window offer count while the activation window is open.
+- Keeps Z'en effective stacks active after a weapon swap while the directly observed Touch of Z'en effect remains active.
+- Prevents the Z'en tracker from selecting ESO's `offline` pseudo-unit and from retaining LibCombat's zero-stack fade value over subsequent fallback DoT reads.
+- Adds per-tracker post-combat report switches while preserving one consolidated `Info` entry per combat.
+- Omits disabled or irrelevant report sections; Coral, Highland, Alkosh, and Z'en require their 5-piece bonus to have been available during the fight.
+- Adds Highland average stacks, estimated average bonus, active uptime, and maximum-stack uptime to the post-combat report.
+
 ## 0.1.49 - Alkosh synergy cycle assistant
 
 - Added configurable Alkosh activation-window timing and a progress bar that fills toward the 10-second Line-Breaker expiry.

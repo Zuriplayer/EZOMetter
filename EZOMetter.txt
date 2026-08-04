@@ -1,8 +1,8 @@
 ## Title: E|cB040FFZ|rOMetter
 ## Author: @Zuriplayer
 ## Description: Lightweight meter foundation for the EZO addon family. Optional add-ons: LibChatMessage, LibDebugLogger, DebugLogViewer, LibCombat, EZOCore.
-## Version: 0.1.49
-## AddOnVersion: 10049
+## Version: 0.1.59
+## AddOnVersion: 10059
 ## APIVersion: 101049 101050
 ## DependsOn: LibAddonMenu-2.0
 ## OptionalDependsOn: LibChatMessage LibDebugLogger DebugLogViewer LibCombat EZOCore
@@ -27,6 +27,7 @@ modules/buff_alert.lua
 modules/off_balance_tracker.lua
 modules/coral_tracker.lua
 modules/highland_tracker.lua
+modules/azureblight_tracker.lua
 modules/alkosh_tracker.lua
 modules/zen_tracker.lua
 modules/dd_stats_tracker.lua
@@ -34,6 +35,7 @@ modules/observed_metric_panel.lua
 modules/observed_damage_tracker.lua
 modules/observed_healing_tracker.lua
 modules/ability_tracker.lua
+modules/magma_fist_tracker.lua
 modules/combat_reporter.lua
 modules/saved_vars.lua
 modules/menu.lua

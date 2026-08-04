@@ -104,7 +104,7 @@ local function BuildTooltipText()
 end
 
 function BuffAlert.GetReportSection()
-    if not lastCombatSummary or not lastCombatSummary.rows then return nil end
+    if not IsEnabled() or not lastCombatSummary or not lastCombatSummary.rows then return nil end
     return BuildTooltipText()
 end
 

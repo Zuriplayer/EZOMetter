@@ -11,7 +11,7 @@ For support, bug reports, and suggestions, join Discord: https://discord.gg/ekw8
 
 EZOMetter is in public beta. The addon is usable, but several combat metrics depend on ESO client events, visible target state, and optional libraries. Treat the numbers as practical helper information, not as a full replacement for dedicated combat log analysis.
 
-Current version: **0.1.49**.
+Current version: **0.1.59**.
 
 ## Requirements
 
@@ -41,7 +41,8 @@ Current version: **0.1.49**.
 - One session-only global HUD unlock option that shows movable EZOMetter panels in normal HUD/HUD UI scenes. With EZOCore, the same aggregate surface participates in global or individual family layout control.
 - Common HUD text size setting that scales EZOMetter visual windows and text together so panel layouts remain proportional.
 - Shared HUD appearance controls for background opacity, border visibility, and border/accent color, applied consistently to every visual panel.
-- Optional post-combat report with date, character, content type, zone, boss/trash context, difficulty when available, and sections from active trackers.
+- Last-combat tooltips render above EZOMetter HUD panels, including the Custom Action Bars surface.
+- Optional post-combat report with date, character, content type, zone, boss/trash context, difficulty when available, and one consolidated `Info` entry per combat. Every tracker has its own inclusion switch, enabled by default; disabled or irrelevant sections are omitted, and set trackers require their 5-piece bonus to have been available during the fight.
 - Debug mode for technical output through `LibDebugLogger`/`DebugLogViewer` when installed.
 - The settings panel uses purple information headers for section-level help, while each field keeps its own tooltip for specific behavior.
 
@@ -85,26 +86,37 @@ Current version: **0.1.49**.
 - Detects worn Highland Sentinel pieces by set name matching and treats the bonus as active at 5 pieces.
 - Reads "Sentinel's Eye" stacks to calculate and display the real-time critical chance bonus.
 - Configurable size, DD-only visibility, and combat-only visibility.
+- Reports last-combat average stacks, estimated average critical bonus, active uptime, and maximum-stack uptime.
 - Optional event debug log to verify stack events and ability IDs.
+
+### Azureblight Reaper Tracker
+
+- Separate movable Azureblight panel with the Blight Seed icon, raw stack count, remaining seconds, and duration bar.
+- Reads Blight Seed (`abilityId 126631`) directly from the current reticle target and `boss1` through `boss6`.
+- Keeps the observed debuff state across weapon swaps; the active bar never resets or hides a valid direct reading.
+- Shows raw stacks without assuming a `/20` cap because the explosion threshold changes when more Azureblight wearers are present.
+- Does not estimate missing stacks, attribute stacks to individual DoTs, or calculate Azureblight damage.
+- Configurable size and combat-only visibility, plus a five-second preview and optional direct-event diagnostics.
 
 ### Roar of Alkosh Tracker
 
 - Separate movable Roar of Alkosh panel, disabled by default.
 - Detects equipped Roar of Alkosh through a canonical set itemLink read, with equipped-slot/name matching as fallback.
 - Automatically hides below three equipped Roar of Alkosh pieces, while HUD layout editing and preview remain available.
-- Tracks Alkosh by abilityId, using Line Breaker and the Trial Dummy aura as the primary 10-second timing sources.
-- Uses CombatMetrics penetration IDs as observed proc/calculation signals, not as the primary uptime clock.
+- Tracks Alkosh by abilityId and uses the direct Line Breaker effect `beginTime`/`endTime` as the authoritative 10-second clock. The Trial Dummy aura is accepted only when ESO attributes it to the player.
+- Keeps CombatMetrics penetration IDs as observed calculation signals; they cannot start or restart the cycle clock.
 - Uses `EVENT_SYNERGY_ABILITY_CHANGED` and the current synergy-list API to observe every usable offer with its name and ability ID, with a current-prompt fallback on older API versions.
-- Provides configurable activation-window start/end values. The progress bar fills from the last proc to the 10-second Line-Breaker expiry and changes state between Wait, Window, Activate now, Late, and Expired.
+- Provides configurable activation-window start/end values. The progress bar shows directly observed remaining Line-Breaker time, drains to zero at expiry, and changes state between Wait, Window, Activate now, Late, and Expired.
 - Correlates a proc with the recently removed primary synergy offer. Unmatched procs are reported explicitly as an unknown synergy instead of inventing a type.
 - Counts, per combat and per synergy type, offers, activations inside/outside the configured window, and offers observed in the window that disappeared without a correlated proc.
-- The live `Win received/used` counter shows how many usable offers overlapped the window and how many activations were completed there; `Out` and `Lost` remain separate.
+- While the activation window is open, the live panel shows whether a usable synergy is currently available and the cumulative number of offers detected inside configured windows.
 - Reports combat uptime as active Line-Breaker time divided by the complete combat time.
-- Simulates possible uptime from the usable synergies actually offered, respecting the configured window and one use per observed offer. Offer efficiency is actual active time divided by this possible active time.
+- Shows offer efficiency as actual active time divided by the internally simulated uptime supported by the usable synergies actually offered.
 - Keeps the last valid combat metrics and per-type counts visible in the tooltip/report until new combat data replaces them.
 - Provides Off, Monitor, and Cycle assistant modes. Cycle assistant is visual only and never intercepts or activates synergy input.
-- Optional debug event logging.
-- Last-combat tooltip/report includes actual/possible uptime, offer efficiency, target/proc data, and the per-synergy breakdown.
+- Shows the independent activation alert in a red/orange warning style for the first combat synergy, offers inside the configured window, the first late offer when no synergy appeared during that window, and any usable offer after Line Breaker has expired.
+- Optional direct-effect timing and synergy-offer debug logging.
+- Last-combat tooltip/report includes actual uptime, offer efficiency, target/proc data, and the per-synergy breakdown.
 
 ### Z'en's Redress Tracker
 
@@ -112,7 +124,8 @@ Current version: **0.1.49**.
 - Auto mode shows the panel while wearing at least 3 pieces; On forces it visible for testing.
 - Uses `LibCombat` as the preferred source for Z'en stacks when available, with an internal player-DoT counter as fallback.
 - Counts your own damage-over-time effects on the tracked target as potential Z'en stacks, including fallback visibility below 5 set pieces.
-- Tracks Touch of Z'en by abilityId and shows effective value only when the 5-piece Touch is active.
+- Tracks Touch of Z'en directly by abilityId and keeps its effective value for the detected Touch duration even if a weapon swap lowers the currently equipped Z'en piece count.
+- Rejects ESO's `offline` pseudo-unit as a target name, prioritizes targets with active Touch/DoTs, and returns to the internal DoT counter as soon as LibCombat reports Touch faded.
 - Shows pieces, potential stacks, effective value, Touch remaining time, target, stack source, and a stack bar.
 - Optional debug event logging.
 - Last-combat tooltip/report includes Touch uptime, potential/effective averages, cap time, and target data.
@@ -141,11 +154,23 @@ Current version: **0.1.49**.
 
 ### Fatecarver Helper
 
+- Its settings are grouped under a dedicated Fatecarver heading inside the Abilities submenu.
 - Horizontal Fatecarver channel bar for Arcanist Fatecarver, Exhausting Fatecarver, and Pragmatic Fatecarver.
 - Detects Fatecarver on either action bar.
 - Tracks active channel timing from combat events and player effects.
 - Configurable cancel-window warning in milliseconds.
 - Last-combat summary reports casts, completed channels, OK cancels, early stops, and early-stop timing.
+
+### Magma Fist Helper
+
+- Its settings are grouped under a dedicated Magma Fist heading inside the Abilities submenu.
+- Independent movable Magma Fist icon that remains visible in normal HUD scenes whenever Magma Fist is slotted, including outside combat, with a `0-3` Heat Shock stack badge.
+- Reads the player's Heat Shock (`abilityId 134340`) stacks and expiration directly from effect events.
+- A single centered countdown shows the directly observed remaining Heat Shock duration, so stack expiry is visible while building or holding the 3 stacks.
+- Border legend: grey while below 3 stacks, amber whenever 3 stacks need to be maintained or used, green during the 6-second empowered-cast window, and red during the final 1.5 seconds of either Heat Shock or that window. The outer border uses a thicker high-visibility stroke.
+- The public client data currently identifies Heat Shock and Magma Fist but not a separate 6-second player-buff ID. EZOMetter therefore derives the window from a deduplicated direct Heat Shock gained/updated event while the target was already observed at 3 stacks, and consumes it on the next observed Magma Fist impact or Heat Shock refresh.
+- Direct Heat Shock expiry is used when present. If its effect event omits a usable `endTime`, the tracker retains that direct stack observation for the documented 7-second Heat Shock duration.
+- Includes configurable icon size, HUD-layout positioning, a simulated preview, and optional event diagnostics.
 
 ## Safety Limits
 
@@ -154,6 +179,7 @@ Current version: **0.1.49**.
 - It does not replace vanilla UI elements.
 - HUD elements are designed to appear only in normal HUD/HUD UI scenes and not in menus such as inventory, map, crafting, Champion Points, or Tales of Tribute.
 - Observed group damage/healing and Exploiter value are estimates based on events available to the client.
+- The Magma Fist 6-second window is an event-derived alert until a dedicated player-effect ID can be confirmed from the live client; stacks and Heat Shock expiration remain direct readings.
 - Alkosh Cycle assistant is advisory only; EZOMetter observes the available synergy list but does not block, consume, activate, or cancel synergy input.
 - The addon includes Discord publication scripts for project maintenance, but nothing is posted to Discord without explicit authorization.
 
@@ -179,11 +205,13 @@ Recommended in-game checks:
 - Banner Bearer alert when a Banner skill is slotted and when no Banner skill is slotted.
 - Off Balance on dummy/boss, including real active time, cooldown/cycle, and Exploiter reporting.
 - Coral Riptide with fewer than 5 pieces, 5 pieces, and different stamina levels.
-- Roar of Alkosh with 0-2 pieces (hidden), 3-4 pieces (visible without the 5-piece bonus), 5 pieces, Monitor/Cycle modes, multiple simultaneous synergy offers, activations before/inside/after the window, offers lost in the window, Trial Dummy debuff, and a normal target when available.
+- Azureblight Reaper on the front bar, back-bar DoTs ticking after both bar swaps, target changes, effect refreshes, and one or multiple set wearers.
+- Roar of Alkosh with 0-2 pieces (hidden), 3-4 pieces (visible without the 5-piece bonus), 5 pieces, Monitor/Cycle modes, repeated updates of one proc, activations before/inside/after the window, an available synergy after expiry, offers lost in the window, Trial Dummy debuff, and a normal target when available.
 - Z'en's Redress with 3-4 pieces, 5 pieces, multiple DoTs, Touch refreshes, target changes, weapon swaps, and with/without `LibCombat`.
 - DD Stats own/effective/max values and tooltip after combat.
 - Observed Damage/Healing with `LibCombat` installed and with `LibCombat` missing.
 - Fatecarver channel start, completion, early stop, and warning color.
+- Magma Fist casts 1-3 with the Heat Shock expiry countdown, the next max-stack hit opening the central 6-second countdown, the following cast consuming it, both expiry paths, target changes, and both weapon bars.
 
 ## Reporting Issues
 

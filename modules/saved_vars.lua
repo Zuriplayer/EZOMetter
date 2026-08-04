@@ -18,6 +18,7 @@ function EZOMetter.savedVars.Init()
         },
         alerts = {
             missingBuffAlerts = true,
+            combatReportEnabled = true,
             unlockAlert = false,
             backgroundOpacity = 86,
             showBorder = true,
@@ -26,6 +27,7 @@ function EZOMetter.savedVars.Init()
         },
         offBalance = {
             enabled = true,
+            combatReportEnabled = true,
             displayMode = "both",
             ddOnly = true,
             bossFocus = true,
@@ -48,6 +50,7 @@ function EZOMetter.savedVars.Init()
         },
         coral = {
             enabled = true,
+            combatReportEnabled = true,
             ddOnly = true,
             onlyCombat = true,
             unlock = false,
@@ -60,6 +63,7 @@ function EZOMetter.savedVars.Init()
         },
         highland = {
             enabled = true,
+            combatReportEnabled = true,
             ddOnly = true,
             onlyCombat = true,
             unlock = false,
@@ -70,8 +74,17 @@ function EZOMetter.savedVars.Init()
             x = 0,
             y = 80,
         },
+        azureblight = {
+            enabled = true,
+            onlyCombat = true,
+            size = 100,
+            debugEvents = false,
+            x = 0,
+            y = 120,
+        },
         alkosh = {
             mode = "off",
+            combatReportEnabled = true,
             windowStartSeconds = 6,
             windowEndSeconds = 9,
             backgroundOpacity = 86,
@@ -87,6 +100,7 @@ function EZOMetter.savedVars.Init()
         },
         zen = {
             mode = "auto",
+            combatReportEnabled = true,
             backgroundOpacity = 86,
             showBorder = true,
             debugEvents = false,
@@ -95,6 +109,7 @@ function EZOMetter.savedVars.Init()
         },
         ddStats = {
             enabled = true,
+            combatReportEnabled = true,
             ddOnly = true,
             onlyCombat = false,
             unlock = false,
@@ -118,6 +133,7 @@ function EZOMetter.savedVars.Init()
         },
         observedDamage = {
             enabled = true,
+            combatReportEnabled = true,
             ddOnly = true,
             onlyCombat = true,
             layout = "detailed",
@@ -129,6 +145,7 @@ function EZOMetter.savedVars.Init()
         },
         observedHealing = {
             enabled = true,
+            combatReportEnabled = true,
             healerOnly = true,
             onlyCombat = true,
             layout = "detailed",
@@ -140,12 +157,18 @@ function EZOMetter.savedVars.Init()
         },
         abilities = {
             fatecarverEnabled = true,
+            magmaFistEnabled = true,
+            magmaFistSize = 100,
+            magmaFistDebugEvents = false,
+            combatReportEnabled = true,
             fatecarverWarningMs = 800,
             backgroundOpacity = 22,
             showBorder = false,
             styleVersion = 2,
             x = 0,
             y = 445,
+            magmaFistX = 80,
+            magmaFistY = -210,
         },
     }
 
@@ -155,12 +178,29 @@ function EZOMetter.savedVars.Init()
     EZOMetter.sv.offBalance = EZOMetter.sv.offBalance or defaults.offBalance
     EZOMetter.sv.coral = EZOMetter.sv.coral or defaults.coral
     EZOMetter.sv.highland = EZOMetter.sv.highland or defaults.highland
+    EZOMetter.sv.azureblight = EZOMetter.sv.azureblight or defaults.azureblight
     EZOMetter.sv.alkosh = EZOMetter.sv.alkosh or defaults.alkosh
     EZOMetter.sv.zen = EZOMetter.sv.zen or defaults.zen
     EZOMetter.sv.ddStats = EZOMetter.sv.ddStats or defaults.ddStats
     EZOMetter.sv.observedDamage = EZOMetter.sv.observedDamage or defaults.observedDamage
     EZOMetter.sv.observedHealing = EZOMetter.sv.observedHealing or defaults.observedHealing
     EZOMetter.sv.abilities = EZOMetter.sv.abilities or defaults.abilities
+    for _, settingsKey in ipairs({
+        "alerts",
+        "offBalance",
+        "coral",
+        "highland",
+        "alkosh",
+        "zen",
+        "ddStats",
+        "observedDamage",
+        "observedHealing",
+        "abilities",
+    }) do
+        if EZOMetter.sv[settingsKey].combatReportEnabled == nil then
+            EZOMetter.sv[settingsKey].combatReportEnabled = defaults[settingsKey].combatReportEnabled
+        end
+    end
     EZOMetter.sv.general.language = EZOMetter.sv.general.language or defaults.general.language
     EZOMetter.sv.general.role = EZOMetter.sv.general.role or defaults.general.role
     EZOMetter.sv.general.roleMode = EZOMetter.sv.general.roleMode or defaults.general.roleMode
@@ -296,6 +336,20 @@ function EZOMetter.savedVars.Init()
     end
     EZOMetter.sv.highland.x = EZOMetter.sv.highland.x or defaults.highland.x
     EZOMetter.sv.highland.y = EZOMetter.sv.highland.y or defaults.highland.y
+    if EZOMetter.sv.azureblight.enabled == nil then
+        EZOMetter.sv.azureblight.enabled = defaults.azureblight.enabled
+    end
+    if EZOMetter.sv.azureblight.onlyCombat == nil then
+        EZOMetter.sv.azureblight.onlyCombat = defaults.azureblight.onlyCombat
+    end
+    EZOMetter.sv.azureblight.size = math.max(70, math.min(140,
+        tonumber(EZOMetter.sv.azureblight.size) or defaults.azureblight.size
+    ))
+    if EZOMetter.sv.azureblight.debugEvents == nil then
+        EZOMetter.sv.azureblight.debugEvents = defaults.azureblight.debugEvents
+    end
+    EZOMetter.sv.azureblight.x = tonumber(EZOMetter.sv.azureblight.x) or defaults.azureblight.x
+    EZOMetter.sv.azureblight.y = tonumber(EZOMetter.sv.azureblight.y) or defaults.azureblight.y
     if EZOMetter.sv.alkosh.mode == "block" then
         EZOMetter.sv.alkosh.mode = "cycle"
     elseif EZOMetter.sv.alkosh.mode ~= "warn" and EZOMetter.sv.alkosh.mode ~= "cycle" then
@@ -413,6 +467,19 @@ function EZOMetter.savedVars.Init()
     if EZOMetter.sv.abilities.fatecarverEnabled == nil then
         EZOMetter.sv.abilities.fatecarverEnabled = defaults.abilities.fatecarverEnabled
     end
+    if EZOMetter.sv.abilities.magmaFistEnabled == nil then
+        EZOMetter.sv.abilities.magmaFistEnabled = defaults.abilities.magmaFistEnabled
+    end
+    EZOMetter.sv.abilities.magmaFistSize = math.max(70, math.min(180,
+        tonumber(EZOMetter.sv.abilities.magmaFistSize) or defaults.abilities.magmaFistSize
+    ))
+    if EZOMetter.sv.abilities.magmaFistDebugEvents == nil then
+        EZOMetter.sv.abilities.magmaFistDebugEvents = defaults.abilities.magmaFistDebugEvents
+    end
+    EZOMetter.sv.abilities.magmaFistX = tonumber(EZOMetter.sv.abilities.magmaFistX)
+        or defaults.abilities.magmaFistX
+    EZOMetter.sv.abilities.magmaFistY = tonumber(EZOMetter.sv.abilities.magmaFistY)
+        or defaults.abilities.magmaFistY
     EZOMetter.sv.abilities.fatecarverWarningMs = EZOMetter.sv.abilities.fatecarverWarningMs or defaults.abilities.fatecarverWarningMs
 
     if EZOMetter.sv.abilities.styleVersion == nil then

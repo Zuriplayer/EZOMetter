@@ -34,3 +34,10 @@ Thumbs.db
 .DS_Store
 dist/
 *.zip
+
+# Keep shared AI project instructions versioned.
+!AGENTS.md
+!CLAUDE.md
+
+# Local assistant handoff notes.
+HANDOFF_PROMPT.md

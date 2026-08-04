@@ -40,6 +40,29 @@ local function RefreshSettingsPanel()
     end
 end
 
+local function CreateCombatReportOption(settingsKey)
+    return {
+        type = "checkbox",
+        name = GetString(EZOM_OPTION_INCLUDE_COMBAT_REPORT),
+        tooltip = GetString(EZOM_OPTION_INCLUDE_COMBAT_REPORT_TOOLTIP),
+        getFunc = function()
+            local settings = EZOMetter.sv and EZOMetter.sv[settingsKey]
+            return settings and settings.combatReportEnabled ~= false
+        end,
+        setFunc = function(value)
+            if EZOMetter.sv and EZOMetter.sv[settingsKey] then
+                EZOMetter.sv[settingsKey].combatReportEnabled = value == true
+            end
+        end,
+        disabled = function()
+            return not EZOMetter.sv
+                or not EZOMetter.sv.general
+                or EZOMetter.sv.general.combatReportEnabled ~= true
+        end,
+        default = true,
+    }
+end
+
 local function GetOffBalanceDisplayMode()
     local settings = EZOMetter.sv and EZOMetter.sv.offBalance
     local mode = settings and settings.displayMode
@@ -68,10 +91,6 @@ local function SetOffBalanceDisplayMode(value)
     if EZOMetter_OffBalance and EZOMetter_OffBalance.ApplySettings then
         EZOMetter_OffBalance.ApplySettings()
     end
-end
-
-local function IsOffBalanceDisplayEnabled()
-    return GetOffBalanceDisplayMode() ~= OFF_BALANCE_DISPLAY_OFF
 end
 
 local function IsOffBalanceIconEnabled()
@@ -211,6 +230,7 @@ function EZOMetter_Menu.Init()
                     end,
                     setFunc = function(value)
                         EZOMetter.sv.general.combatReportEnabled = value == true
+                        RefreshSettingsPanel()
                     end,
                     default = false,
                 },
@@ -310,6 +330,7 @@ function EZOMetter_Menu.Init()
                     end,
                     default = true,
                 },
+                CreateCombatReportOption("alerts"),
             },
         },
         {
@@ -337,6 +358,7 @@ function EZOMetter_Menu.Init()
                     setFunc = SetOffBalanceDisplayMode,
                     default = OFF_BALANCE_DISPLAY_BOTH,
                 },
+                CreateCombatReportOption("offBalance"),
                 {
                     type = "slider",
                     name = GetString(EZOM_OPTION_OFF_BALANCE_ICON_SIZE),
@@ -448,6 +470,7 @@ function EZOMetter_Menu.Init()
                     end,
                     default = true,
                 },
+                CreateCombatReportOption("coral"),
                 {
                     type = "checkbox",
                     name = GetString(EZOM_OPTION_CORAL_DD_ONLY),
@@ -530,6 +553,7 @@ function EZOMetter_Menu.Init()
                     end,
                     default = true,
                 },
+                CreateCombatReportOption("highland"),
                 {
                     type = "checkbox",
                     name = GetString(EZOM_OPTION_HIGHLAND_DD_ONLY),
@@ -627,6 +651,83 @@ function EZOMetter_Menu.Init()
         },
         {
             type = "submenu",
+            name = GetString(EZOM_OPTION_AZUREBLIGHT),
+            controls = {
+                CreateInfoHeader(GetString(EZOM_OPTION_AZUREBLIGHT), GetString(EZOM_OPTION_AZUREBLIGHT_HEADER_TOOLTIP)),
+                {
+                    type = "checkbox",
+                    name = GetString(EZOM_OPTION_AZUREBLIGHT_ENABLED),
+                    tooltip = GetString(EZOM_OPTION_AZUREBLIGHT_ENABLED_TOOLTIP),
+                    getFunc = function()
+                        return EZOMetter.sv.azureblight and EZOMetter.sv.azureblight.enabled == true
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.azureblight.enabled = value == true
+                        if EZOMetter_Azureblight and EZOMetter_Azureblight.ApplySettings then
+                            EZOMetter_Azureblight.ApplySettings()
+                        end
+                    end,
+                    default = true,
+                },
+                {
+                    type = "checkbox",
+                    name = GetString(EZOM_OPTION_AZUREBLIGHT_ONLY_COMBAT),
+                    tooltip = GetString(EZOM_OPTION_AZUREBLIGHT_ONLY_COMBAT_TOOLTIP),
+                    getFunc = function()
+                        return EZOMetter.sv.azureblight and EZOMetter.sv.azureblight.onlyCombat ~= false
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.azureblight.onlyCombat = value == true
+                        if EZOMetter_Azureblight and EZOMetter_Azureblight.ApplySettings then
+                            EZOMetter_Azureblight.ApplySettings()
+                        end
+                    end,
+                    default = true,
+                },
+                {
+                    type = "slider",
+                    name = GetString(EZOM_OPTION_AZUREBLIGHT_SIZE),
+                    tooltip = GetString(EZOM_OPTION_AZUREBLIGHT_SIZE_TOOLTIP),
+                    min = 70,
+                    max = 140,
+                    step = 5,
+                    getFunc = function()
+                        return EZOMetter.sv.azureblight.size or 100
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.azureblight.size = tonumber(value) or 100
+                        if EZOMetter_Azureblight and EZOMetter_Azureblight.ApplySettings then
+                            EZOMetter_Azureblight.ApplySettings()
+                        end
+                    end,
+                    default = 100,
+                },
+                {
+                    type = "button",
+                    name = GetString(EZOM_OPTION_AZUREBLIGHT_TEST),
+                    tooltip = GetString(EZOM_OPTION_AZUREBLIGHT_TEST_TOOLTIP),
+                    func = function()
+                        if EZOMetter_Azureblight and EZOMetter_Azureblight.ShowTest then
+                            EZOMetter_Azureblight.ShowTest()
+                        end
+                    end,
+                },
+                {
+                    type = "checkbox",
+                    name = GetString(EZOM_OPTION_AZUREBLIGHT_DEBUG_EVENTS),
+                    tooltip = GetString(EZOM_OPTION_AZUREBLIGHT_DEBUG_EVENTS_TOOLTIP),
+                    getFunc = function()
+                        return EZOMetter.sv.azureblight and EZOMetter.sv.azureblight.debugEvents == true
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.azureblight.debugEvents = value == true
+                    end,
+                    default = false,
+                },
+            },
+        },
+        {
+            type = "submenu",
             name = GetString(EZOM_OPTION_ALKOSH),
             controls = {
                 CreateInfoHeader(GetString(EZOM_OPTION_ALKOSH), GetString(EZOM_OPTION_ALKOSH_HEADER_TOOLTIP)),
@@ -659,6 +760,7 @@ function EZOMetter_Menu.Init()
                     end,
                     default = "off",
                 },
+                CreateCombatReportOption("alkosh"),
                 {
                     type = "slider",
                     name = GetString(EZOM_OPTION_ALKOSH_WINDOW_START),
@@ -818,6 +920,7 @@ function EZOMetter_Menu.Init()
                     end,
                     default = "auto",
                 },
+                CreateCombatReportOption("zen"),
                 {
                     type = "checkbox",
                     name = GetString(EZOM_OPTION_ZEN_DEBUG_EVENTS),
@@ -852,6 +955,7 @@ function EZOMetter_Menu.Init()
                     end,
                     default = true,
                 },
+                CreateCombatReportOption("ddStats"),
                 {
                     type = "checkbox",
                     name = GetString(EZOM_OPTION_DD_STATS_DD_ONLY),
@@ -1058,6 +1162,7 @@ function EZOMetter_Menu.Init()
                     end,
                     default = true,
                 },
+                CreateCombatReportOption("observedDamage"),
                 {
                     type = "checkbox",
                     name = GetString(EZOM_OPTION_DAMAGE_DD_ONLY),
@@ -1156,6 +1261,7 @@ function EZOMetter_Menu.Init()
                     end,
                     default = true,
                 },
+                CreateCombatReportOption("observedHealing"),
                 {
                     type = "checkbox",
                     name = GetString(EZOM_OPTION_HEALING_HEALER_ONLY),
@@ -1239,6 +1345,10 @@ function EZOMetter_Menu.Init()
             name = GetString(EZOM_OPTION_ABILITIES),
             controls = {
                 CreateInfoHeader(GetString(EZOM_OPTION_ABILITIES), GetString(EZOM_OPTION_ABILITIES_HEADER_TOOLTIP)),
+                CreateInfoHeader(
+                    GetString(EZOM_OPTION_FATECARVER_SECTION),
+                    GetString(EZOM_OPTION_FATECARVER_SECTION_TOOLTIP)
+                ),
                 {
                     type = "checkbox",
                     name = GetString(EZOM_OPTION_FATECARVER_ENABLED),
@@ -1254,6 +1364,7 @@ function EZOMetter_Menu.Init()
                     end,
                     default = true,
                 },
+                CreateCombatReportOption("abilities"),
                 {
                     type = "slider",
                     name = GetString(EZOM_OPTION_FATECARVER_WARNING),
@@ -1271,6 +1382,75 @@ function EZOMetter_Menu.Init()
                         end
                     end,
                     default = 800,
+                },
+                CreateInfoHeader(
+                    GetString(EZOM_OPTION_MAGMA_FIST_SECTION),
+                    GetString(EZOM_OPTION_MAGMA_FIST_SECTION_TOOLTIP)
+                ),
+                {
+                    type = "checkbox",
+                    name = GetString(EZOM_OPTION_MAGMA_FIST_ENABLED),
+                    tooltip = GetString(EZOM_OPTION_MAGMA_FIST_ENABLED_TOOLTIP),
+                    getFunc = function()
+                        return EZOMetter.sv.abilities and EZOMetter.sv.abilities.magmaFistEnabled == true
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.abilities.magmaFistEnabled = value == true
+                        if EZOMetter_MagmaFist and EZOMetter_MagmaFist.ApplySettings then
+                            EZOMetter_MagmaFist.ApplySettings()
+                        end
+                        RefreshSettingsPanel()
+                    end,
+                    default = true,
+                },
+                {
+                    type = "slider",
+                    name = GetString(EZOM_OPTION_MAGMA_FIST_SIZE),
+                    tooltip = GetString(EZOM_OPTION_MAGMA_FIST_SIZE_TOOLTIP),
+                    min = 70,
+                    max = 180,
+                    step = 5,
+                    getFunc = function()
+                        return EZOMetter.sv.abilities and EZOMetter.sv.abilities.magmaFistSize or 100
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.abilities.magmaFistSize = tonumber(value) or 100
+                        if EZOMetter_MagmaFist and EZOMetter_MagmaFist.ApplySettings then
+                            EZOMetter_MagmaFist.ApplySettings()
+                        end
+                    end,
+                    disabled = function()
+                        return not EZOMetter.sv.abilities or EZOMetter.sv.abilities.magmaFistEnabled ~= true
+                    end,
+                    default = 100,
+                },
+                {
+                    type = "button",
+                    name = GetString(EZOM_OPTION_MAGMA_FIST_TEST),
+                    tooltip = GetString(EZOM_OPTION_MAGMA_FIST_TEST_TOOLTIP),
+                    func = function()
+                        if EZOMetter_MagmaFist and EZOMetter_MagmaFist.ShowTest then
+                            EZOMetter_MagmaFist.ShowTest()
+                        end
+                    end,
+                    disabled = function()
+                        return not EZOMetter.sv.abilities or EZOMetter.sv.abilities.magmaFistEnabled ~= true
+                    end,
+                },
+                {
+                    type = "checkbox",
+                    name = GetString(EZOM_OPTION_MAGMA_FIST_DEBUG_EVENTS),
+                    tooltip = GetString(EZOM_OPTION_MAGMA_FIST_DEBUG_EVENTS_TOOLTIP),
+                    getFunc = function()
+                        return EZOMetter.sv.abilities and EZOMetter.sv.abilities.magmaFistDebugEvents == true
+                    end,
+                    setFunc = function(value)
+                        EZOMetter.sv.abilities.magmaFistDebugEvents = value == true
+                    end,
+                    disabled = function()
+                        return not EZOMetter.sv.abilities or EZOMetter.sv.abilities.magmaFistEnabled ~= true
+                    end,
+                    default = false,
                 },
             },
         },

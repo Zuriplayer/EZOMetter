@@ -375,7 +375,7 @@ local function BuildTooltipText()
 end
 
 function Tracker.GetReportSection()
-    if not lastCombatSummary or not lastCombatSummary.hasData then return nil end
+    if not IsEnabled() or not lastCombatSummary or not lastCombatSummary.hasData then return nil end
     return BuildTooltipText()
 end
 

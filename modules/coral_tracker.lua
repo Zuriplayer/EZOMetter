@@ -54,6 +54,7 @@ local currentBand = BAND_INACTIVE
 local currentStaminaPct = 100
 local statsTracker
 local lastCombatSummary
+local combatRelevant = false
 local IsHudUnlocked
 
 local function GetSettings()
@@ -183,7 +184,10 @@ local function BuildTooltipText()
 end
 
 function Tracker.GetReportSection()
-    if not lastCombatSummary or not lastCombatSummary.hasData then return nil end
+    local settings = GetSettings()
+    if not settings or settings.enabled ~= true then return nil end
+    if settings.ddOnly ~= false and GetRole() ~= "dd" then return nil end
+    if not lastCombatSummary or not lastCombatSummary.hasData or not lastCombatSummary.relevant then return nil end
     return BuildTooltipText()
 end
 
@@ -394,6 +398,9 @@ local function RefreshState()
 
     currentStaminaPct = GetStaminaPct()
     local active = IsCoralActive()
+    if isCombat and active then
+        combatRelevant = true
+    end
     currentBonus = active and CalculateBonus(currentStaminaPct) or 0
     currentBand = GetBand(currentStaminaPct, active)
     UpdateVisuals()
@@ -444,6 +451,7 @@ local function OnCombatState(_, inCombat)
     RefreshState()
 
     if isCombat then
+        combatRelevant = IsCoralActive()
         lastCombatSummary = nil
         if statsTracker then
             statsTracker:Start(GetNowMs())
@@ -452,6 +460,9 @@ local function OnCombatState(_, inCombat)
     else
         if statsTracker then
             lastCombatSummary = statsTracker:Finish(GetNowMs())
+            if lastCombatSummary then
+                lastCombatSummary.relevant = combatRelevant
+            end
         end
         UnregisterStatsUpdate()
     end

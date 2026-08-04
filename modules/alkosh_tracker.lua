@@ -15,7 +15,7 @@ local PADDING = 10
 local ROW_HEIGHT = 18
 local OFFER_CLOSE_GRACE_MS = 500
 local ACTIVATION_MATCH_MS = 2200
-local PROC_DEDUPLICATION_MS = 1200
+local DIRECT_TIME_TOLERANCE_MS = 750
 local PROC_DELAY_MS = 1000
 
 local MODE_OFF = "off"
@@ -27,7 +27,6 @@ local ALKOSH_ITEM_LINK = "|H1:item:73058:364:50:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:
 local ALKOSH_DURATION_MS = 10000
 local TIMING_DEBUFF_IDS = { [75753] = true, [120018] = true }
 local OBSERVED_DEBUFF_IDS = { [75753] = true, [76667] = true, [120018] = true }
-local PROC_IDS = { [75751] = true, [75752] = true, [75753] = true, [76667] = true, [78835] = true, [120018] = true }
 
 local ALKOSH_ALIASES = {
     "Roar of Alkosh",
@@ -45,7 +44,7 @@ local barLabel
 local stateLabel
 local synergyLabel
 local uptimeLabel
-local possibleLabel
+local efficiencyLabel
 local alertControl
 local alertBackdrop
 local alertTitleLabel
@@ -58,6 +57,8 @@ local currentSnapshot = { hasSet = false, numEquipped = 0, maxEquipped = 0 }
 local activeFromMs = 0
 local activeUntilMs = 0
 local activeTarget = ""
+local activeTimingEffects = {}
+local lastDirectEffectEndMs = 0
 local lastProcMs = nil
 local lastProcTarget = ""
 local combatStartMs = 0
@@ -72,9 +73,10 @@ local lastRecordedProcMs = nil
 local activeOffers = {}
 local pendingClosedOffers = {}
 local currentPrimaryKey = nil
+local cycleHadWindowOffer = false
 local combatStats = nil
 local lastCombatSummary = nil
-local combatEventFiltersRegistered = false
+local combatRelevant = false
 local IsHudUnlocked
 
 local function GetSettings()
@@ -168,7 +170,6 @@ local function EnsureDebuffIds()
     if EZOMetter_DDEffectiveStats and EZOMetter_DDEffectiveStats.GetModifierAbilityIds then
         for _, abilityId in ipairs(EZOMetter_DDEffectiveStats.GetModifierAbilityIds("alkosh") or {}) do
             OBSERVED_DEBUFF_IDS[tonumber(abilityId) or 0] = true
-            PROC_IDS[tonumber(abilityId) or 0] = true
         end
     end
 end
@@ -363,74 +364,129 @@ local function ClampKnownEndTime(nowMs, untilMs)
     return math.min(untilMs, nowMs + ALKOSH_DURATION_MS)
 end
 
-local function EstimateEndTime(nowMs, untilMs)
-    local endMs = ClampKnownEndTime(nowMs, untilMs)
-    if endMs > 0 then return endMs end
-    return (nowMs or GetNowMs()) + ALKOSH_DURATION_MS
-end
-
 local RecordActivation
 
-local function MarkProc(nowMs, targetName, untilMs, canSetActive)
+local function BuildTimingEffectKey(unitTag, unitId, abilityId)
+    unitId = tonumber(unitId) or 0
+    if unitId > 0 then
+        return string.format("id:%s:%s", tostring(unitId), tostring(abilityId))
+    end
+    return string.format("tag:%s:%s", tostring(unitTag or ""), tostring(abilityId))
+end
+
+local function NormalizeEffectStartMs(nowMs, startMs, endMs)
+    startMs = tonumber(startMs) or 0
+    if startMs <= 0
+        or startMs >= endMs
+        or startMs > nowMs + DIRECT_TIME_TOLERANCE_MS
+        or endMs - startMs > ALKOSH_DURATION_MS + DIRECT_TIME_TOLERANCE_MS then
+        return math.max(0, endMs - ALKOSH_DURATION_MS)
+    end
+    return startMs
+end
+
+local function ReconcileTimingEffects(nowMs)
     nowMs = nowMs or GetNowMs()
-    local isNewProc = not lastRecordedProcMs or nowMs - lastRecordedProcMs > PROC_DEDUPLICATION_MS
-    if isNewProc and RecordActivation then
-        RecordActivation(nowMs)
+    local bestEndMs = 0
+    local bestStartMs = 0
+    local bestTarget = ""
+
+    for key, effect in pairs(activeTimingEffects) do
+        if effect.endMs <= nowMs then
+            activeTimingEffects[key] = nil
+        elseif effect.endMs > bestEndMs then
+            bestEndMs = effect.endMs
+            bestStartMs = effect.startMs
+            bestTarget = effect.target
+        end
     end
-    if isNewProc then
-        lastProcMs = nowMs
-    end
-    lastProcTarget = CleanName(targetName)
-    if lastProcTarget ~= "" then
-        activeTarget = lastProcTarget
-    end
-    if canSetActive == true then
-        untilMs = EstimateEndTime(nowMs, untilMs)
+
+    if bestEndMs > 0 then
         if activeUntilMs <= nowMs then
-            activeFromMs = nowMs
+            activeFromMs = math.max(combatStartMs, bestStartMs)
         end
-        if untilMs > activeUntilMs then
-            activeUntilMs = untilMs
-        end
+        activeUntilMs = bestEndMs
+        if bestTarget ~= "" then activeTarget = bestTarget end
+    else
+        activeFromMs = 0
+        activeUntilMs = 0
     end
+end
+
+local function ObserveTimingEffect(nowMs, key, targetName, startMs, endMs, source)
+    nowMs = nowMs or GetNowMs()
+    endMs = ClampKnownEndTime(nowMs, endMs)
+    if endMs <= 0 then return false end
+
+    startMs = NormalizeEffectStartMs(nowMs, startMs, endMs)
+    targetName = CleanName(targetName)
+    activeTimingEffects[key] = {
+        startMs = startMs,
+        endMs = endMs,
+        target = targetName,
+    }
+
+    local isNewProc = not lastRecordedProcMs
+        or endMs > lastDirectEffectEndMs + DIRECT_TIME_TOLERANCE_MS
+    lastDirectEffectEndMs = math.max(lastDirectEffectEndMs, endMs)
+
+    if isNewProc then
+        if isCombat and startMs >= combatStartMs then
+            RecordActivation(startMs, nowMs, source)
+        else
+            lastRecordedProcMs = startMs
+            cycleHadWindowOffer = false
+        end
+        lastProcMs = startMs
+    end
+    lastProcTarget = targetName
+    if targetName ~= "" then activeTarget = targetName end
+    if activeUntilMs <= nowMs then
+        activeFromMs = math.max(combatStartMs, startMs)
+    end
+    activeUntilMs = math.max(activeUntilMs, endMs)
+
+    DebugLog(string.format(
+        "direct timing source=%s start=%s end=%s target=%s newProc=%s",
+        tostring(source),
+        tostring(startMs),
+        tostring(endMs),
+        tostring(targetName),
+        tostring(isNewProc)
+    ))
+    return isNewProc
 end
 
 local function ScanTargetEffects()
     if type(GetNumBuffs) ~= "function" or type(GetUnitBuffInfo) ~= "function" then return end
 
     local nowMs = GetNowMs()
-    local bestEndMs = 0
-    local bestTarget = ""
     for _, unitTag in ipairs(TARGET_TAGS) do
         if CanReadTarget(unitTag) then
             for index = 1, GetNumBuffs(unitTag) do
-                local _, _, endTime, _, _, _, _, _, _, _, abilityId = GetUnitBuffInfo(unitTag, index)
+                local _, startTime, endTime, _, _, _, _, _, _, _, abilityId, _, castByPlayer = GetUnitBuffInfo(unitTag, index)
                 abilityId = tonumber(abilityId) or 0
-                if TIMING_DEBUFF_IDS[abilityId] then
-                    local endMs = ClampKnownEndTime(nowMs, (tonumber(endTime) or 0) * 1000)
-                    if endMs > bestEndMs then
-                        bestEndMs = endMs
-                        bestTarget = ReadTargetName(unitTag)
-                    end
+                if TIMING_DEBUFF_IDS[abilityId] and castByPlayer == true then
+                    local unitId = type(GetUnitId) == "function" and GetUnitId(unitTag) or 0
+                    ObserveTimingEffect(
+                        nowMs,
+                        BuildTimingEffectKey(unitTag, unitId, abilityId),
+                        ReadTargetName(unitTag),
+                        (tonumber(startTime) or 0) * 1000,
+                        (tonumber(endTime) or 0) * 1000,
+                        "scan"
+                    )
                 end
             end
         end
     end
-
-    if bestEndMs > 0 and (activeUntilMs > nowMs or (lastRecordedProcMs and nowMs - lastRecordedProcMs <= ALKOSH_DURATION_MS + 1000)) then
-        if activeUntilMs <= nowMs then
-            activeFromMs = nowMs
-        end
-        activeUntilMs = bestEndMs
-        if bestTarget ~= "" then activeTarget = bestTarget end
-    elseif activeUntilMs <= nowMs then
-        activeFromMs = 0
-        activeUntilMs = 0
-    end
+    ReconcileTimingEffects(nowMs)
 end
 
 local function MarkOfferAvailableInWindow(offer)
-    if not offer or offer.availableInWindow then return end
+    if not offer then return end
+    cycleHadWindowOffer = true
+    if offer.availableInWindow then return end
     offer.availableInWindow = true
     AddStat(offer, "availableInWindow")
 end
@@ -569,11 +625,13 @@ local function FindActivationOffer(nowMs)
     return nil
 end
 
-RecordActivation = function(nowMs)
+RecordActivation = function(procMs, observedMs, source)
     if not isCombat then return end
+    procMs = tonumber(procMs) or GetNowMs()
+    observedMs = tonumber(observedMs) or procMs
     local previousProcMs = lastRecordedProcMs
-    local activationMs = math.max(combatStartMs, nowMs - PROC_DELAY_MS)
-    local offer = FindActivationOffer(nowMs)
+    local activationMs = math.max(combatStartMs, procMs - PROC_DELAY_MS)
+    local offer = FindActivationOffer(observedMs)
     AddStat(offer, "used")
 
     if previousProcMs then
@@ -588,14 +646,16 @@ RecordActivation = function(nowMs)
         offer.resolved = true
         offer.potentialUsed = true
     end
-    if possibleActiveUntilMs <= nowMs then
-        possibleActiveFromMs = nowMs
+    if possibleActiveUntilMs <= procMs then
+        possibleActiveFromMs = procMs
     end
-    possibleActiveUntilMs = math.max(possibleActiveUntilMs, nowMs + ALKOSH_DURATION_MS)
-    possibleLastProcMs = nowMs
-    lastRecordedProcMs = nowMs
+    possibleActiveUntilMs = math.max(possibleActiveUntilMs, procMs + ALKOSH_DURATION_MS)
+    possibleLastProcMs = procMs
+    lastRecordedProcMs = procMs
+    cycleHadWindowOffer = false
     DebugLog(string.format(
-        "synergy used id=%s name=%s inWindow=%s",
+        "synergy used source=%s id=%s name=%s inWindow=%s",
+        tostring(source or "direct"),
         tostring(offer and offer.abilityId or 0),
         tostring(offer and offer.name or GetString(EZOM_ALKOSH_UNKNOWN_SYNERGY)),
         tostring(previousProcMs and IsInWindowForProc(previousProcMs, activationMs) or false)
@@ -646,12 +706,12 @@ local function GetDisplayUptime()
     return GetCurrentUptime()
 end
 
-local function GetDisplayPossibleUptime()
-    if isCombat or forceShow then return GetCurrentPossibleUptime() end
+local function GetDisplayEfficiency()
+    if isCombat or forceShow then return GetCurrentEfficiency() end
     if lastCombatSummary and lastCombatSummary.hasData then
-        return lastCombatSummary.possibleUptime or 0
+        return lastCombatSummary.efficiency or 0
     end
-    return GetCurrentPossibleUptime()
+    return GetCurrentEfficiency()
 end
 
 local function CopyCombatStats()
@@ -684,6 +744,7 @@ local function BuildSummary(nowMs)
         possibleUptime = GetCurrentPossibleUptime(),
         efficiency = GetCurrentEfficiency(),
         equipped = IsEquipped(),
+        relevant = combatRelevant,
         lastProcAgoMs = lastProcMs and math.max(0, nowMs - lastProcMs) or nil,
         lastTarget = activeTarget ~= "" and activeTarget or lastProcTarget,
         remainingMs = GetRemainingMs(nowMs),
@@ -727,9 +788,7 @@ local function BuildTooltipText()
         GetString(EZOM_SUMMARY_DURATION) .. ": " .. FormatSeconds(summary.durationMs),
         GetString(EZOM_ALKOSH_EQUIPPED) .. ": " .. (summary.equipped and GetString(EZOM_YES) or GetString(EZOM_NO)),
         GetString(EZOM_ALKOSH_COMBAT_UPTIME) .. ": " .. FormatPercent(summary.uptime),
-        GetString(EZOM_ALKOSH_POSSIBLE_UPTIME) .. ": " .. FormatPercent(summary.possibleUptime),
         GetString(EZOM_ALKOSH_EFFICIENCY) .. ": " .. FormatPercent(summary.efficiency),
-        GetString(EZOM_ALKOSH_POSSIBLE_TIME) .. ": " .. FormatSeconds(summary.possibleMs),
         GetString(EZOM_ALKOSH_REMAINING) .. ": " .. FormatSeconds(summary.remainingMs),
         GetString(EZOM_ALKOSH_TARGET) .. ": " .. ((summary.lastTarget and summary.lastTarget ~= "") and summary.lastTarget or GetString(EZOM_SUMMARY_NOT_APPLICABLE)),
     }
@@ -759,7 +818,12 @@ local function BuildTooltipText()
 end
 
 function Tracker.GetReportSection()
-    if GetMode() == MODE_OFF or not lastCombatSummary or not lastCombatSummary.hasData then return nil end
+    if GetMode() == MODE_OFF
+        or not lastCombatSummary
+        or not lastCombatSummary.hasData
+        or not lastCombatSummary.relevant then
+        return nil
+    end
     return BuildTooltipText()
 end
 
@@ -840,11 +904,11 @@ local function ApplyStyle()
     end
     if alertBackdrop then
         local alertOpacity = Clamp(tonumber(settings.alertBackgroundOpacity) or 72, 0, 100)
-        alertBackdrop:SetCenterColor(0.02, 0.02, 0.02, alertOpacity / 100)
+        alertBackdrop:SetCenterColor(0.12, 0.01, 0.005, alertOpacity / 100)
         if settings.alertShowBorder == false then
             alertBackdrop:SetEdgeColor(0, 0, 0, 0)
         else
-            alertBackdrop:SetEdgeColor(0.2, 1, 0.35, 1)
+            alertBackdrop:SetEdgeColor(1, 0.18, 0.08, 1)
         end
     end
 end
@@ -911,11 +975,11 @@ local function EnsureControl()
     uptimeLabel:SetDimensions(132, ROW_HEIGHT)
     uptimeLabel:SetFont("ZoFontGame")
 
-    possibleLabel = wm:CreateControl(CONTROL_NAME .. "Possible", control, CT_LABEL)
-    possibleLabel:SetAnchor(TOPRIGHT, synergyLabel, BOTTOMRIGHT, 0, 2)
-    possibleLabel:SetDimensions(142, ROW_HEIGHT)
-    possibleLabel:SetFont("ZoFontGame")
-    possibleLabel:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
+    efficiencyLabel = wm:CreateControl(CONTROL_NAME .. "Efficiency", control, CT_LABEL)
+    efficiencyLabel:SetAnchor(TOPRIGHT, synergyLabel, BOTTOMRIGHT, 0, 2)
+    efficiencyLabel:SetDimensions(142, ROW_HEIGHT)
+    efficiencyLabel:SetFont("ZoFontGame")
+    efficiencyLabel:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
 
     alertControl = wm:CreateTopLevelWindow(ALERT_CONTROL_NAME)
     alertControl:SetDimensions(ALERT_WIDTH, ALERT_HEIGHT)
@@ -937,7 +1001,7 @@ local function EnsureControl()
     alertTitleLabel:SetFont("ZoFontWinH2")
     alertTitleLabel:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
     alertTitleLabel:SetVerticalAlignment(TEXT_ALIGN_CENTER)
-    alertTitleLabel:SetColor(0.2, 1, 0.35, 1)
+    alertTitleLabel:SetColor(1, 0.24, 0.08, 1)
     alertTitleLabel:SetText(GetString(EZOM_ALKOSH_ALERT_ACTIVATE))
     alertTitleLabel:SetMouseEnabled(false)
 
@@ -948,7 +1012,7 @@ local function EnsureControl()
     alertDetailLabel:SetFont("ZoFontGameSmall")
     alertDetailLabel:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
     alertDetailLabel:SetVerticalAlignment(TEXT_ALIGN_CENTER)
-    alertDetailLabel:SetColor(0.9, 0.9, 0.9, 1)
+    alertDetailLabel:SetColor(1, 0.82, 0.3, 1)
     alertDetailLabel:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
     alertDetailLabel:SetMaxLineCount(1)
     alertDetailLabel:SetMouseEnabled(false)
@@ -986,11 +1050,11 @@ local function GetCycleVisualState(nowMs)
     end
 
     if GetMode() == MODE_WARN then
-        local elapsedMs = lastRecordedProcMs and math.min(ALKOSH_DURATION_MS, math.max(0, nowMs - lastRecordedProcMs)) or 0
+        local remainingMs = GetRemainingMs(nowMs)
         if IsActive(nowMs) then
-            return GetString(EZOM_ALKOSH_STATE_ACTIVE), 0.15, 1, 0.35, elapsedMs
+            return GetString(EZOM_ALKOSH_STATE_ACTIVE), 0.15, 1, 0.35, remainingMs
         end
-        return GetString(EZOM_ALKOSH_STATE_INACTIVE), 0.65, 0.65, 0.65, elapsedMs
+        return GetString(EZOM_ALKOSH_STATE_INACTIVE), 0.65, 0.65, 0.65, 0
     end
 
     if not lastRecordedProcMs then
@@ -998,15 +1062,15 @@ local function GetCycleVisualState(nowMs)
     end
 
     local elapsedMs = math.max(0, nowMs - lastRecordedProcMs)
-    if elapsedMs < GetWindowStartMs() then
-        return GetString(EZOM_ALKOSH_STATE_ACTIVE), 0.15, 1, 0.35, elapsedMs
+    local remainingMs = GetRemainingMs(nowMs)
+    if not IsActive(nowMs) then
+        return GetString(EZOM_ALKOSH_STATE_EXPIRED), 1, 0.25, 0.2, 0
+    elseif elapsedMs < GetWindowStartMs() then
+        return GetString(EZOM_ALKOSH_STATE_ACTIVE), 0.15, 1, 0.35, remainingMs
     elseif elapsedMs <= GetWindowEndMs() then
-        return GetString(EZOM_ALKOSH_STATE_WINDOW), 1, 0.86, 0.25, elapsedMs
-    elseif elapsedMs < ALKOSH_DURATION_MS then
-        return GetString(EZOM_ALKOSH_STATE_ACTIVE), 0.15, 1, 0.35, elapsedMs
+        return GetString(EZOM_ALKOSH_STATE_WINDOW), 1, 0.86, 0.25, remainingMs
     end
-
-    return GetString(EZOM_ALKOSH_STATE_EXPIRED), 1, 0.25, 0.2, ALKOSH_DURATION_MS
+    return GetString(EZOM_ALKOSH_STATE_ACTIVE), 0.15, 1, 0.35, remainingMs
 end
 
 function Tracker.GetCycleState()
@@ -1020,7 +1084,8 @@ function Tracker.GetCycleState()
         remainingMs = GetRemainingMs(nowMs),
         windowStartMs = GetWindowStartMs(),
         windowEndMs = GetWindowEndMs(),
-        inWindow = elapsedMs ~= nil
+        inWindow = IsActive(nowMs)
+            and elapsedMs ~= nil
             and elapsedMs >= GetWindowStartMs()
             and elapsedMs <= GetWindowEndMs(),
         hasSynergy = offer ~= nil,
@@ -1033,10 +1098,16 @@ local function ShouldShowActivationAlert(nowMs)
     if GetMode() ~= MODE_CYCLE or not isCombat or not HasMinimumPieces() or not HasUsableSynergy() then
         return false
     end
-    if not lastRecordedProcMs then return false end
+    if not lastRecordedProcMs then return true end
 
-    local elapsedMs = math.max(0, (nowMs or GetNowMs()) - lastRecordedProcMs)
-    return elapsedMs >= GetWindowStartMs() and elapsedMs <= GetWindowEndMs()
+    nowMs = nowMs or GetNowMs()
+    if not IsActive(nowMs) then return true end
+
+    local elapsedMs = math.max(0, nowMs - lastRecordedProcMs)
+    if elapsedMs >= GetWindowStartMs() and elapsedMs <= GetWindowEndMs() then
+        return true
+    end
+    return elapsedMs > GetWindowEndMs() and not cycleHadWindowOffer
 end
 
 local function UpdateVisuals()
@@ -1045,6 +1116,12 @@ local function UpdateVisuals()
     local equipped = IsEquipped()
     local stateText, r, g, b, barValue = GetCycleVisualState(nowMs)
     local offer = GetPrimaryOffer()
+    local elapsedMs = lastRecordedProcMs and math.max(0, nowMs - lastRecordedProcMs) or nil
+    local inWindow = IsActive(nowMs)
+        and elapsedMs ~= nil
+        and elapsedMs >= GetWindowStartMs()
+        and elapsedMs <= GetWindowEndMs()
+    local windowOfferCount = combatStats and combatStats.availableInWindow or 0
 
     titleLabel:SetColor(r, g, b, 1)
     equippedLabel:SetColor(equipped and 0.15 or 1, equipped and 1 or 0.25, equipped and 0.35 or 0.2, 1)
@@ -1053,24 +1130,43 @@ local function UpdateVisuals()
     stateLabel:SetColor(r, g, b, 1)
     synergyLabel:SetColor(offer and 0.65 or 0.7, offer and 0.9 or 0.7, offer and 1 or 0.7, 1)
     uptimeLabel:SetColor(0.15, 1, 0.35, 1)
-    possibleLabel:SetColor(0.55, 0.8, 1, 1)
+    efficiencyLabel:SetColor(0.55, 0.8, 1, 1)
 
     equippedLabel:SetText(GetString(EZOM_ALKOSH_EQUIPPED_SHORT) .. ": " .. (equipped and GetString(EZOM_YES) or GetString(EZOM_NO)))
     bar:SetValue(barValue)
     barLabel:SetText(lastRecordedProcMs and FormatSeconds(barValue) .. " / " .. FormatSeconds(ALKOSH_DURATION_MS) or GetString(EZOM_SUMMARY_NOT_APPLICABLE))
     stateLabel:SetText(stateText)
-    synergyLabel:SetText(offer and offer.name or GetString(EZOM_ALKOSH_NO_SYNERGY))
+    if inWindow then
+        synergyLabel:SetText(zo_strformat(
+            GetString(EZOM_ALKOSH_WINDOW_OFFER_SHORT),
+            offer and GetString(EZOM_YES) or GetString(EZOM_NO),
+            windowOfferCount
+        ))
+    else
+        synergyLabel:SetText(offer and offer.name or GetString(EZOM_ALKOSH_NO_SYNERGY))
+    end
     uptimeLabel:SetText(GetString(EZOM_ALKOSH_UPTIME_SHORT) .. ": " .. FormatPercent(GetDisplayUptime()))
-    possibleLabel:SetText(GetString(EZOM_ALKOSH_POSSIBLE_SHORT) .. ": " .. FormatPercent(GetDisplayPossibleUptime()))
+    efficiencyLabel:SetText(GetString(EZOM_ALKOSH_EFFICIENCY_SHORT) .. ": " .. FormatPercent(GetDisplayEfficiency()))
 
-    local elapsedMs = lastRecordedProcMs and math.max(0, nowMs - lastRecordedProcMs) or GetWindowStartMs()
-    local alertRemainingMs = math.max(0, GetWindowEndMs() - elapsedMs)
     alertTitleLabel:SetText(GetString(EZOM_ALKOSH_ALERT_ACTIVATE))
-    alertDetailLabel:SetText(zo_strformat(
-        GetString(EZOM_ALKOSH_ALERT_DETAIL),
-        offer and offer.name or GetString(EZOM_ALKOSH_TEST_SYNERGY),
-        FormatSeconds(alertRemainingMs)
-    ))
+    local offerName = offer and offer.name or GetString(EZOM_ALKOSH_TEST_SYNERGY)
+    if not lastRecordedProcMs then
+        alertDetailLabel:SetText(zo_strformat(GetString(EZOM_ALKOSH_ALERT_INITIAL_DETAIL), offerName))
+    elseif IsActive(nowMs) then
+        local alertElapsedMs = math.max(0, nowMs - lastRecordedProcMs)
+        if alertElapsedMs <= GetWindowEndMs() then
+            local alertRemainingMs = math.max(0, GetWindowEndMs() - alertElapsedMs)
+            alertDetailLabel:SetText(zo_strformat(
+                GetString(EZOM_ALKOSH_ALERT_DETAIL),
+                offerName,
+                FormatSeconds(alertRemainingMs)
+            ))
+        else
+            alertDetailLabel:SetText(zo_strformat(GetString(EZOM_ALKOSH_ALERT_LATE_DETAIL), offerName))
+        end
+    else
+        alertDetailLabel:SetText(zo_strformat(GetString(EZOM_ALKOSH_ALERT_LATE_DETAIL), offerName))
+    end
 end
 
 local function UpdateVisibility()
@@ -1105,6 +1201,9 @@ local function RefreshState()
     if nowMs - lastEquipmentScanMs >= EQUIPMENT_SCAN_INTERVAL_MS then
         ScanEquipment()
     end
+    if isCombat and IsEquipped() then
+        combatRelevant = true
+    end
     EnsureDebuffIds()
     ScanTargetEffects()
     ScanSynergyOffers(nowMs)
@@ -1138,12 +1237,22 @@ local function OnCombatState(_, inCombat)
     local nowMs = GetNowMs()
     local nowCombat = inCombat == true or (type(IsUnitInCombat) == "function" and IsUnitInCombat("player") == true)
 
+    if nowCombat == isCombat then
+        ScanEquipment()
+        RefreshState()
+        RefreshUpdateRegistration()
+        return
+    end
+
     if nowCombat then
         isCombat = true
+        combatRelevant = false
         combatStartMs = nowMs
         activeUntilMs = 0
         activeFromMs = 0
         activeTarget = ""
+        activeTimingEffects = {}
+        lastDirectEffectEndMs = 0
         lastProcMs = nil
         lastProcTarget = ""
         activeMs = 0
@@ -1157,6 +1266,7 @@ local function OnCombatState(_, inCombat)
         activeOffers = {}
         pendingClosedOffers = {}
         currentPrimaryKey = nil
+        cycleHadWindowOffer = false
         combatStats = CreateCombatStats()
         lastCombatSummary = nil
     else
@@ -1178,7 +1288,10 @@ local function OnCombatState(_, inCombat)
         activeOffers = {}
         pendingClosedOffers = {}
         currentPrimaryKey = nil
+        cycleHadWindowOffer = false
         combatStats = nil
+        activeTimingEffects = {}
+        lastDirectEffectEndMs = 0
     end
 
     ScanEquipment()
@@ -1186,7 +1299,7 @@ local function OnCombatState(_, inCombat)
     RefreshUpdateRegistration()
 end
 
-local function OnEffectChanged(_, changeType, _, _effectName, unitTag, _, endTime, _, _, _, effectType, _, _, unitName, unitId, abilityId, sourceType)
+local function OnEffectChanged(_, changeType, _, _effectName, unitTag, beginTime, endTime, _, _, _, effectType, _, _, unitName, unitId, abilityId, sourceType)
     EnsureDebuffIds()
     abilityId = tonumber(abilityId) or 0
     if not OBSERVED_DEBUFF_IDS[abilityId] then return end
@@ -1196,59 +1309,28 @@ local function OnEffectChanged(_, changeType, _, _effectName, unitTag, _, endTim
     local nowMs = GetNowMs()
     local cleanName = CleanName(unitName)
     if cleanName == "" then cleanName = ReadTargetName(unitTag) end
-    local endMs = (tonumber(endTime) or 0) * 1000
+    local key = BuildTimingEffectKey(unitTag, unitId, abilityId)
 
-    if changeType == EFFECT_RESULT_GAINED or changeType == EFFECT_RESULT_UPDATED or changeType == EFFECT_RESULT_FULL_REFRESH then
-        MarkProc(nowMs, cleanName, endMs, TIMING_DEBUFF_IDS[abilityId] == true)
-        DebugLog(string.format("effect ability=%s target=%s unitId=%s end=%s", tostring(abilityId), tostring(cleanName), tostring(unitId), tostring(endMs)))
+    if TIMING_DEBUFF_IDS[abilityId]
+        and (changeType == EFFECT_RESULT_GAINED or changeType == EFFECT_RESULT_UPDATED or changeType == EFFECT_RESULT_FULL_REFRESH) then
+        ObserveTimingEffect(
+            nowMs,
+            key,
+            cleanName,
+            (tonumber(beginTime) or 0) * 1000,
+            (tonumber(endTime) or 0) * 1000,
+            "EVENT_EFFECT_CHANGED"
+        )
+        DebugLog(string.format("effect ability=%s target=%s unitId=%s", tostring(abilityId), tostring(cleanName), tostring(unitId)))
     elseif changeType == EFFECT_RESULT_FADED then
-        if TIMING_DEBUFF_IDS[abilityId] and (cleanName == "" or cleanName == activeTarget) then
-            activeUntilMs = 0
-            activeFromMs = 0
+        if TIMING_DEBUFF_IDS[abilityId] then
+            activeTimingEffects[key] = nil
+            ReconcileTimingEffects(nowMs)
         end
         DebugLog(string.format("faded ability=%s target=%s", tostring(abilityId), tostring(cleanName)))
     end
 
     RefreshState()
-end
-
-local function OnCombatEvent(_, result, _, abilityName, _, _, sourceName, sourceType, targetName, targetType, _, _, _, _, sourceUnitId, targetUnitId, abilityId)
-    EnsureDebuffIds()
-    abilityId = tonumber(abilityId) or 0
-    if not PROC_IDS[abilityId] then return end
-    if sourceType and COMBAT_UNIT_TYPE_PLAYER and sourceType ~= COMBAT_UNIT_TYPE_PLAYER then return end
-
-    local nowMs = GetNowMs()
-    MarkProc(nowMs, targetName, nil, TIMING_DEBUFF_IDS[abilityId] == true)
-    DebugLog(string.format(
-        "combat result=%s ability=%s name=%s target=%s source=%s sourceUnitId=%s targetUnitId=%s targetType=%s",
-        tostring(result),
-        tostring(abilityId),
-        tostring(abilityName),
-        tostring(targetName),
-        tostring(sourceName),
-        tostring(sourceUnitId),
-        tostring(targetUnitId),
-        tostring(targetType)
-    ))
-    RefreshState()
-end
-
-local function RegisterCombatEventFilters()
-    if combatEventFiltersRegistered then return end
-    EnsureDebuffIds()
-    if not REGISTER_FILTER_ABILITY_ID then return end
-    for abilityId in pairs(PROC_IDS) do
-        if abilityId and abilityId > 0 then
-            local eventName = ADDON_NAME .. "_AlkoshCombatEvent" .. tostring(abilityId)
-            EVENT_MANAGER:RegisterForEvent(eventName, EVENT_COMBAT_EVENT, OnCombatEvent)
-            EVENT_MANAGER:AddFilterForEvent(eventName, EVENT_COMBAT_EVENT, REGISTER_FILTER_ABILITY_ID, abilityId)
-            if REGISTER_FILTER_SOURCE_COMBAT_UNIT_TYPE and COMBAT_UNIT_TYPE_PLAYER then
-                EVENT_MANAGER:AddFilterForEvent(eventName, EVENT_COMBAT_EVENT, REGISTER_FILTER_SOURCE_COMBAT_UNIT_TYPE, COMBAT_UNIT_TYPE_PLAYER)
-            end
-        end
-    end
-    combatEventFiltersRegistered = true
 end
 
 function Tracker.ApplySettings()
@@ -1273,6 +1355,14 @@ function Tracker.ShowTest()
     activeTarget = GetString(EZOM_OFF_BALANCE_TEST_TARGET)
     lastProcMs = nowMs - 7000
     lastRecordedProcMs = lastProcMs
+    activeTimingEffects = {
+        preview = {
+            startMs = lastProcMs,
+            endMs = activeUntilMs,
+            target = activeTarget,
+        },
+    }
+    lastDirectEffectEndMs = activeUntilMs
     activeMs = 6100
     possibleActiveMs = 6800
     requiredMs = 7000
@@ -1314,7 +1404,6 @@ function Tracker.Init()
     if EVENT_SYNERGY_ABILITY_CHANGED then
         EVENT_MANAGER:RegisterForEvent(ADDON_NAME .. "_AlkoshSynergy", EVENT_SYNERGY_ABILITY_CHANGED, RefreshState)
     end
-    RegisterCombatEventFilters()
     if EVENT_INVENTORY_SINGLE_SLOT_UPDATE then
         EVENT_MANAGER:RegisterForEvent(ADDON_NAME .. "_AlkoshInventory", EVENT_INVENTORY_SINGLE_SLOT_UPDATE, function()
             Tracker.ApplySettings()

@@ -38,6 +38,14 @@ local lastEquipmentScanMs = 0
 local currentSnapshot = { hasSet = false, numEquipped = 0, maxEquipped = 0 }
 local currentStacks = 0
 local currentBonus = 0
+local combatStartMs = 0
+local lastSampleMs = 0
+local requiredMs = 0
+local stackWeightedMs = 0
+local activeMs = 0
+local capMs = 0
+local combatRelevant = false
+local lastCombatSummary = nil
 
 local IsHudUnlocked
 
@@ -86,6 +94,81 @@ local function IsEnabled()
     if not settings or settings.enabled ~= true then return false end
     if settings.ddOnly ~= false and GetRole() ~= "dd" then return false end
     return true
+end
+
+local function FormatSeconds(ms)
+    if EZOMetter_CombatSummary and EZOMetter_CombatSummary.FormatSeconds then
+        return EZOMetter_CombatSummary.FormatSeconds(ms) .. "s"
+    end
+    return string.format("%.1fs", math.max(0, tonumber(ms) or 0) / 1000)
+end
+
+local function FormatPercent(value)
+    if EZOMetter_CombatSummary and EZOMetter_CombatSummary.FormatPercent then
+        return EZOMetter_CombatSummary.FormatPercent(value)
+    end
+    return string.format("%.1f%%", tonumber(value) or 0)
+end
+
+local function SampleCombat(nowMs)
+    if not isCombat then return end
+
+    nowMs = nowMs or GetNowMs()
+    if lastSampleMs <= 0 then
+        lastSampleMs = nowMs
+        return
+    end
+
+    local deltaMs = math.max(0, nowMs - lastSampleMs)
+    requiredMs = requiredMs + deltaMs
+    stackWeightedMs = stackWeightedMs + currentStacks * deltaMs
+    if currentStacks > 0 then
+        activeMs = activeMs + deltaMs
+    end
+    if currentStacks >= MAX_STACKS then
+        capMs = capMs + deltaMs
+    end
+    lastSampleMs = nowMs
+end
+
+local function BuildSummary(nowMs)
+    nowMs = nowMs or GetNowMs()
+    local averageStacks = requiredMs > 0 and stackWeightedMs / requiredMs or 0
+    return {
+        hasData = combatRelevant and requiredMs > 0,
+        relevant = combatRelevant,
+        durationMs = combatStartMs > 0 and math.max(0, nowMs - combatStartMs) or requiredMs,
+        averageStacks = averageStacks,
+        averageBonus = averageStacks * CRIT_PER_STACK,
+        activeUptime = requiredMs > 0 and activeMs / requiredMs * 100 or 0,
+        capUptime = requiredMs > 0 and capMs / requiredMs * 100 or 0,
+    }
+end
+
+local function BuildReportText()
+    local summary = lastCombatSummary
+    if not summary or not summary.hasData then
+        return GetString(EZOM_LAST_COMBAT_NO_DATA)
+    end
+
+    return table.concat({
+        GetString(EZOM_HIGHLAND_SUMMARY_TITLE),
+        GetString(EZOM_SUMMARY_DURATION) .. ": " .. FormatSeconds(summary.durationMs),
+        GetString(EZOM_HIGHLAND_SUMMARY_AVG_STACKS) .. ": " .. string.format("%.2f", summary.averageStacks),
+        GetString(EZOM_HIGHLAND_SUMMARY_AVG_BONUS) .. ": +" .. string.format("%.0f", summary.averageBonus),
+        GetString(EZOM_HIGHLAND_SUMMARY_ACTIVE_TIME) .. ": " .. FormatPercent(summary.activeUptime),
+        GetString(EZOM_HIGHLAND_SUMMARY_CAP_TIME) .. ": " .. FormatPercent(summary.capUptime),
+    }, "\n")
+end
+
+function Tracker.GetReportSection()
+    if not IsEnabled()
+        or not lastCombatSummary
+        or not lastCombatSummary.hasData
+        or not lastCombatSummary.relevant then
+        return nil
+    end
+    return BuildReportText()
 end
 
 local function CanShowHud()
@@ -248,7 +331,11 @@ local function RefreshState()
         ScanEquipment()
     end
 
-    -- Si no está equipado o no está en combate, resetear los stacks a 0 para asegurar.
+    if isCombat and IsHighlandActive() then
+        combatRelevant = true
+    end
+    SampleCombat(nowMs)
+
     if not IsHighlandActive() or not isCombat then
         currentStacks = 0
         currentBonus = 0
@@ -281,12 +368,39 @@ local function RefreshUpdateRegistration()
 end
 
 local function OnCombatState(_, inCombat)
-    isCombat = inCombat == true or (type(IsUnitInCombat) == "function" and IsUnitInCombat("player") == true)
+    local nowMs = GetNowMs()
+    local wasCombat = isCombat
+    local nowCombat = inCombat == true or (type(IsUnitInCombat) == "function" and IsUnitInCombat("player") == true)
     ScanEquipment()
-    if not isCombat then
+
+    if nowCombat and not wasCombat then
+        isCombat = true
+        combatStartMs = nowMs
+        lastSampleMs = nowMs
+        requiredMs = 0
+        stackWeightedMs = 0
+        activeMs = 0
+        capMs = 0
+        combatRelevant = IsHighlandActive()
+        lastCombatSummary = nil
         currentStacks = 0
         currentBonus = 0
+    elseif not nowCombat and wasCombat then
+        SampleCombat(nowMs)
+        lastCombatSummary = BuildSummary(nowMs)
+        isCombat = false
+        currentStacks = 0
+        currentBonus = 0
+        combatStartMs = 0
+        lastSampleMs = 0
+        requiredMs = 0
+        stackWeightedMs = 0
+        activeMs = 0
+        capMs = 0
+    else
+        isCombat = nowCombat
     end
+
     RefreshState()
     RefreshUpdateRegistration()
 end
@@ -304,6 +418,7 @@ local function OnEffectChanged(_, changeType, _effectSlot, effectName, unitTag, 
     end
 
     if matched then
+        SampleCombat(GetNowMs())
         if changeType == EFFECT_RESULT_FADED then
             currentStacks = 0
         else

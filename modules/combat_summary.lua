@@ -3,6 +3,21 @@ EZOMetter_CombatSummary = EZOMetter_CombatSummary or {}
 
 local Summary = EZOMetter_CombatSummary
 
+local function RaiseInformationTooltip()
+    if not InformationTooltip then return end
+
+    -- Combat-summary tooltips must remain readable above the addon's HUD panels.
+    if type(InformationTooltip.SetDrawTier) == "function" then
+        InformationTooltip:SetDrawTier(DT_HIGH)
+    end
+    if type(InformationTooltip.SetDrawLayer) == "function" and DL_OVERLAY ~= nil then
+        InformationTooltip:SetDrawLayer(DL_OVERLAY)
+    end
+    if type(InformationTooltip.SetDrawLevel) == "function" then
+        InformationTooltip:SetDrawLevel(1000)
+    end
+end
+
 function Summary.GetNowMs()
     if type(GetGameTimeMilliseconds) == "function" then
         return GetGameTimeMilliseconds()
@@ -25,6 +40,7 @@ function Summary.ShowTooltip(control, text)
     if not control or not InformationTooltip or type(InitializeTooltip) ~= "function" then return end
 
     InitializeTooltip(InformationTooltip, control, TOPLEFT, 0, 0, BOTTOMLEFT)
+    RaiseInformationTooltip()
     SetTooltipText(InformationTooltip, tostring(text or ""))
 end
 

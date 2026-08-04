@@ -117,7 +117,7 @@ function EZOM.RegisterWithEZOCore()
             id = "ezometter",
             name = EZOM.ADDON_NAME or ADDON_NAME,
             version = EZOM.ADDON_VERSION or "0.0.0",
-            addOnVersion = 10022,
+            addOnVersion = 10059,
             apiVersion = 1,
             capabilities = {
                 "combat.metrics",
@@ -180,12 +180,14 @@ function EZOM.RefreshVisualModules()
         "EZOMetter_OffBalance",
         "EZOMetter_Coral",
         "EZOMetter_Highland",
+        "EZOMetter_Azureblight",
         "EZOMetter_Alkosh",
         "EZOMetter_Zen",
         "EZOMetter_DDStats",
         "EZOMetter_ObservedDamage",
         "EZOMetter_ObservedHealing",
         "EZOMetter_AbilityTracker",
+        "EZOMetter_MagmaFist",
     }
     for _, moduleName in ipairs(moduleNames) do
         local visualModule = _G[moduleName]
@@ -282,6 +284,10 @@ function EZOM:Initialize()
         EZOMetter_Highland.Init()
     end
 
+    if EZOMetter_Azureblight and EZOMetter_Azureblight.Init then
+        EZOMetter_Azureblight.Init()
+    end
+
     if EZOMetter_Alkosh and EZOMetter_Alkosh.Init then
         EZOMetter_Alkosh.Init()
     end
@@ -304,6 +310,10 @@ function EZOM:Initialize()
 
     if EZOMetter_AbilityTracker and EZOMetter_AbilityTracker.Init then
         EZOMetter_AbilityTracker.Init()
+    end
+
+    if EZOMetter_MagmaFist and EZOMetter_MagmaFist.Init then
+        EZOMetter_MagmaFist.Init()
     end
 
     if EZOMetter_CombatReporter and EZOMetter_CombatReporter.Init then

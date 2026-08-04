@@ -6,9 +6,8 @@ local ADDON_NAME = "EZOMetter"
 local REPORT_DELAY_MS = 750
 
 local combatActive = false
-local reportToken = 0
+local reportSequence = 0
 local currentContext = nil
-local lastContext = nil
 
 local ARENA_ZONE_IDS = {
     [635] = true, -- Dragonstar Arena
@@ -19,15 +18,16 @@ local ARENA_ZONE_IDS = {
 }
 
 local providers = {
-    function() return EZOMetter_BuffAlert end,
-    function() return EZOMetter_OffBalance end,
-    function() return EZOMetter_Coral end,
-    function() return EZOMetter_Alkosh end,
-    function() return EZOMetter_Zen end,
-    function() return EZOMetter_DDStats end,
-    function() return EZOMetter_ObservedDamage end,
-    function() return EZOMetter_ObservedHealing end,
-    function() return EZOMetter_AbilityTracker end,
+    { settingsKey = "alerts", get = function() return EZOMetter_BuffAlert end },
+    { settingsKey = "offBalance", get = function() return EZOMetter_OffBalance end },
+    { settingsKey = "coral", get = function() return EZOMetter_Coral end },
+    { settingsKey = "highland", get = function() return EZOMetter_Highland end },
+    { settingsKey = "alkosh", get = function() return EZOMetter_Alkosh end },
+    { settingsKey = "zen", get = function() return EZOMetter_Zen end },
+    { settingsKey = "ddStats", get = function() return EZOMetter_DDStats end },
+    { settingsKey = "observedDamage", get = function() return EZOMetter_ObservedDamage end },
+    { settingsKey = "observedHealing", get = function() return EZOMetter_ObservedHealing end },
+    { settingsKey = "abilities", get = function() return EZOMetter_AbilityTracker end },
 }
 
 local function IsEnabled()
@@ -191,9 +191,13 @@ end
 
 local function CollectSections()
     local sections = {}
-    for _, getProvider in ipairs(providers) do
-        local provider = getProvider()
-        if provider and provider.GetReportSection then
+    for _, providerConfig in ipairs(providers) do
+        local settings = EZOMetter.sv and EZOMetter.sv[providerConfig.settingsKey]
+        local provider = providerConfig.get()
+        if settings
+            and settings.combatReportEnabled ~= false
+            and provider
+            and provider.GetReportSection then
             local section = provider.GetReportSection()
             if section and section ~= "" then
                 table.insert(sections, section)
@@ -203,12 +207,7 @@ local function CollectSections()
     return sections
 end
 
-local function EmitReport(token)
-    if token ~= reportToken or not IsEnabled() then return end
-
-    RefreshContextBoss(currentContext)
-    local context = lastContext or currentContext or BuildContext()
-    local sections = CollectSections()
+local function EmitReport(context, sections)
     local zoneText = context.zoneName or "-"
     if context.zoneId then
         zoneText = zoneText .. " (" .. tostring(context.zoneId) .. ")"
@@ -239,31 +238,41 @@ local function EmitReport(token)
     LogInfo(table.concat(lines, "\n"))
 end
 
+local function ScheduleReport(context, sections)
+    reportSequence = reportSequence + 1
+    local sequence = reportSequence
+
+    if type(zo_callLater) == "function" then
+        zo_callLater(function() EmitReport(context, sections) end, REPORT_DELAY_MS)
+    else
+        local updateName = ADDON_NAME .. "_CombatReportOnce_" .. tostring(sequence)
+        EVENT_MANAGER:RegisterForUpdate(updateName, REPORT_DELAY_MS, function()
+            EVENT_MANAGER:UnregisterForUpdate(updateName)
+            EmitReport(context, sections)
+        end)
+    end
+end
+
 local function OnCombatState(_, inCombat)
     local nowCombat = inCombat == true or (type(IsUnitInCombat) == "function" and IsUnitInCombat("player") == true)
     if nowCombat then
+        if combatActive then
+            RefreshContextBoss(currentContext)
+            return
+        end
         combatActive = true
         currentContext = BuildContext()
-        lastContext = nil
-        reportToken = reportToken + 1
         return
     end
 
     if not combatActive then return end
     RefreshContextBoss(currentContext)
-    lastContext = currentContext
+    local context = currentContext or BuildContext()
     combatActive = false
-    reportToken = reportToken + 1
-    local token = reportToken
+    currentContext = nil
 
-    if type(zo_callLater) == "function" then
-        zo_callLater(function() EmitReport(token) end, REPORT_DELAY_MS)
-    else
-        EVENT_MANAGER:RegisterForUpdate(ADDON_NAME .. "_CombatReportOnce", REPORT_DELAY_MS, function()
-            EVENT_MANAGER:UnregisterForUpdate(ADDON_NAME .. "_CombatReportOnce")
-            EmitReport(token)
-        end)
-    end
+    if not IsEnabled() then return end
+    ScheduleReport(context, CollectSections())
 end
 
 local function OnBossesChanged()

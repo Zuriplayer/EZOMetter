@@ -52,7 +52,6 @@ local forceShow = false
 local lastEquipmentScanMs = 0
 local currentSnapshot = { hasSet = false, numEquipped = 0, maxEquipped = 0 }
 local targets = {}
-local activeTargetKey = nil
 local combatStartMs = 0
 local lastSampleMs = 0
 local requiredMs = 0
@@ -62,6 +61,7 @@ local effectiveWeightedMs = 0
 local potentialCapMs = 0
 local effectiveCapMs = 0
 local lastCombatSummary = nil
+local combatRelevant = false
 local IsHudUnlocked
 local RefreshState
 local RefreshUpdateRegistration
@@ -110,6 +110,10 @@ local function CleanName(name)
         name = zo_strformat(SI_UNIT_NAME, name)
     end
     return name
+end
+
+local function IsOfflinePlaceholder(value)
+    return string.lower(tostring(value or "")) == "offline"
 end
 
 local function DebugLog(message)
@@ -191,9 +195,11 @@ local function GetTargetKey(unitTag, unitName, unitId)
     if unitId > 0 then return "id:" .. tostring(unitId) end
 
     local cleanName = CleanName(unitName)
-    if cleanName ~= "" then return "name:" .. cleanName end
+    if cleanName ~= "" and not IsOfflinePlaceholder(cleanName) then return "name:" .. cleanName end
 
-    if unitTag and unitTag ~= "" then return "tag:" .. tostring(unitTag) end
+    if unitTag and unitTag ~= "" and not IsOfflinePlaceholder(unitTag) then
+        return "tag:" .. tostring(unitTag)
+    end
     return nil
 end
 
@@ -220,8 +226,14 @@ local function GetTarget(key, unitTag, unitName, unitId)
     end
 
     local cleanName = CleanName(unitName)
-    if cleanName == "" and unitTag and unitTag ~= "" and type(GetUnitName) == "function" then
+    if IsOfflinePlaceholder(cleanName) then cleanName = "" end
+    if cleanName == ""
+        and unitTag
+        and unitTag ~= ""
+        and not IsOfflinePlaceholder(unitTag)
+        and type(GetUnitName) == "function" then
         cleanName = CleanName(GetUnitName(unitTag))
+        if IsOfflinePlaceholder(cleanName) then cleanName = "" end
     end
     if cleanName ~= "" then target.name = cleanName end
     target.unitId = tonumber(unitId) or target.unitId or 0
@@ -267,30 +279,36 @@ end
 
 local function GetActiveTarget()
     local nowMs = GetNowMs()
-    if activeTargetKey and targets[activeTargetKey] then return targets[activeTargetKey] end
-
+    local touchTarget
+    local dotTarget
     local best
     for _, target in pairs(targets) do
+        local dotCount = GetTargetDotCount(target, nowMs)
+        if IsTouchActive(target, nowMs)
+            and (not touchTarget or (target.lastSeenMs or 0) > (touchTarget.lastSeenMs or 0)) then
+            touchTarget = target
+        end
+        if dotCount > 0
+            and (not dotTarget or (target.lastSeenMs or 0) > (dotTarget.lastSeenMs or 0)) then
+            dotTarget = target
+        end
         if not best or (target.lastSeenMs or 0) > (best.lastSeenMs or 0) then
             best = target
         end
     end
 
-    if best then
-        activeTargetKey = best.key
-        GetTargetDotCount(best, nowMs)
-    end
-    return best
+    local selected = touchTarget or dotTarget or best
+    return selected
 end
 
 local function GetCurrentStacks(nowMs)
     local target = GetActiveTarget()
-    if target and libCombatRegistered and target.libCombatStacks ~= nil then
-        nowMs = nowMs or GetNowMs()
-        local updatedMs = tonumber(target.libCombatUpdatedMs) or 0
-        if IsTouchActive(target, nowMs) or target.libCombatStacks == 0 or nowMs - updatedMs <= ZEN_TOUCH_FALLBACK_DURATION_MS + 2000 then
-            return math.max(0, math.min(MAX_STACKS, tonumber(target.libCombatStacks) or 0)), target, "libcombat"
-        end
+    nowMs = nowMs or GetNowMs()
+    if target
+        and libCombatRegistered
+        and target.libCombatStacks ~= nil
+        and IsTouchActive(target, nowMs) then
+        return math.max(0, math.min(MAX_STACKS, tonumber(target.libCombatStacks) or 0)), target, "libcombat"
     end
 
     return GetTargetDotCount(target, nowMs), target, "fallback"
@@ -300,7 +318,7 @@ local function GetCurrentValues(nowMs)
     nowMs = nowMs or GetNowMs()
     local stacks, target, stackSource = GetCurrentStacks(nowMs)
     local potential = stacks
-    local effective = (HasFivePieces() and IsTouchActive(target, nowMs)) and potential or 0
+    local effective = IsTouchActive(target, nowMs) and potential or 0
     return potential, effective, target, stackSource
 end
 
@@ -319,6 +337,7 @@ local function BuildSummary(nowMs)
         requiredMs = requiredMs,
         pieces = GetPieces(),
         hasFivePieces = HasFivePieces(),
+        relevant = combatRelevant,
         potential = potential,
         effective = effective,
         potentialAverage = GetAverage(potentialWeightedMs),
@@ -378,7 +397,12 @@ local function BuildTooltipText()
 end
 
 function Tracker.GetReportSection()
-    if GetMode() == MODE_OFF or not lastCombatSummary or not lastCombatSummary.hasData then return nil end
+    if GetMode() == MODE_OFF
+        or not lastCombatSummary
+        or not lastCombatSummary.hasData
+        or not lastCombatSummary.relevant then
+        return nil
+    end
     return BuildTooltipText()
 end
 
@@ -513,8 +537,8 @@ function IsHudUnlocked()
     return EZOMetter_VisualContext and EZOMetter_VisualContext.IsHudUnlocked and EZOMetter_VisualContext.IsHudUnlocked()
 end
 
-local function GetStatusColor(potential, effective, hasFive, touchActive)
-    if hasFive and touchActive and effective >= MAX_STACKS then return 0.15, 1, 0.35 end
+local function GetStatusColor(potential, effective, touchActive)
+    if touchActive and effective >= MAX_STACKS then return 0.15, 1, 0.35 end
     if potential >= MAX_STACKS then return 0.15, 1, 0.35 end
     if potential >= 3 then return 1, 0.86, 0.25 end
     if potential >= 1 then return 1, 0.55, 0.15 end
@@ -528,13 +552,13 @@ local function UpdateVisuals()
     local hasFive = HasFivePieces()
     local touchActive = IsTouchActive(target, nowMs)
     local remainingMs = touchActive and GetTouchRemainingMs(target, nowMs) or 0
-    local r, g, b = GetStatusColor(potential, effective, hasFive, touchActive)
-    local value = hasFive and effective or potential
+    local r, g, b = GetStatusColor(potential, effective, touchActive)
+    local value = touchActive and effective or potential
 
     titleLabel:SetColor(r, g, b, 1)
     piecesLabel:SetColor(hasFive and 0.15 or 1, hasFive and 1 or 0.86, hasFive and 0.35 or 0.25, 1)
     potentialLabel:SetColor(r, g, b, 1)
-    effectiveLabel:SetColor(hasFive and r or 0.7, hasFive and g or 0.7, hasFive and b or 0.7, 1)
+    effectiveLabel:SetColor(touchActive and r or 0.7, touchActive and g or 0.7, touchActive and b or 0.7, 1)
     leftLabel:SetColor(touchActive and 0.15 or 0.7, touchActive and 1 or 0.7, touchActive and 0.35 or 0.7, 1)
     targetLabel:SetColor(0.78, 0.9, 1, 1)
     bar:SetColor(r, g, b, 0.9)
@@ -566,6 +590,9 @@ function RefreshState()
     local nowMs = GetNowMs()
     if nowMs - lastEquipmentScanMs >= EQUIPMENT_SCAN_INTERVAL_MS then
         ScanEquipment()
+    end
+    if isCombat and HasFivePieces() then
+        combatRelevant = true
     end
     SampleCombat(nowMs)
     UpdateVisuals()
@@ -623,7 +650,6 @@ local function OnLibCombatEffectsOut(_, _timeMs, unitId, abilityId, changeType, 
     local target = GetTargetByUnitId(unitId)
     if not target then return end
 
-    activeTargetKey = target.key
     target.libCombatStacks = math.max(0, math.min(MAX_STACKS, tonumber(stacks) or 0))
     target.libCombatUpdatedMs = nowMs
 
@@ -655,6 +681,7 @@ local function OnCombatState(_, inCombat)
 
     if nowCombat then
         isCombat = true
+        combatRelevant = false
         ResetCombatData(nowMs)
         lastCombatSummary = nil
     else
@@ -676,11 +703,15 @@ local function OnEffectChanged(_, changeType, effectSlot, _effectName, unitTag, 
     if IsIgnoredUnitTag(unitTag) then return end
 
     abilityId = tonumber(abilityId) or 0
+    if abilityId ~= ZEN_TOUCH_ID then
+        if effectType and effectType ~= BUFF_EFFECT_TYPE_DEBUFF then return end
+        if abilityType ~= ABILITY_TYPE_DAMAGE then return end
+    end
+
     local nowMs = GetNowMs()
     local key = GetTargetKey(unitTag, unitName, unitId)
     local target = GetTarget(key, unitTag, unitName, unitId)
     if not target then return end
-    activeTargetKey = key
 
     local isGain = changeType == EFFECT_RESULT_GAINED or changeType == EFFECT_RESULT_UPDATED or changeType == EFFECT_RESULT_FULL_REFRESH
     local isFade = changeType == EFFECT_RESULT_FADED
@@ -697,9 +728,6 @@ local function OnEffectChanged(_, changeType, effectSlot, _effectName, unitTag, 
         end
         return
     end
-
-    if effectType and effectType ~= BUFF_EFFECT_TYPE_DEBUFF then return end
-    if abilityType ~= ABILITY_TYPE_DAMAGE then return end
 
     local dotKey = GetEffectKey(effectSlot, abilityId)
     if isGain then

@@ -11,7 +11,7 @@ Para soporte, errores y sugerencias, únete a Discord: https://discord.gg/ekw8zU
 
 EZOMetter está en beta pública. El addon es utilizable, pero varias métricas de combate dependen de eventos del cliente de ESO, del estado visible del objetivo y de librerías opcionales. Trata los valores como información práctica de apoyo, no como sustituto completo de un analizador de logs de combate.
 
-Versión actual: **0.1.49**.
+Versión actual: **0.1.59**.
 
 ## Requisitos
 
@@ -41,7 +41,8 @@ Versión actual: **0.1.49**.
 - Opción global temporal para desbloquear el HUD y mover todos los paneles de EZOMetter en escenas normales de HUD/HUD UI. Con EZOCore, la misma superficie agregada participa en el control global o individual de disposición de la familia.
 - Ajuste común de tamaño de texto HUD que escala las ventanas visuales de EZOMetter y su texto a la vez para mantener una distribución proporcional.
 - Controles compartidos de apariencia HUD para opacidad del fondo, visibilidad del borde y color de borde/acento, aplicados de forma consistente a todos los paneles visuales.
-- Informe post-combate opcional con fecha, personaje, tipo de contenido, zona, contexto de boss/trash, dificultad cuando está disponible y secciones de los trackers activos.
+- Los tooltips del último combate se dibujan sobre los paneles HUD de EZOMetter, incluida la superficie de barras de habilidades personalizadas.
+- Informe post-combate opcional con fecha, personaje, tipo de contenido, zona, contexto de boss/trash, dificultad cuando está disponible y una unica entrada `Info` consolidada por combate. Cada tracker tiene su propio selector de inclusion, habilitado por defecto; se omiten las secciones desactivadas o no relevantes, y los trackers de sets requieren que su bono de 5 piezas haya estado disponible durante el encuentro.
 - Modo debug para salida técnica mediante `LibDebugLogger`/`DebugLogViewer` si están instalados.
 - El panel de configuración usa cabeceras informativas moradas para la ayuda general de cada sección, mientras cada campo conserva su propio tooltip para el comportamiento específico.
 
@@ -85,26 +86,37 @@ Versión actual: **0.1.49**.
 - Detecta piezas equipadas mediante coincidencia de nombres de set y considera activo el bonus con 5 piezas.
 - Lee los stacks de "Ojo del centinela" para calcular y mostrar en tiempo real el bono de probabilidad de crítico.
 - Tamaño, visibilidad solo DD y visibilidad solo en combate configurables.
+- Informa de stacks medios, bono crítico medio estimado, uptime activo y uptime a stacks máximos del último combate.
 - Registro debug opcional para verificar eventos de stacks e IDs de habilidad.
+
+### Tracker de Azureblight Reaper
+
+- Panel movible separado con el icono de Blight Seed, número bruto de cargas, segundos restantes y barra de duración.
+- Lee Blight Seed (`abilityId 126631`) directamente en el objetivo bajo la retícula y en `boss1` a `boss6`.
+- Conserva el debuff observado al cambiar de barra; la barra activa nunca reinicia ni oculta una lectura directa válida.
+- Muestra las cargas sin asumir un máximo `/20`, porque el umbral de explosión cambia cuando hay más usuarios de Azureblight.
+- No estima cargas ausentes, no atribuye cargas a DoTs concretos ni calcula el daño de Azureblight.
+- Tamaño y visibilidad solo en combate configurables, con previsualización de cinco segundos y diagnóstico opcional de eventos directos.
 
 ### Tracker de Rugido de Alkosh
 
 - Panel movible separado para Rugido de Alkosh, desactivado por defecto.
 - Detecta Rugido de Alkosh equipado mediante una lectura de itemLink canónico del set, con coincidencia por slots/nombre como respaldo.
 - Se oculta automáticamente por debajo de tres piezas equipadas de Rugido de Alkosh; la edición de HUD y la previsualización siguen disponibles.
-- Sigue Alkosh por abilityId, usando Line Breaker y el aura del Trial Dummy como fuentes principales de timing de 10 segundos.
-- Usa los IDs de penetración usados por CombatMetrics como señales observadas de proc/cálculo, no como reloj principal de uptime.
+- Sigue Alkosh por abilityId y usa los `beginTime`/`endTime` directos del efecto Line Breaker como reloj autoritativo de 10 segundos. Solo acepta el aura del Trial Dummy cuando ESO la atribuye al jugador.
+- Mantiene los IDs de penetración usados por CombatMetrics como señales observadas de cálculo; no pueden iniciar ni reiniciar el reloj del ciclo.
 - Usa `EVENT_SYNERGY_ABILITY_CHANGED` y la API de lista de sinergias actual para observar cada oferta utilizable con su nombre y abilityId, con fallback al aviso actual en versiones anteriores de la API.
-- Permite configurar el inicio y final de la ventana de activación. La barra se llena desde el último proc hasta que Line-Breaker expira a los 10 segundos y cambia entre Espera, Ventana, Activa ahora, Tarde y Expirado.
+- Permite configurar el inicio y final de la ventana de activación. La barra muestra el tiempo restante de Line Breaker observado directamente, baja hasta cero al expirar y cambia entre Espera, Ventana, Activa ahora, Tarde y Expirado.
 - Correlaciona cada proc con la oferta principal que acaba de desaparecer. Los procs sin coincidencia se muestran como sinergia desconocida sin inventar el tipo.
 - Cuenta por combate y tipo de sinergia las ofertas, activaciones dentro/fuera de la ventana y ofertas observadas en la ventana que desaparecen sin un proc correlacionado.
-- El contador en vivo `Ven recibidas/usadas` muestra cuántas ofertas utilizables coincidieron con la ventana y cuántas activaciones se completaron dentro; `Fuera` y `Perdidas` se mantienen separados.
+- Mientras la ventana de activación está abierta, el panel muestra si hay una sinergia utilizable en ese momento y el número acumulado de ofertas detectadas dentro de las ventanas configuradas.
 - Calcula el uptime de combate como tiempo activo de Line-Breaker dividido entre todo el tiempo de combate.
-- Simula el uptime posible usando las sinergias utilizables recibidas realmente, respetando la ventana configurada y un uso por oferta observada. La eficiencia de ofertas es el tiempo activo real dividido entre ese tiempo activo posible.
+- Muestra la eficiencia de ofertas como tiempo activo real dividido entre el uptime simulado internamente que permitían las sinergias utilizables recibidas realmente.
 - Mantiene las últimas métricas y contadores por tipo en el tooltip/informe hasta que otro combate los sustituye.
 - Ofrece modos Off, Monitor y Asistente de ciclo. El asistente es únicamente visual y nunca intercepta ni activa sinergias.
-- Registro debug opcional de eventos.
-- El tooltip/informe del último combate incluye uptime real/posible, eficiencia de ofertas, datos de objetivo/proc y el desglose por sinergia.
+- Muestra el aviso independiente de activación con estilo rojo/naranja de warning para la primera sinergia del combate, las ofertas dentro de la ventana configurada, la primera oferta tardía cuando no apareció ninguna sinergia durante esa ventana y cualquier oferta utilizable después de expirar Line Breaker.
+- Registro debug opcional del timing directo del efecto y de las ofertas de sinergia.
+- El tooltip/informe del último combate incluye uptime real, eficiencia de ofertas, datos de objetivo/proc y el desglose por sinergia.
 
 ### Tracker de Reparación de Z'en
 
@@ -112,7 +124,8 @@ Versión actual: **0.1.49**.
 - El modo Auto muestra el panel si llevas al menos 3 piezas; On lo fuerza visible para pruebas.
 - Usa `LibCombat` como fuente preferente de stacks de Z'en cuando está disponible, con un contador interno de DoTs propios como fallback.
 - Cuenta tus efectos propios de daño en el tiempo sobre el objetivo seguido como stacks potenciales, incluyendo visibilidad fallback con menos de 5 piezas.
-- Sigue Touch de Z'en por abilityId y solo muestra valor efectivo cuando el Touch de 5 piezas está activo.
+- Sigue Touch de Z'en directamente por abilityId y mantiene su valor efectivo durante la duración detectada de Touch aunque un cambio de arma reduzca el número de piezas de Z'en equipadas en ese momento.
+- Rechaza la pseudo-unidad `offline` de ESO como nombre de objetivo, prioriza objetivos con Touch/DoTs activos y vuelve al contador interno de DoTs en cuanto LibCombat informa que Touch ha terminado.
 - Muestra piezas, stacks potenciales, valor efectivo, tiempo restante de Touch, objetivo, fuente de stacks y una barra de stacks.
 - Registro debug opcional de eventos.
 - El tooltip/informe del último combate incluye uptime de Touch, medias potencial/efectiva, tiempo en cap y datos de objetivo.
@@ -141,11 +154,23 @@ Versión actual: **0.1.49**.
 
 ### Ayuda para Fatecarver
 
+- Sus ajustes están agrupados bajo una cabecera propia de Fatecarver dentro del submenú Habilidades.
 - Barra horizontal de canalización para Fatecarver, Exhausting Fatecarver y Pragmatic Fatecarver del Arcanista.
 - Detecta Fatecarver en cualquiera de las dos barras de acción.
 - Sigue el tiempo de canalización activo mediante eventos de combate y efectos del jugador.
 - Ventana de aviso para cancelar configurable en milisegundos.
 - El resumen del último combate informa lanzamientos, canalizaciones completadas, cancelaciones OK, cortes tempranos y tiempos de corte temprano.
+
+### Ayuda para Magma Fist
+
+- Sus ajustes están agrupados bajo una cabecera propia de Magma Fist dentro del submenú Habilidades.
+- Icono independiente y movible de Magma Fist que permanece visible en escenas normales del HUD siempre que la habilidad esté sloteada, también fuera de combate, con un badge de `0-3` acumulaciones de Heat Shock.
+- Lee directamente las acumulaciones y el final de Heat Shock (`abilityId 134340`) aplicado por el jugador mediante eventos de efecto.
+- Un único contador centrado muestra el tiempo restante de Heat Shock leído directamente, para que su caducidad sea visible mientras se acumulan o mantienen las 3 cargas.
+- Leyenda del borde: gris con menos de 3 cargas, ámbar siempre que haya que mantener o usar las 3 cargas, verde durante la ventana potenciada de 6 segundos y rojo durante los últimos 1,5 segundos de Heat Shock o de esa ventana. El borde exterior usa un trazo más grueso y visible.
+- Los datos públicos del cliente identifican actualmente Heat Shock y Magma Fist, pero no un abilityId separado para el buff personal de 6 segundos. Por ello, EZOMetter deriva la ventana de un evento directo gained/updated de Heat Shock, deduplicado, cuando el objetivo ya estaba observado en 3 acumulaciones, y la consume con el siguiente impacto observado de Magma Fist o renovación de Heat Shock.
+- Usa directamente la expiración de Heat Shock cuando está disponible. Si el evento no incluye un `endTime` válido, conserva esa observación directa de stacks durante la duración documentada de 7 segundos.
+- Incluye tamaño configurable, posición mediante el modo de disposición del HUD, previsualización simulada y diagnóstico opcional de eventos.
 
 ## Límites de seguridad
 
@@ -154,6 +179,7 @@ Versión actual: **0.1.49**.
 - No reemplaza elementos de la interfaz original del juego.
 - Los elementos HUD están diseñados para aparecer solo en escenas normales de HUD/HUD UI y no en menús como inventario, mapa, crafting, Champion Points o Tales of Tribute.
 - El daño/curación de grupo observados y el valor de Exploiter son estimaciones basadas en eventos disponibles para el cliente.
+- La ventana de 6 segundos de Magma Fist es un aviso derivado de eventos hasta confirmar en el cliente un ID de efecto propio; las acumulaciones y la expiración de Heat Shock sí son lecturas directas.
 - El Asistente de ciclo de Alkosh es solo informativo; EZOMetter observa la lista de sinergias disponibles, pero no bloquea, consume, activa ni cancela su input.
 - El addon incluye scripts de publicación en Discord para mantenimiento del proyecto, pero no se publica nada en Discord sin autorización explícita.
 
@@ -179,11 +205,13 @@ Comprobaciones recomendadas dentro del juego:
 - Aviso de Banner Bearer cuando hay una habilidad de Banner sloteada y cuando no hay ninguna.
 - Off Balance en dummy/boss, incluyendo tiempo activo real, cooldown/ciclo e informe de Exploiter.
 - Coral Riptide con menos de 5 piezas, con 5 piezas y con distintos niveles de stamina.
-- Rugido de Alkosh con 0-2 piezas (oculto), con 3-4 piezas (visible sin el bonus de 5 piezas), con 5 piezas, modos Monitor/Asistente, varias ofertas simultáneas, activaciones antes/dentro/después de la ventana, ofertas perdidas dentro de la ventana, debuff de Trial Dummy y objetivo normal cuando esté disponible.
+- Azureblight Reaper en la barra principal, DoTs de la barra secundaria haciendo ticks después de ambos cambios de barra, cambios de objetivo, refrescos del efecto y uno o varios usuarios del set.
+- Rugido de Alkosh con 0-2 piezas (oculto), con 3-4 piezas (visible sin el bonus de 5 piezas), con 5 piezas, modos Monitor/Asistente, actualizaciones repetidas de un mismo proc, activaciones antes/dentro/después de la ventana, una sinergia disponible tras expirar, ofertas perdidas dentro de la ventana, debuff de Trial Dummy y objetivo normal cuando esté disponible.
 - Reparación de Z'en con 3-4 piezas, con 5 piezas, varios DoTs, refrescos de Touch, cambios de objetivo, cambios de barra y con/sin `LibCombat`.
 - Valores propios/efectivos/máximos de Estadísticas DD y tooltip después del combate.
 - Daño/curación observados con `LibCombat` instalado y sin `LibCombat`.
 - Inicio, finalización, corte temprano y color de aviso de Fatecarver.
+- Lanzamientos 1-3 de Magma Fist con la cuenta atrás de Heat Shock, el siguiente golpe a máximo abriendo la cuenta central de 6 segundos, el lanzamiento posterior consumiéndola, ambas caducidades, cambios de objetivo y ambas barras de armas.
 
 ## Reportar problemas
 

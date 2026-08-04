@@ -789,6 +789,9 @@ local function BuildTooltipText()
 end
 
 function Tracker.GetReportSection()
+    local settings = GetSettings()
+    if not settings or settings.enabled ~= true then return nil end
+    if settings.ddOnly ~= false and GetRole() ~= "dd" then return nil end
     if not lastCombatSummary or not lastCombatSummary.hasData then return nil end
     return BuildTooltipText()
 end
