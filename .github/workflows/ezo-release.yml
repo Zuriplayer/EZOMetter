@@ -28,6 +28,8 @@ on:
 
 jobs:
   publish-release:
+    if: ${{ github.ref_name == 'main' }}
+    environment: discord-live
     runs-on: windows-latest
     steps:
       - name: Checkout
