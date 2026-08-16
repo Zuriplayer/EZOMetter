@@ -46,7 +46,7 @@ modules/menu.lua
 
 El rol puede quedar en modo manual o automatico. El modo automatico no lee un rol oficial del juego: infiere `dd`, `healer` o `tank` mediante una heuristica conservadora basada en armas equipadas y habilidades sloteadas. Si no hay senales claras, cae a `dd`. El detector debe actualizar el perfil al cambiar barras, armas o equipo, y despues refrescar los modulos visuales.
 
-La alerta de buffs usa el perfil activo y lee el catalogo de efectos por rol. `dd` mantiene sus buffs ofensivos propios y `healer` empieza con Major Sorcery/Major Prophecy como imprescindibles propios basicos. `tank` queda preparado en configuracion y catalogo, pero sin checklist activo hasta definir una lista conservadora.
+La alerta de buffs usa el perfil activo y lee el catalogo de efectos por rol. En U51, `dd` y `healer` usan Major Brutality/Major Savagery como efectos ofensivos propios unificados; `dd` conserva ademas el requisito condicional de Banner Bearer. Una captura directa del cliente U51 PTS confirma Major Brutality como `61665` y Major Savagery como `61667`. `tank` queda preparado en configuracion y catalogo, pero sin checklist activo hasta definir una lista conservadora.
 
 `Banner Bearer` se trata como requisito condicional: solo aparece como buff ausente cuando alguna variante de Banner esta sloteada en la barra primaria o secundaria.
 

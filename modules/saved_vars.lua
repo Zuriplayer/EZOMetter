@@ -16,6 +16,12 @@ function EZOMetter.savedVars.Init()
             hudShowBorder = true,
             hudBorderColor = { r = 0.69, g = 0.25, b = 1, a = 0.92 },
         },
+        debugCapture = {
+            u51BuffCapture = {
+                entries = {},
+                truncated = false,
+            },
+        },
         alerts = {
             missingBuffAlerts = true,
             combatReportEnabled = true,
@@ -185,6 +191,9 @@ function EZOMetter.savedVars.Init()
     EZOMetter.sv.observedDamage = EZOMetter.sv.observedDamage or defaults.observedDamage
     EZOMetter.sv.observedHealing = EZOMetter.sv.observedHealing or defaults.observedHealing
     EZOMetter.sv.abilities = EZOMetter.sv.abilities or defaults.abilities
+    EZOMetter.sv.debugCapture = EZOMetter.sv.debugCapture or defaults.debugCapture
+    EZOMetter.sv.debugCapture.u51BuffCapture = EZOMetter.sv.debugCapture.u51BuffCapture
+        or defaults.debugCapture.u51BuffCapture
     for _, settingsKey in ipairs({
         "alerts",
         "offBalance",

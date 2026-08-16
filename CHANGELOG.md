@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.61 - U51 Persistent Buff Capture
+
+- Persists the latest bounded U51 player-buff capture in EZOMetter SavedVariables when LibDebugLogger is unavailable.
+- Forces deferred dependent-control refreshes in both EZOCore-hosted and standalone LAM settings, including the U51 debug controls.
+
+## 0.1.60 - U51 Buff Hybridization
+
+- Removes the obsolete Major Sorcery and Major Prophecy catalog entries for U51.
+- Uses the unified Major Brutality and Major Savagery requirements for both DD and Healer profiles.
+- Confirms in the U51 PTS client that Major Brutality remains `61665` and Major Savagery remains `61667`.
+- Adds a player-buff snapshot and a 15-second player-effect capture to Debug Viewer for U51 ID verification.
+
 ## 0.1.59 - Magma Fist Stack Expiry Warning
 
 - Keeps the max-stack alert active during the internal six-second bonus limit instead of returning the icon to a neutral state.

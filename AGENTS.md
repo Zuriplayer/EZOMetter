@@ -10,6 +10,20 @@ Antes de crear o modificar ajustes LibAddonMenu, leer y aplicar:
 Las reglas específicas de este addon tienen prioridad. Si el archivo compartido
 no está accesible, no modificar LAM e indicarlo explícitamente.
 <!-- EZO-SHARED-LAM-END -->
+
+### Refresco dinámico obligatorio de LAM
+
+- Todo `setFunc` que cambie un valor leído por otro control mediante `disabled`,
+  `hidden`, `choices` o una condición dinámica debe llamar a
+  `EZOMetter_Menu.RequestSettingsRefresh(true)` después de guardar el valor y
+  aplicar el cambio runtime.
+- El refresco forzado debe seguir cubriendo ambos hosts: reconstrucción diferida
+  mediante `EZOCore:RefreshSettingsPanel(true)` y
+  `LibAddonMenu2.util.RequestRefreshIfNeeded(panel)` para LAM independiente.
+- Síntoma de incumplimiento: el primer valor cambia, pero los controles
+  dependientes conservan el estado gris/anterior hasta reabrir Ajustes o usar
+  `/reloadui`.
+
 Este proyecto es un addon para The Elder Scrolls Online (ESO).
 
 El entorno Lua de ESO es limitado y no equivale a Lua estandar. El objetivo inicial es mantener `EZOMetter` pequeno, estable y facil de revisar dentro de la familia EZO.

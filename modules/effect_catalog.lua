@@ -14,20 +14,10 @@ Effects.Definitions = {
         nameString = "EZOM_EFFECT_MAJOR_BRUTALITY",
         abilityIds = { 61665 },
     },
-    major_sorcery = {
-        key = "major_sorcery",
-        nameString = "EZOM_EFFECT_MAJOR_SORCERY",
-        abilityIds = { 61687 },
-    },
     major_savagery = {
         key = "major_savagery",
         nameString = "EZOM_EFFECT_MAJOR_SAVAGERY",
         abilityIds = { 61667 },
-    },
-    major_prophecy = {
-        key = "major_prophecy",
-        nameString = "EZOM_EFFECT_MAJOR_PROPHECY",
-        abilityIds = { 61689 },
     },
     banner_bearer = {
         key = "banner_bearer",
@@ -85,14 +75,12 @@ Effects.Definitions = {
 Effects.RequiredKeysByRole = {
     dd = {
         "major_brutality",
-        "major_sorcery",
         "major_savagery",
-        "major_prophecy",
         "banner_bearer",
     },
     healer = {
-        "major_sorcery",
-        "major_prophecy",
+        "major_brutality",
+        "major_savagery",
     },
     tank = {},
 }

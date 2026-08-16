@@ -11,7 +11,7 @@ Para soporte, errores y sugerencias, únete a Discord: https://discord.gg/ekw8zU
 
 EZOMetter está en beta pública. El addon es utilizable, pero varias métricas de combate dependen de eventos del cliente de ESO, del estado visible del objetivo y de librerías opcionales. Trata los valores como información práctica de apoyo, no como sustituto completo de un analizador de logs de combate.
 
-Versión actual: **0.1.59**.
+Versión actual: **0.1.61**.
 
 ## Requisitos
 
@@ -44,13 +44,16 @@ Versión actual: **0.1.59**.
 - Los tooltips del último combate se dibujan sobre los paneles HUD de EZOMetter, incluida la superficie de barras de habilidades personalizadas.
 - Informe post-combate opcional con fecha, personaje, tipo de contenido, zona, contexto de boss/trash, dificultad cuando está disponible y una unica entrada `Info` consolidada por combate. Cada tracker tiene su propio selector de inclusion, habilitado por defecto; se omiten las secciones desactivadas o no relevantes, y los trackers de sets requieren que su bono de 5 piezas haya estado disponible durante el encuentro.
 - Modo debug para salida técnica mediante `LibDebugLogger`/`DebugLogViewer` si están instalados.
+- Las herramientas debug pueden obtener un snapshot de los buffs actuales del jugador o capturar 15 segundos de datos `EVENT_EFFECT_CHANGED` sin transformar para verificar los effect IDs de U51 dentro del cliente PTS. La última captura limitada también se guarda en las SavedVariables de EZOMetter para conservarla si fallan Debug Viewer o LibDebugLogger.
 - El panel de configuración usa cabeceras informativas moradas para la ayuda general de cada sección, mientras cada campo conserva su propio tooltip para el comportamiento específico.
+- Los ajustes con controles dependientes se actualizan inmediatamente al cambiar su valor maestro, tanto en Ajustes > EZO como en el panel independiente de LibAddonMenu; no es necesario reabrir Ajustes ni usar `/reloadui`.
 
 ### Avisos de buffs por rol
 
 - Aviso movible para buffs propios requeridos que falten en el rol seleccionado.
-- DD comprueba actualmente Major Brutality, Major Sorcery, Major Savagery, Major Prophecy y Banner Bearer cuando hay una habilidad de Banner sloteada.
-- Healer comprueba actualmente Major Sorcery y Major Prophecy.
+- DD comprueba actualmente Major Brutality, Major Savagery y Banner Bearer cuando hay una habilidad de Banner sloteada.
+- Healer comprueba actualmente Major Brutality y Major Savagery.
+- U51 elimina Major Sorcery y Major Prophecy en favor de los efectos unificados. La captura PTS confirma Major Brutality como `61665` y Major Savagery como `61667`.
 - Tank no tiene actualmente una lista de buffs propios requeridos.
 - El aviso registra uptime del último combate para las comprobaciones requeridas cuando el informe de combate está activado.
 

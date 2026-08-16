@@ -11,7 +11,7 @@ For support, bug reports, and suggestions, join Discord: https://discord.gg/ekw8
 
 EZOMetter is in public beta. The addon is usable, but several combat metrics depend on ESO client events, visible target state, and optional libraries. Treat the numbers as practical helper information, not as a full replacement for dedicated combat log analysis.
 
-Current version: **0.1.59**.
+Current version: **0.1.61**.
 
 ## Requirements
 
@@ -44,13 +44,16 @@ Current version: **0.1.59**.
 - Last-combat tooltips render above EZOMetter HUD panels, including the Custom Action Bars surface.
 - Optional post-combat report with date, character, content type, zone, boss/trash context, difficulty when available, and one consolidated `Info` entry per combat. Every tracker has its own inclusion switch, enabled by default; disabled or irrelevant sections are omitted, and set trackers require their 5-piece bonus to have been available during the fight.
 - Debug mode for technical output through `LibDebugLogger`/`DebugLogViewer` when installed.
+- Debug tools can snapshot current player buffs or capture 15 seconds of raw player `EVENT_EFFECT_CHANGED` data to verify U51 effect IDs in the PTS client. The latest bounded capture is also stored in EZOMetter SavedVariables so it remains available when Debug Viewer or LibDebugLogger fails.
 - The settings panel uses purple information headers for section-level help, while each field keeps its own tooltip for specific behavior.
+- Settings with dependent controls refresh immediately after their master value changes, both under Settings > EZO and in the standalone LibAddonMenu panel; reopening Settings or `/reloadui` is not required.
 
 ### Role Buff Alerts
 
 - Movable alert for missing required self buffs for the selected role.
-- DD currently checks Major Brutality, Major Sorcery, Major Savagery, Major Prophecy, and Banner Bearer when a Banner skill is slotted.
-- Healer currently checks Major Sorcery and Major Prophecy.
+- DD currently checks Major Brutality, Major Savagery, and Banner Bearer when a Banner skill is slotted.
+- Healer currently checks Major Brutality and Major Savagery.
+- U51 removes Major Sorcery and Major Prophecy in favor of the unified effects. PTS capture confirms Major Brutality as `61665` and Major Savagery as `61667`.
 - Tank currently has no required self-buff list.
 - The alert records last-combat uptime for required checks when combat reporting is enabled.
 

@@ -117,7 +117,7 @@ function EZOM.RegisterWithEZOCore()
             id = "ezometter",
             name = EZOM.ADDON_NAME or ADDON_NAME,
             version = EZOM.ADDON_VERSION or "0.0.0",
-            addOnVersion = 10059,
+            addOnVersion = 10061,
             apiVersion = 1,
             capabilities = {
                 "combat.metrics",
