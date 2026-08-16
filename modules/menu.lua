@@ -29,16 +29,32 @@ local function RefreshLanguage()
     end
 end
 
-local function RefreshSettingsPanel()
-    if EZOCore and type(EZOCore.RefreshSettingsPanel) == "function" then
-        EZOCore:RefreshSettingsPanel()
-    elseif LibAddonMenu2
-        and LibAddonMenu2.util
-        and type(LibAddonMenu2.util.RequestRefreshIfNeeded) == "function"
+local function RequestSettingsRefresh(forceRebuild)
+    local function RefreshHostedPanel()
+        if EZOMetter.ezoSettingsRegistered
+            and EZOCore
+            and type(EZOCore.RefreshSettingsPanel) == "function" then
+            pcall(function()
+                EZOCore:RefreshSettingsPanel(forceRebuild == true)
+            end)
+        end
+    end
+
+    if forceRebuild == true and type(zo_callLater) == "function" then
+        zo_callLater(RefreshHostedPanel, 1)
+    else
+        RefreshHostedPanel()
+    end
+
+    local util = LibAddonMenu2 and LibAddonMenu2.util
+    if util
+        and type(util.RequestRefreshIfNeeded) == "function"
         and EZOMetter._lamPanel then
-        LibAddonMenu2.util.RequestRefreshIfNeeded(EZOMetter._lamPanel)
+        pcall(util.RequestRefreshIfNeeded, EZOMetter._lamPanel)
     end
 end
+
+EZOMetter_Menu.RequestSettingsRefresh = RequestSettingsRefresh
 
 local function CreateCombatReportOption(settingsKey)
     return {
@@ -91,6 +107,7 @@ local function SetOffBalanceDisplayMode(value)
     if EZOMetter_OffBalance and EZOMetter_OffBalance.ApplySettings then
         EZOMetter_OffBalance.ApplySettings()
     end
+    RequestSettingsRefresh(true)
 end
 
 local function IsOffBalanceIconEnabled()
@@ -180,6 +197,7 @@ function EZOMetter_Menu.Init()
                         else
                             RefreshVisualModules()
                         end
+                        RequestSettingsRefresh(true)
                     end,
                     default = "manual",
                 },
@@ -230,7 +248,7 @@ function EZOMetter_Menu.Init()
                     end,
                     setFunc = function(value)
                         EZOMetter.sv.general.combatReportEnabled = value == true
-                        RefreshSettingsPanel()
+                        RequestSettingsRefresh(true)
                     end,
                     default = false,
                 },
@@ -283,6 +301,7 @@ function EZOMetter_Menu.Init()
                     setFunc = function(value)
                         EZOMetter.sv.general.hudShowBorder = value == true
                         RefreshVisualModules()
+                        RequestSettingsRefresh(true)
                     end,
                     default = true,
                 },
@@ -756,7 +775,7 @@ function EZOMetter_Menu.Init()
                         if EZOMetter_Alkosh and EZOMetter_Alkosh.ApplySettings then
                             EZOMetter_Alkosh.ApplySettings()
                         end
-                        RefreshSettingsPanel()
+                        RequestSettingsRefresh(true)
                     end,
                     default = "off",
                 },
@@ -1213,6 +1232,7 @@ function EZOMetter_Menu.Init()
                         if EZOMetter_ObservedDamage and EZOMetter_ObservedDamage.ApplySettings then
                             EZOMetter_ObservedDamage.ApplySettings()
                         end
+                        RequestSettingsRefresh(true)
                     end,
                     default = "detailed",
                 },
@@ -1312,6 +1332,7 @@ function EZOMetter_Menu.Init()
                         if EZOMetter_ObservedHealing and EZOMetter_ObservedHealing.ApplySettings then
                             EZOMetter_ObservedHealing.ApplySettings()
                         end
+                        RequestSettingsRefresh(true)
                     end,
                     default = "detailed",
                 },
@@ -1399,7 +1420,7 @@ function EZOMetter_Menu.Init()
                         if EZOMetter_MagmaFist and EZOMetter_MagmaFist.ApplySettings then
                             EZOMetter_MagmaFist.ApplySettings()
                         end
-                        RefreshSettingsPanel()
+                        RequestSettingsRefresh(true)
                     end,
                     default = true,
                 },

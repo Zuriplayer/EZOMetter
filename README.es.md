@@ -11,7 +11,7 @@ Para soporte, errores y sugerencias, únete a Discord: https://discord.gg/ekw8zU
 
 EZOMetter está en beta pública. El addon es utilizable, pero varias métricas de combate dependen de eventos del cliente de ESO, del estado visible del objetivo y de librerías opcionales. Trata los valores como información práctica de apoyo, no como sustituto completo de un analizador de logs de combate.
 
-Versión actual: **0.1.59**.
+Versión actual: **0.1.60**.
 
 ## Requisitos
 
@@ -45,6 +45,7 @@ Versión actual: **0.1.59**.
 - Informe post-combate opcional con fecha, personaje, tipo de contenido, zona, contexto de boss/trash, dificultad cuando está disponible y una unica entrada `Info` consolidada por combate. Cada tracker tiene su propio selector de inclusion, habilitado por defecto; se omiten las secciones desactivadas o no relevantes, y los trackers de sets requieren que su bono de 5 piezas haya estado disponible durante el encuentro.
 - Modo debug para salida técnica mediante `LibDebugLogger`/`DebugLogViewer` si están instalados.
 - El panel de configuración usa cabeceras informativas moradas para la ayuda general de cada sección, mientras cada campo conserva su propio tooltip para el comportamiento específico.
+- Los ajustes con controles dependientes se actualizan inmediatamente al cambiar su valor maestro, tanto en Ajustes > EZO como en el panel independiente de LibAddonMenu; no es necesario reabrir Ajustes ni usar `/reloadui`.
 
 ### Avisos de buffs por rol
 

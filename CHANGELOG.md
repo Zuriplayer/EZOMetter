@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.60 - Reliable Dependent LAM Refresh
+
+- Forces a deferred EZOCore settings rebuild whenever a master value changes a dependent control's enabled state.
+- Retains LibAddonMenu's direct refresh path for the standalone settings panel.
+- Covers role mode, combat-report sections, HUD border color, Off Balance icon options, Alkosh modes, compact damage/healing size, and Magma Fist options.
+
 ## 0.1.59 - Magma Fist Stack Expiry Warning
 
 - Keeps the max-stack alert active during the internal six-second bonus limit instead of returning the icon to a neutral state.
