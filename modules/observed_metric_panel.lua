@@ -10,6 +10,9 @@ local LABEL_WIDTH = 98
 local VALUE_WIDTH = 122
 local ROW_HEIGHT = 30
 local WINDOW_MS = 3000
+local COMPACT_ICON_SIZE = 18
+local COMPACT_ICON_GAP = 6
+local COMPACT_HEADER_HEIGHT = COMPACT_ICON_SIZE + COMPACT_ICON_GAP
 
 local ROW_DEFS = {
     { key = "instant", labelKey = "rowInstantString" },
@@ -137,6 +140,7 @@ function Factory.Create(config)
     local defaultY = Number(config.defaultY)
     local control
     local backdrop
+    local compactIcon
     local rows = {}
     local isCombat = false
     local currentData
@@ -148,6 +152,8 @@ function Factory.Create(config)
     local combatDurationMs = 0
     local lastCombatEndMs = 0
     local combatBaseline
+    local layoutKey
+    local lastHidden
 
     local function GetSettings()
         if not EZOMetter.sv or not settingsKey then return nil end
@@ -374,6 +380,11 @@ function Factory.Create(config)
         local settings = GetSettings() or {}
         local isCompact = settings.layout == "compact"
         local compactValueSize = tonumber(settings.compactValueSize) or 100
+        layoutKey = nil
+
+        if control then
+            control:SetHeight(isCompact and (HEIGHT + COMPACT_HEADER_HEIGHT) or HEIGHT)
+        end
 
         if EZOMetter_WindowStyle then
             EZOMetter_WindowStyle.ApplyControlScale(control, isCompact and compactValueSize or nil)
@@ -513,6 +524,12 @@ function Factory.Create(config)
         backdrop:SetEdgeTexture("", 1, 1, 1)
         ApplyStyle()
 
+        compactIcon = wm:CreateControl(controlName .. "CompactIcon", control, CT_TEXTURE)
+        compactIcon:SetDimensions(COMPACT_ICON_SIZE, COMPACT_ICON_SIZE)
+        compactIcon:SetAnchor(TOP, control, TOP, 0, PADDING)
+        compactIcon:SetTexture(config.compactIcon or "EsoUI/Art/Icons/icon_missing.dds")
+        compactIcon:SetHidden(true)
+
         for index, def in ipairs(ROW_DEFS) do
             CreateRow(control, def.key, 7 + ((index - 1) * ROW_HEIGHT))
             rows[def.key].name:SetText(GetStringByName(config[def.labelKey]))
@@ -526,38 +543,62 @@ function Factory.Create(config)
         return control
     end
 
+    local function SetValue(row, value)
+        if row.lastValue ~= value then
+            row.value:SetText(value)
+            row.lastValue = value
+        end
+    end
+
     local function UpdateVisuals()
         EnsureControl()
 
         local settings = GetSettings() or {}
         local isCompact = settings.layout == "compact"
+        local compactTextColor = config.compactTextColor or { 0.9, 0.9, 0.9, 1 }
+        local nextLayoutKey = isCompact and "compact" or "detailed"
 
-        for _, def in ipairs(ROW_DEFS) do
-            local row = rows[def.key]
-            row.name:SetText(GetStringByName(config[def.labelKey]))
-            row.value:SetColor(0.9, 0.9, 0.9, 1)
+        if layoutKey ~= nextLayoutKey then
+            layoutKey = nextLayoutKey
+            if compactIcon then
+                compactIcon:SetHidden(not isCompact)
+                compactIcon:SetColor(compactTextColor[1], compactTextColor[2], compactTextColor[3], 0.7)
+                if isCompact then
+                    compactIcon:ClearAnchors()
+                    compactIcon:SetAnchor(TOP, control, TOP, 0, PADDING)
+                end
+            end
 
-            if isCompact then
-                row.name:SetHidden(true)
-                row.value:ClearAnchors()
-                row.value:SetAnchor(TOPLEFT, control, TOPLEFT, PADDING, row.top)
-                row.value:SetAnchor(TOPRIGHT, control, TOPRIGHT, -PADDING, row.top)
-                row.value:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
-            else
-                row.name:SetHidden(false)
-                row.value:ClearAnchors()
-                row.value:SetAnchor(TOPLEFT, row.name, TOPRIGHT, 6, 0)
-                row.value:SetDimensions(VALUE_WIDTH, ROW_HEIGHT)
-                row.value:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
+            for _, def in ipairs(ROW_DEFS) do
+                local row = rows[def.key]
+                row.name:SetText(GetStringByName(config[def.labelKey]))
+
+                if isCompact then
+                    row.name:SetHidden(true)
+                    row.value:ClearAnchors()
+                    row.value:SetAnchor(TOPLEFT, control, TOPLEFT, PADDING, row.top + COMPACT_HEADER_HEIGHT)
+                    row.value:SetAnchor(TOPRIGHT, control, TOPRIGHT, -PADDING, row.top + COMPACT_HEADER_HEIGHT)
+                    row.value:SetHorizontalAlignment(TEXT_ALIGN_CENTER)
+                    row.value:SetColor(compactTextColor[1], compactTextColor[2], compactTextColor[3], compactTextColor[4] or 1)
+                else
+                    row.name:SetHidden(false)
+                    row.value:ClearAnchors()
+                    row.value:SetAnchor(TOPLEFT, row.name, TOPRIGHT, 6, 0)
+                    row.value:SetDimensions(VALUE_WIDTH, ROW_HEIGHT)
+                    row.value:SetHorizontalAlignment(TEXT_ALIGN_RIGHT)
+                    row.value:SetColor(0.9, 0.9, 0.9, 1)
+                end
+            end
+            if not isCompact then
+                rows.instant.value:SetColor(0.35, 1, 0.45, 1)
+                rows.group.value:SetColor(0.55, 0.8, 1, 1)
             end
         end
-        rows.instant.value:SetColor(0.35, 1, 0.45, 1)
-        rows.group.value:SetColor(0.55, 0.8, 1, 1)
 
         if not HasLibCombat() then
-            rows.instant.value:SetText(GetStringByName(config.libShortString))
-            rows.average.value:SetText("--")
-            rows.group.value:SetText("--")
+            SetValue(rows.instant, GetStringByName(config.libShortString))
+            SetValue(rows.average, "--")
+            SetValue(rows.group, "--")
             return
         end
 
@@ -566,25 +607,25 @@ function Factory.Create(config)
             data = BuildPreviewData()
         end
         if not data then
-            rows.instant.value:SetText("--")
-            rows.average.value:SetText("--")
-            rows.group.value:SetText("--")
+            SetValue(rows.instant, "--")
+            SetValue(rows.average, "--")
+            SetValue(rows.group, "--")
             return
         end
 
         local instantRate = data.previewInstantRate or (isCombat and GetWindowRate("total") or Number(data.rate))
-        rows.instant.value:SetText(FormatRate(instantRate))
-        rows.average.value:SetText(FormatRate(data.rate))
+        SetValue(rows.instant, FormatRate(instantRate))
+        SetValue(rows.average, FormatRate(data.rate))
 
         if IsGroupObserved(data) then
             local groupShare = Share(data.rate, data.groupRate)
             if isCompact then
-                rows.group.value:SetText(FormatPercent(groupShare or 0))
+                SetValue(rows.group, FormatPercent(groupShare or 0))
             else
-                rows.group.value:SetText(FormatPercent(groupShare or 0) .. " | " .. FormatRate(data.groupRate))
+                SetValue(rows.group, FormatPercent(groupShare or 0) .. " | " .. FormatRate(data.groupRate))
             end
         else
-            rows.group.value:SetText("--")
+            SetValue(rows.group, "--")
         end
     end
 
@@ -603,7 +644,10 @@ function Factory.Create(config)
             hidden = true
         end
 
-        control:SetHidden(hidden)
+        if lastHidden ~= hidden then
+            control:SetHidden(hidden)
+            lastHidden = hidden
+        end
     end
 
     local function Refresh()

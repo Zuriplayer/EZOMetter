@@ -46,7 +46,7 @@ modules/menu.lua
 
 El rol puede quedar en modo manual o automatico. El modo automatico no lee un rol oficial del juego: infiere `dd`, `healer` o `tank` mediante una heuristica conservadora basada en armas equipadas y habilidades sloteadas. Si no hay senales claras, cae a `dd`. El detector debe actualizar el perfil al cambiar barras, armas o equipo, y despues refrescar los modulos visuales.
 
-La alerta de buffs usa el perfil activo y lee el catalogo de efectos por rol. `dd` mantiene sus buffs ofensivos propios y `healer` empieza con Major Sorcery/Major Prophecy como imprescindibles propios basicos. `tank` queda preparado en configuracion y catalogo, pero sin checklist activo hasta definir una lista conservadora.
+La alerta de buffs usa el perfil activo y lee el catalogo de efectos por rol. Tras la unificacion de U51, `dd` y `healer` comprueban Major Brutality (`61665`) y Major Savagery (`61667`) como efectos ofensivos propios; `dd` conserva ademas Banner Bearer como requisito condicional y `healer` requiere Aura of Pride solo con Spaulder equipado. `tank` queda preparado en configuracion y catalogo, pero sin checklist activo hasta definir una lista conservadora.
 
 `Banner Bearer` se trata como requisito condicional: solo aparece como buff ausente cuando alguna variante de Banner esta sloteada en la barra primaria o secundaria.
 
@@ -77,7 +77,7 @@ Los controles visuales propios deben comportarse como HUDs de ESO, no como venta
 - Refrescar visibilidad desde el callback central `SceneStateChanged`.
 - No usar listas negativas de escenas.
 
-El modo mover es global y temporal: `EZOMetter.runtime.hudLayoutEditMode` muestra todos los paneles visuales en HUD/HUD_UI y permite arrastrarlos individualmente. El mismo modo se registra como una superficie agregada en `family.layout` cuando EZOCore está disponible. No hay botones de test, reset ni desbloqueo por panel en LAM.
+El modo mover es global y temporal: `EZOMetter.runtime.hudLayoutEditMode` muestra todos los paneles visuales en HUD/HUD_UI y permite arrastrarlos individualmente con el botón derecho. El mismo modo se registra como una superficie agregada en `family.layout` cuando EZOCore está disponible. No hay botones de test, reset ni desbloqueo por panel en LAM.
 
 ## Pendiente de medicion avanzada
 

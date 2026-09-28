@@ -117,7 +117,7 @@ function EZOM.RegisterWithEZOCore()
             id = "ezometter",
             name = EZOM.ADDON_NAME or ADDON_NAME,
             version = EZOM.ADDON_VERSION or "0.0.0",
-            addOnVersion = 10060,
+            addOnVersion = 10074,
             apiVersion = 1,
             capabilities = {
                 "combat.metrics",
@@ -143,6 +143,12 @@ function EZOM.SetDebugModeEnabled(enabled)
         return false
     end
     EZOM.sv.general.debugMode = enabled == true
+    if EZOMetter_Zen and type(EZOMetter_Zen.ApplySettings) == "function" then
+        EZOMetter_Zen.ApplySettings()
+    end
+    if EZOMetter_Menu and type(EZOMetter_Menu.RequestSettingsRefresh) == "function" then
+        EZOMetter_Menu.RequestSettingsRefresh(true)
+    end
     return EZOM.sv.general.debugMode == (enabled == true)
 end
 

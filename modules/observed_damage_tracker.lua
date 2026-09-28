@@ -9,6 +9,8 @@ EZOMetter_ObservedDamage = EZOMetter_ObservedMetricPanel.Create({
     previewRate = 18500,
     previewAverage = 32400,
     previewGroupShare = 16.5,
+    compactIcon = "esoui/art/lfg/gamepad/lfg_roleicon_dps.dds",
+    compactTextColor = { 0.94, 0.72, 0.42, 1 },
 
     rateKeys = "DPSOut",
     groupRateKeys = "groupDPSOut",

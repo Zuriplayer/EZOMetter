@@ -35,7 +35,7 @@ function EZOMetter.savedVars.Init()
             backgroundOpacity = 86,
             showBorder = true,
             pulseOnActive = true,
-            iconSize = 18,
+            iconSize = 50,
             iconOnlyCombat = true,
             iconOnlyBosses = false,
             iconOnlyExploiter = false,
@@ -284,6 +284,21 @@ function EZOMetter.savedVars.Init()
     end
     if EZOMetter.sv.offBalance.pulseOnActive == nil then
         EZOMetter.sv.offBalance.pulseOnActive = defaults.offBalance.pulseOnActive
+    end
+    -- Los valores iniciales anteriores eran 18 y 32 px. Mígralos una sola vez,
+    -- pero no sobrescribas los ajustes posteriores que el jugador elija.
+    if EZOMetter.sv.offBalance.iconSizeMigratedTo32 ~= true then
+        if tonumber(EZOMetter.sv.offBalance.iconSize) == 18 then
+            EZOMetter.sv.offBalance.iconSize = defaults.offBalance.iconSize
+        end
+        EZOMetter.sv.offBalance.iconSizeMigratedTo32 = true
+    end
+    if EZOMetter.sv.offBalance.iconSizeMigratedTo50 ~= true then
+        local iconSize = tonumber(EZOMetter.sv.offBalance.iconSize)
+        if iconSize == 18 or iconSize == 32 then
+            EZOMetter.sv.offBalance.iconSize = defaults.offBalance.iconSize
+        end
+        EZOMetter.sv.offBalance.iconSizeMigratedTo50 = true
     end
     EZOMetter.sv.offBalance.iconSize = tonumber(EZOMetter.sv.offBalance.iconSize) or defaults.offBalance.iconSize
     if EZOMetter.sv.offBalance.debugEvents == nil then

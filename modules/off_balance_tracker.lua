@@ -11,6 +11,7 @@ local OFF_BALANCE_IMMUNITY_MS = 15000
 local WIDTH = 220
 local HEIGHT = 58
 local ICON_SIZE = 18
+local DEFAULT_ICON_SIZE = 50
 local PADDING = 8
 local TEXT_GAP = 8
 local TIMER_WIDTH = 66
@@ -18,6 +19,7 @@ local PULSE_DURATION_MS = 650
 local PULSE_SCALE = 1.18
 local DEBUG_THROTTLE_MS = 750
 local COMBAT_SAMPLE_INTERVAL_MS = 250
+local RETICLE_SCAN_INTERVAL_MS = 500
 local SUMMARY_TOLERANCE_MS = 250
 local DAMAGE_CALLBACK_NAME = ADDON_NAME .. "OffBalanceDamage"
 
@@ -75,6 +77,10 @@ local isTrackingBoss = false
 local namesByState
 local lastVisualState = STATE_FREE
 local currentState = STATE_FREE
+local reticleScanDirty = true
+local nextReticleScanMs = 0
+local cachedReticleState = STATE_FREE
+local cachedReticleEndTime = 0
 local pulseUntilMs = 0
 local lastDebugByKey = {}
 local statsUpdateRegistered = false
@@ -610,7 +616,7 @@ end
 
 local function ApplyStyle()
     local settings = GetSettings() or {}
-    local iconSize = tonumber(settings.iconSize) or ICON_SIZE
+    local iconSize = tonumber(settings.iconSize) or DEFAULT_ICON_SIZE
 
     if icon then
         icon:SetDimensions(iconSize, iconSize)
@@ -1008,7 +1014,14 @@ local function OnUpdate()
     if reticleActive then
         targetName = CleanUnitName(GetUnitName("reticleover"))
         targetIsBoss = IsTargetBossOrDummy("reticleover", targetName)
-        state, endTime = ScanUnit("reticleover")
+        -- EVENT_EFFECT_CHANGED updates this cache immediately.  Keep a slow
+        -- fallback scan for effects that arrive before the reticle event.
+        if reticleScanDirty or nowMs >= nextReticleScanMs then
+            cachedReticleState, cachedReticleEndTime = ScanUnit("reticleover")
+            reticleScanDirty = false
+            nextReticleScanMs = nowMs + RETICLE_SCAN_INTERVAL_MS
+        end
+        state, endTime = cachedReticleState, cachedReticleEndTime
         source = SOURCE_DIRECT
 
         if state == STATE_FREE then
@@ -1024,6 +1037,9 @@ local function OnUpdate()
             SetMemory(state, endTime, targetName, targetIsBoss, source)
         end
     else
+        cachedReticleState = STATE_FREE
+        cachedReticleEndTime = 0
+        reticleScanDirty = true
         AdvanceSyntheticState(memory, nowMs)
         source = memory.source or SOURCE_NONE
     end
@@ -1067,7 +1083,6 @@ local function OnUpdate()
     isTrackingBoss = targetIsBoss
     currentState = state
     UpdateVisuals(state, math.max(0, endTime - nowMs), targetName, targetIsBoss, source)
-    UpdateVisibility()
 end
 
 local function RegisterStatsUpdate()
@@ -1195,6 +1210,7 @@ local function OnEffectChanged(_, changeType, _, effectName, unitTag, _, endTime
     end
 
     if unitTag == "reticleover" then
+        reticleScanDirty = true
         if changeType == EFFECT_RESULT_FADED and state == STATE_ACTIVE then
             SetMemory(STATE_IMMUNE, GetNowMs() + OFF_BALANCE_IMMUNITY_MS, cleanName, isBossEvent, SOURCE_ESTIMATED)
         elseif changeType == EFFECT_RESULT_FADED then
@@ -1203,6 +1219,22 @@ local function OnEffectChanged(_, changeType, _, effectName, unitTag, _, endTime
             SetMemory(state, endTimeMs, cleanName, isBossEvent, SOURCE_EVENT)
         end
     end
+end
+
+local function OnReticleTargetChanged()
+    reticleScanDirty = true
+    cachedReticleState = STATE_FREE
+    cachedReticleEndTime = 0
+    nextReticleScanMs = 0
+    if updateRegistered then
+        OnUpdate()
+    end
+end
+
+local function RegisterEffectFilter(suffix, abilityId)
+    local eventName = ADDON_NAME .. "_OffBalanceEffect_" .. suffix
+    EVENT_MANAGER:RegisterForEvent(eventName, EVENT_EFFECT_CHANGED, OnEffectChanged)
+    EVENT_MANAGER:AddFilterForEvent(eventName, EVENT_EFFECT_CHANGED, REGISTER_FILTER_ABILITY_ID, abilityId)
 end
 
 function Tracker.ShowTest()
@@ -1312,7 +1344,13 @@ function Tracker.Init()
     end
 
     EVENT_MANAGER:RegisterForEvent(ADDON_NAME .. "_OffBalanceCombat", EVENT_PLAYER_COMBAT_STATE, OnCombatState)
-    EVENT_MANAGER:RegisterForEvent(ADDON_NAME .. "_OffBalanceEffects", EVENT_EFFECT_CHANGED, OnEffectChanged)
+    for abilityId in pairs(OFF_BALANCE_ALIASES) do
+        RegisterEffectFilter(tostring(abilityId), abilityId)
+    end
+    RegisterEffectFilter("immunity", OFF_BALANCE_IMMUNITY_ID)
+    if EVENT_RETICLE_TARGET_CHANGED then
+        EVENT_MANAGER:RegisterForEvent(ADDON_NAME .. "_OffBalanceReticle", EVENT_RETICLE_TARGET_CHANGED, OnReticleTargetChanged)
+    end
 
     OnCombatState(nil, type(IsUnitInCombat) == "function" and IsUnitInCombat("player"))
 end

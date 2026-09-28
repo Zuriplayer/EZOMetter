@@ -1,5 +1,80 @@
 # Changelog
 
+## Unreleased
+
+- Standardizes every movable meter, tracker, and alert panel on right-mouse-button
+  dragging.
+
+## 0.1.74 - U51 Unified Major Buffs
+
+- Uses Major Brutality (`61665`) and Major Savagery (`61667`) as the two offensive buff requirements for DD and Healer after U51 hybridization.
+- Removes obsolete Major Sorcery and Major Prophecy checks while retaining the later Banner Bearer and Spaulder requirements.
+- Declares the verified U51 addon API version `101051`.
+
+## 0.1.73 - Spaulder Native Effect Event
+
+- Replaces the inferred crouch/Prowl state with Spaulder's native filtered combat event (`163359`) for Aura of Pride.
+- Restricts the listener to the wearer's player-sourced event and records a concise optional diagnostic entry for each real effect result.
+
+## 0.1.72 - Spaulder Item Icon
+
+- Uses the icon of the actually equipped Spaulder shoulder item for the Aura of Pride alert, with the previous native texture retained as a safe fallback.
+
+## 0.1.71 - Spaulder Toggle Detection
+
+- Tracks Aura of Pride from the wearer's native crouch/Prowl transition when ESO does not expose that aura through the normal player-buff list.
+- Keeps the normal self-buff scan as the preferred source, resets the fallback on character/equipment refresh, and writes one optional debug entry per Spaulder toggle.
+
+## 0.1.70 - Spaulder Aura Alert
+
+- Adds Aura of Pride to the Healer missing-buff alert only while the wearer has Spaulder of Ruin equipped.
+- Uses the native Spaulder effect icon while the aura is inactive and clears the row as soon as the player aura is observed.
+
+## 0.1.69 - Combat Performance Audit
+
+- Filters Off Balance and Alkosh effect listeners by their relevant ability IDs and uses event-driven target refreshes, with low-frequency scans only as recovery.
+- Limits Z'en marker projection to 10 Hz, reuses its camera data, and skips unchanged marker transforms and visibility writes.
+- Avoids repeated compact-panel layout work and duplicate text writes for observed damage/healing recap updates.
+- Reduces the active visual update cadence of Magma Fist and Fatecarver to 10 Hz; Magma Fist now stops its updater when no observed stack or active window remains.
+- Registers Z'en's unfilterable player-effect listener only while its mode and equipped-set state make tracking relevant.
+
+## 0.1.68 - Off Balance Icon Default and Range
+
+- Sets the initial Off Balance icon size to 50 px, lowers the minimum to 10 px, and raises the maximum to 100 px.
+- Migrates the two former initial values (18 and 32 px) once while preserving any other size selected by the player.
+
+## 0.1.67 - Compact Observed Icon Alignment
+
+- Places the compact observed damage/healing icon above the three values instead of beside them, preserving their centred alignment.
+
+## 0.1.66 - Larger Initial Off Balance Icon
+
+- Raises the initial Off Balance icon size from 18 to 32 px and migrates that former default once, while preserving any size selected afterwards.
+
+## 0.1.65 - Observed Healing Availability and Compact Identity
+
+- Adds a positive setting to show Observed Healing for Tank and DD role profiles as well as Healer, while preserving existing saved choices.
+- Gives the compact observed damage and healing panels their respective subtle ESO role icon and distinct muted text tint; the detailed layout keeps its existing value colours.
+
+## 0.1.64 - Scribing Critical Buff Detection
+
+- Recognizes the combined Savagery and Prophecy Scribing buff as both Major Savagery and Major Prophecy when ESO exposes a variant buff ID.
+
+## 0.1.63 - Own Banner Bearer Detection
+
+- Detects Banner Bearer from the active toggle of the player's own slotted ability (`217699`), matching the source used by EZOCombat instead of accepting an allied Banner buff.
+
+## 0.1.62 - Z'en Application Diagnostics
+
+- Adds an opt-in Z'en diagnostic capture for outgoing light/heavy attack impacts, the active weapon pair, and the exact 5-piece state at impact time; only light attacks are treated as Touch application candidates.
+- Correlates an initial Touch of Z'en application with a same-target light attack in a short window on either side of the effect event, handling ESO's observed Touch-before-impact event order without attributing older heavy attacks.
+- Preserves the highest/application-time piece count, combat target, and observed LibCombat source in the last-combat summary instead of reporting only the final weapon bar state.
+- Adds a manual reticle-target scan for Touch and player DoTs plus direct access to DebugLogViewer from the Z'en settings.
+- Adds a custom world-projected Touch marker above the matching enemy under the reticle while the effect is active, using the EZO family icon-rendering pattern without native group markers.
+- Consolidates each weapon-swap diagnostic into one settled entry and suppresses superseded rapid-swap scans.
+- Fixes the deferred weapon-swap diagnostic callback so it resolves the active weapon pair as a local helper.
+- Keeps the combat-event listener unregistered unless both general debug mode and Z'en diagnostics are enabled; no native group markers are used.
+
 ## 0.1.60 - Reliable Dependent LAM Refresh
 
 - Forces a deferred EZOCore settings rebuild whenever a master value changes a dependent control's enabled state.

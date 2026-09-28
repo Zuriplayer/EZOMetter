@@ -9,6 +9,8 @@ EZOMetter_ObservedHealing = EZOMetter_ObservedMetricPanel.Create({
     previewRate = 8200,
     previewAverage = 14600,
     previewGroupShare = 21.5,
+    compactIcon = "esoui/art/lfg/gamepad/lfg_roleicon_healer.dds",
+    compactTextColor = { 0.42, 0.86, 0.72, 1 },
 
     rateKeys = "HPSOut",
     groupRateKeys = "groupHPSOut",

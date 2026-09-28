@@ -55,3 +55,31 @@ end
 function EZOMetter.GetDebugLogger()
     return GetLogger()
 end
+
+function EZOMetter.IsDebugLogViewerAvailable()
+    local viewer = _G.DebugLogViewer
+    return type(viewer) == "table"
+        and (type(viewer.ShowWindow) == "function" or type(viewer.ToggleWindow) == "function")
+end
+
+function EZOMetter.OpenDebugLogViewer()
+    local viewer = _G.DebugLogViewer
+    if type(viewer) ~= "table" then
+        return false
+    end
+
+    if type(viewer.ShowWindow) == "function" then
+        local ok = pcall(viewer.ShowWindow)
+        if ok then return true end
+    end
+
+    if type(viewer.ToggleWindow) == "function" then
+        if type(viewer.IsWindowShowing) == "function" then
+            local ok, showing = pcall(viewer.IsWindowShowing)
+            if ok and showing == true then return true end
+        end
+        return pcall(viewer.ToggleWindow)
+    end
+
+    return false
+end

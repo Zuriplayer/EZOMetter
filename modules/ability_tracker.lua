@@ -4,7 +4,7 @@ EZOMetter_AbilityTracker = EZOMetter_AbilityTracker or {}
 local Tracker = EZOMetter_AbilityTracker
 local ADDON_NAME = "EZOMetter"
 local CONTROL_NAME = "EZOMetterAbilityTracker"
-local UPDATE_INTERVAL_MS = 33
+local UPDATE_INTERVAL_MS = 100
 local WIDTH = 260
 local HEIGHT = 38
 local PADDING = 4
@@ -62,6 +62,7 @@ local activeWatcherRegistered = false
 local activeWatcherEventNames = {}
 local active = false
 local activeEffectSeen = false
+local nextActiveEffectScanMs = 0
 local activeAbilityId = 0
 local activeName = ""
 local startMs = 0
@@ -754,9 +755,12 @@ function UpdateVisuals()
     end
 
     local nowMs = GetNowMs()
-    if activeEffectSeen and nowMs - startMs > CHANNEL_EFFECT_GRACE_MS and not RefreshActiveEffectFromBuffs(nowMs) then
-        FinishActiveChannel("faded", nowMs)
-        return
+    if activeEffectSeen and nowMs - startMs > CHANNEL_EFFECT_GRACE_MS and nowMs >= nextActiveEffectScanMs then
+        nextActiveEffectScanMs = nowMs + CHANNEL_EFFECT_GRACE_MS
+        if not RefreshActiveEffectFromBuffs(nowMs) then
+            FinishActiveChannel("faded", nowMs)
+            return
+        end
     end
 
     remainingMs = math.max(0, (startMs + durationMs) - nowMs)
@@ -809,6 +813,7 @@ local function StartChannel(abilityId, abilityName, actualDurationMs)
 
     active = true
     activeEffectSeen = false
+    nextActiveEffectScanMs = nowMs + CHANNEL_EFFECT_GRACE_MS
     activeAbilityId = abilityId
     activeName = tostring(abilityName or "")
     if activeName == "" and type(GetAbilityName) == "function" and activeAbilityId > 0 then

@@ -67,7 +67,7 @@ function VisualContext.BindPrimaryDrag(control, canMove, onMoveStop)
     local dragActive = false
     control:SetMovable(false)
     control:SetHandler("OnMouseDown", function(_, button)
-        if button ~= MOUSE_BUTTON_INDEX_LEFT or canMove() ~= true then
+        if button ~= MOUSE_BUTTON_INDEX_RIGHT or canMove() ~= true then
             return
         end
         dragActive = true
@@ -75,7 +75,7 @@ function VisualContext.BindPrimaryDrag(control, canMove, onMoveStop)
         control:StartMoving()
     end)
     control:SetHandler("OnMouseUp", function(_, button)
-        if button ~= MOUSE_BUTTON_INDEX_LEFT or not dragActive then
+        if button ~= MOUSE_BUTTON_INDEX_RIGHT or not dragActive then
             return
         end
         control:StopMovingOrResizing()

@@ -11,11 +11,11 @@ Para soporte, errores y sugerencias, únete a Discord: https://discord.gg/ekw8zU
 
 EZOMetter está en beta pública. El addon es utilizable, pero varias métricas de combate dependen de eventos del cliente de ESO, del estado visible del objetivo y de librerías opcionales. Trata los valores como información práctica de apoyo, no como sustituto completo de un analizador de logs de combate.
 
-Versión actual: **0.1.60**.
+Versión actual: **0.1.74**.
 
 ## Requisitos
 
-- *The Elder Scrolls Online* para PC.
+- *The Elder Scrolls Online* para PC (actualización 51, API de addons `101051`).
 - [LibAddonMenu-2.0](https://www.esoui.com/downloads/info7-LibAddonMenu.html) es obligatorio para el panel de configuración.
 - Librerías opcionales:
   - `LibCombat` habilita los paneles de daño/curación observados, los resúmenes de estadísticas DD ponderados por daño, la atribución de daño durante Off Balance y el seguimiento preferente de stacks de Z'en.
@@ -50,8 +50,9 @@ Versión actual: **0.1.60**.
 ### Avisos de buffs por rol
 
 - Aviso movible para buffs propios requeridos que falten en el rol seleccionado.
-- DD comprueba actualmente Major Brutality, Major Sorcery, Major Savagery, Major Prophecy y Banner Bearer cuando hay una habilidad de Banner sloteada.
-- Healer comprueba actualmente Major Sorcery y Major Prophecy.
+- DD comprueba actualmente Major Brutality y Major Savagery, además de Banner Bearer cuando hay una habilidad de Banner sloteada. Banner Bearer usa el estado activo de la propia barra de acciones, por lo que el Banner de un aliado no satisface la comprobación.
+- Healer comprueba actualmente Major Brutality y Major Savagery. Mientras Spaulder of Ruin esté equipado, también muestra el icono de la hombrera equipada hasta que Aura of Pride esté activa. Aura of Pride se sigue mediante su evento nativo de combate Spaulders of Ruin, no se infiere a partir de crouch/Prowl ni de la lista normal de buffs del jugador. No se exige sin ese mítico.
+- En U51, Major Brutality cubre el daño físico y mágico (`61665`), y Major Savagery ambas probabilidades de crítico (`61667`). Se han retirado las comprobaciones obsoletas de Major Sorcery y Major Prophecy.
 - Tank no tiene actualmente una lista de buffs propios requeridos.
 - El aviso registra uptime del último combate para las comprobaciones requeridas cuando el informe de combate está activado.
 
@@ -64,6 +65,7 @@ Versión actual: **0.1.60**.
 - Selector de visualización para desactivar Off Balance, mostrar solo el panel, mostrar solo el icono independiente o mostrar panel e icono.
 - El panel no tiene filtros de visibilidad: si su superficie está seleccionada en el modo de visualización, se muestra siempre.
 - El icono flotante tiene tres filtros exclusivos que se combinan: mostrar solo en combate, mostrar solo en bosses y mostrar solo si la estrella de Puntos de Campeón Explotador está equipada.
+- El icono independiente empieza a 50 px y sigue siendo ajustable entre 10 y 100 px.
 - La superficie seleccionada de Off Balance sigue los filtros de combate, boss, perfil de rol y CP Explotador. Si la visibilidad solo en combate y solo en bosses están desactivadas, las superficies seleccionadas permanecen visibles en estado listo fuera de combate.
 - Colores configurables para estado listo, activo y cooldown.
 - Pulso opcional cuando empieza Off Balance.
@@ -128,8 +130,10 @@ Versión actual: **0.1.60**.
 - Sigue Touch de Z'en directamente por abilityId y mantiene su valor efectivo durante la duración detectada de Touch aunque un cambio de arma reduzca el número de piezas de Z'en equipadas en ese momento.
 - Rechaza la pseudo-unidad `offline` de ESO como nombre de objetivo, prioriza objetivos con Touch/DoTs activos y vuelve al contador interno de DoTs en cuanto LibCombat informa que Touch ha terminado.
 - Muestra piezas, stacks potenciales, valor efectivo, tiempo restante de Touch, objetivo, fuente de stacks y una barra de stacks.
-- Registro debug opcional de eventos.
-- El tooltip/informe del último combate incluye uptime de Touch, medias potencial/efectiva, tiempo en cap y datos de objetivo.
+- Muestra un icono propio de Touch proyectado desde el mundo sobre el enemigo coincidente mientras permanece bajo la retícula, siguiendo el patrón de renderizado establecido por `EZOCustomSupportIcons`. No utiliza marcadores nativos de grupo y se oculta de forma segura cuando ESO deja de exponer ese enemigo mediante un `unitTag` estable.
+- Diagnóstico opcional que registra para comparar impactos de ataques ligeros/pesados propios y una única entrada de equipo estable por cambio de barra, pero solo correlaciona la aplicación inicial de Touch con un ataque ligero al mismo objetivo y su estado de 5 piezas. La breve ventana diferida admite que ESO informe Touch poco antes del impacto ligero y nunca atribuye un ataque pesado anterior.
+- Incluye escaneo manual del objetivo bajo la retícula para Touch/DoTs propios y un botón directo para abrir DebugLogViewer. No utiliza marcadores nativos de grupo.
+- El tooltip/informe del último combate incluye uptime de Touch, medias potencial/efectiva, tiempo en cap, datos de objetivo y el número de piezas de aplicación/máximo junto con la fuente de stacks observada durante el combate, no solo la barra final.
 
 ### Estadísticas DD
 
@@ -150,7 +154,8 @@ Versión actual: **0.1.60**.
 - Paneles opcionales mediante `LibCombat` para daño y curación salientes observados.
 - Daño observado muestra DPS actual, DPS medio, proporción observada del grupo y daño/proporción en boss cuando está disponible.
 - Curación observada muestra HPS actual, HPS medio y proporción de curación observada del grupo cuando está disponible.
-- Ambos paneles admiten visibilidad solo en combate y visibilidad por rol.
+- Curación observada puede mantenerse visible también con los perfiles Tank y DD.
+- Ambos paneles admiten diseño compacto, con un icono sutil de DPS/Healer sobre los valores y distinto tinte de texto, además de visibilidad solo en combate y por rol.
 - Los totales de grupo son valores observados por el cliente y dependen de los eventos recibidos localmente.
 
 ### Ayuda para Fatecarver
@@ -175,6 +180,9 @@ Versión actual: **0.1.60**.
 
 ## Límites de seguridad
 
+- Al desbloquear el HUD, cada panel compatible se mueve con el botón derecho;
+  el clic izquierdo mantiene su comportamiento y el modo no intercepta el
+  input global.
 - EZOMetter no automatiza combate, rotaciones, uso de habilidades, movimiento, selección de objetivos, bloqueo, cambios de equipo, cambios de Champion Points ni keybinds.
 - No intercepta input global.
 - No reemplaza elementos de la interfaz original del juego.
@@ -202,13 +210,14 @@ Comprobaciones recomendadas dentro del juego:
 - Tooltips de ayuda general por sección y ayuda específica por campo en el panel de configuración.
 - Selección de idioma inglés/español y modo automático de idioma.
 - Visibilidad del HUD en combate, fuera de combate, inventario, mapa, crafting, Champion Points, Tales of Tribute y configuración de addons.
-- Avisos de buffs DD con y sin los buffs requeridos.
-- Aviso de Banner Bearer cuando hay una habilidad de Banner sloteada y cuando no hay ninguna.
+- Avisos de buffs de rol Healer con Spaulder of Ruin equipado: Aura of Pride aparece mientras está inactiva, desaparece cuando se observa su efecto nativo y no aparece tras desequipar el mítico.
+- En PvP, activa una habilidad de escribanía que otorgue Major Savagery: debe desaparecer su único aviso mientras la hoja de personaje muestra ambas bonificaciones de crítico. Comprueba por separado Major Brutality frente a ambas bonificaciones de daño.
+- Banner Bearer con la habilidad sloteada: lanza tu propio Banner y confirma que desaparece el aviso; permanece en el Banner de un aliado sin lanzar el tuyo y confirma que el aviso continúa activo.
 - Off Balance en dummy/boss, incluyendo tiempo activo real, cooldown/ciclo e informe de Exploiter.
 - Coral Riptide con menos de 5 piezas, con 5 piezas y con distintos niveles de stamina.
 - Azureblight Reaper en la barra principal, DoTs de la barra secundaria haciendo ticks después de ambos cambios de barra, cambios de objetivo, refrescos del efecto y uno o varios usuarios del set.
 - Rugido de Alkosh con 0-2 piezas (oculto), con 3-4 piezas (visible sin el bonus de 5 piezas), con 5 piezas, modos Monitor/Asistente, actualizaciones repetidas de un mismo proc, activaciones antes/dentro/después de la ventana, una sinergia disponible tras expirar, ofertas perdidas dentro de la ventana, debuff de Trial Dummy y objetivo normal cuando esté disponible.
-- Reparación de Z'en con 3-4 piezas, con 5 piezas, varios DoTs, refrescos de Touch, cambios de objetivo, cambios de barra y con/sin `LibCombat`.
+- Reparación de Z'en con 3-4 piezas y con 5 piezas; ataques ligeros y pesados desde ambas barras; varios DoTs; aparición, renovación y desaparición de Touch; cambios de objetivo; cambios de barra; escaneos manuales de retícula; y con/sin `LibCombat`. Comprueba que solo un ataque ligero con 5 piezas resuelve la correlación inicial de Touch, también cuando Touch precede al impacto; los ataques pesados deben quedar como no candidatos.
 - Valores propios/efectivos/máximos de Estadísticas DD y tooltip después del combate.
 - Daño/curación observados con `LibCombat` instalado y sin `LibCombat`.
 - Inicio, finalización, corte temprano y color de aviso de Fatecarver.

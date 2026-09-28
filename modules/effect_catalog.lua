@@ -3,6 +3,7 @@ EZOMetter.Effects = EZOMetter.Effects or {}
 
 local Effects = EZOMetter.Effects
 local localizedNamesByKey = {}
+local equippedSetByKey = {}
 
 Effects.ROLE_DD = "dd"
 Effects.ROLE_HEALER = "healer"
@@ -14,25 +15,16 @@ Effects.Definitions = {
         nameString = "EZOM_EFFECT_MAJOR_BRUTALITY",
         abilityIds = { 61665 },
     },
-    major_sorcery = {
-        key = "major_sorcery",
-        nameString = "EZOM_EFFECT_MAJOR_SORCERY",
-        abilityIds = { 61687 },
-    },
     major_savagery = {
         key = "major_savagery",
         nameString = "EZOM_EFFECT_MAJOR_SAVAGERY",
         abilityIds = { 61667 },
     },
-    major_prophecy = {
-        key = "major_prophecy",
-        nameString = "EZOM_EFFECT_MAJOR_PROPHECY",
-        abilityIds = { 61689 },
-    },
     banner_bearer = {
         key = "banner_bearer",
         nameString = "EZOM_EFFECT_BANNER_BEARER",
         abilityIds = { 217699, 230289 },
+        ownToggleOnly = true,
         buffAbilityIds = {
             227066,
             227067,
@@ -80,19 +72,40 @@ Effects.Definitions = {
             "Estandarte vinculante",
         },
     },
+    spaulder_aura = {
+        key = "spaulder_aura",
+        nameString = "EZOM_EFFECT_SPAULDER_AURA",
+        -- Aura of Pride is emitted as a ground-AOE combat event rather than
+        -- a player buff. 163359 is the native Spaulders of Ruin event ID.
+        combatAbilityIds = { 163359 },
+        -- This is the fallback texture when the equipped shoulder item cannot
+        -- be read yet.
+        icon = "EsoUI/Art/Icons/ability_mage_065.dds",
+        iconSlot = "shoulders",
+        setId = 627,
+        setAliases = {
+            "Spaulder of Ruin",
+            "Bufa de la ruina",
+        },
+        requiresEquippedSet = true,
+        requiresCastByPlayer = true,
+        aliases = {
+            "Aura of Pride",
+            "Aura de orgullo",
+        },
+    },
 }
 
 Effects.RequiredKeysByRole = {
     dd = {
         "major_brutality",
-        "major_sorcery",
         "major_savagery",
-        "major_prophecy",
         "banner_bearer",
     },
     healer = {
-        "major_sorcery",
-        "major_prophecy",
+        "major_brutality",
+        "major_savagery",
+        "spaulder_aura",
     },
     tank = {},
 }
@@ -111,6 +124,59 @@ end
 function Effects.GetPrimaryAbilityId(effect)
     if not effect or not effect.abilityIds then return nil end
     return effect.abilityIds[1]
+end
+
+function Effects.InvalidateEquipmentConditions()
+    equippedSetByKey = {}
+end
+
+function Effects.IsRequiredSetEquipped(effect)
+    if not effect or effect.requiresEquippedSet ~= true then return true end
+    if equippedSetByKey[effect.key] ~= nil then
+        return equippedSetByKey[effect.key]
+    end
+
+    local equipped = false
+    if EZOMetter_EquipmentSets and EZOMetter_EquipmentSets.GetWornSetSnapshot then
+        local snapshot = EZOMetter_EquipmentSets.GetWornSetSnapshot(function(setName, setId)
+            if tonumber(setId) == tonumber(effect.setId) then return true end
+            return EZOMetter_EquipmentSets.NameMatches(setName, effect.setAliases)
+        end)
+        equipped = snapshot and snapshot.hasSet == true and (tonumber(snapshot.numEquipped) or 0) >= 1
+    end
+
+    equippedSetByKey[effect.key] = equipped
+    return equipped
+end
+
+function Effects.GetEquippedSetIcon(effect)
+    if not effect
+        or effect.requiresEquippedSet ~= true
+        or effect.iconSlot ~= "shoulders"
+        or BAG_WORN == nil
+        or EQUIP_SLOT_SHOULDERS == nil
+        or type(GetItemLink) ~= "function"
+        or type(GetItemLinkIcon) ~= "function"
+        or not EZOMetter_EquipmentSets
+        or type(EZOMetter_EquipmentSets.GetSetSnapshotFromItemLink) ~= "function" then
+        return nil
+    end
+
+    local itemLink = GetItemLink(BAG_WORN, EQUIP_SLOT_SHOULDERS)
+    if not itemLink or itemLink == "" then return nil end
+
+    local snapshot = EZOMetter_EquipmentSets.GetSetSnapshotFromItemLink(itemLink, function(setName, setId)
+        if tonumber(setId) == tonumber(effect.setId) then return true end
+        return EZOMetter_EquipmentSets.NameMatches(setName, effect.setAliases)
+    end)
+    if not snapshot or snapshot.hasSet ~= true then return nil end
+
+    local icon = GetItemLinkIcon(itemLink)
+    if icon and icon ~= "" then
+        return icon
+    end
+
+    return nil
 end
 
 local function NormalizeName(name)
@@ -242,8 +308,50 @@ function Effects.IsSlotted(effect)
     return false
 end
 
+-- Some persistent skills are best identified from the player's own slotted
+-- toggle state. This avoids treating a matching group buff as the player's
+-- Banner Bearer.
+function Effects.IsOwnToggleActive(effect)
+    if not effect
+        or effect.ownToggleOnly ~= true
+        or type(GetSlotBoundId) ~= "function"
+        or type(GetSlotType) ~= "function"
+        or type(IsSlotToggled) ~= "function" then
+        return false
+    end
+
+    for _, hotbarCategory in ipairs(GetHotbarCategories()) do
+        for slotIndex = 3, 8 do
+            local actionType = GetSlotType(slotIndex, hotbarCategory)
+            local boundId = GetSlotBoundId(slotIndex, hotbarCategory)
+            local trueAbilityId = boundId
+            local slotName = ""
+
+            if type(GetSlotName) == "function" then
+                slotName = GetSlotName(slotIndex, hotbarCategory) or ""
+            end
+
+            if actionType == ACTION_TYPE_CRAFTED_ABILITY and type(GetAbilityIdForCraftedAbilityId) == "function" then
+                trueAbilityId = GetAbilityIdForCraftedAbilityId(boundId)
+            end
+
+            if slotName == "" and trueAbilityId and type(GetAbilityName) == "function" then
+                slotName = GetAbilityName(trueAbilityId)
+            end
+
+            if (Effects.Matches(effect, trueAbilityId, slotName) or Effects.Matches(effect, boundId, slotName))
+                and IsSlotToggled(slotIndex, hotbarCategory) == true then
+                return true
+            end
+        end
+    end
+
+    return false
+end
+
 function Effects.ShouldRequire(effect)
     if not effect then return false end
+    if not Effects.IsRequiredSetEquipped(effect) then return false end
     if effect.requiresSlotted == true then
         return Effects.IsSlotted(effect)
     end

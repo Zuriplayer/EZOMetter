@@ -7,6 +7,7 @@ local CONTROL_NAME = "EZOMetterAlkoshTracker"
 local ALERT_CONTROL_NAME = "EZOMetterAlkoshActivationAlert"
 local UPDATE_INTERVAL_MS = 250
 local EQUIPMENT_SCAN_INTERVAL_MS = 1000
+local TARGET_EFFECT_SCAN_INTERVAL_MS = 1000
 local WIDTH = 300
 local HEIGHT = 94
 local ALERT_WIDTH = 240
@@ -77,6 +78,8 @@ local cycleHadWindowOffer = false
 local combatStats = nil
 local lastCombatSummary = nil
 local combatRelevant = false
+local targetEffectsDirty = true
+local nextTargetEffectScanMs = 0
 local IsHudUnlocked
 
 local function GetSettings()
@@ -1204,8 +1207,13 @@ local function RefreshState()
     if isCombat and IsEquipped() then
         combatRelevant = true
     end
-    EnsureDebuffIds()
-    ScanTargetEffects()
+    -- Direct effect events keep this state current.  The full seven-target
+    -- buff walk is only a recovery path for events missed while targets load.
+    if targetEffectsDirty or nowMs >= nextTargetEffectScanMs then
+        ScanTargetEffects()
+        targetEffectsDirty = false
+        nextTargetEffectScanMs = nowMs + TARGET_EFFECT_SCAN_INTERVAL_MS
+    end
     ScanSynergyOffers(nowMs)
     SampleCombat(nowMs)
     UpdateVisuals()
@@ -1300,11 +1308,12 @@ local function OnCombatState(_, inCombat)
 end
 
 local function OnEffectChanged(_, changeType, _, _effectName, unitTag, beginTime, endTime, _, _, _, effectType, _, _, unitName, unitId, abilityId, sourceType)
-    EnsureDebuffIds()
     abilityId = tonumber(abilityId) or 0
     if not OBSERVED_DEBUFF_IDS[abilityId] then return end
     if effectType and effectType ~= BUFF_EFFECT_TYPE_DEBUFF then return end
     if sourceType and COMBAT_UNIT_TYPE_PLAYER and sourceType ~= COMBAT_UNIT_TYPE_PLAYER then return end
+
+    targetEffectsDirty = true
 
     local nowMs = GetNowMs()
     local cleanName = CleanName(unitName)
@@ -1333,6 +1342,20 @@ local function OnEffectChanged(_, changeType, _, _effectName, unitTag, beginTime
     RefreshState()
 end
 
+local function OnReticleTargetChanged()
+    targetEffectsDirty = true
+    nextTargetEffectScanMs = 0
+    if updateRegistered then
+        RefreshState()
+    end
+end
+
+local function RegisterEffectFilter(abilityId)
+    local eventName = ADDON_NAME .. "_AlkoshEffect_" .. tostring(abilityId)
+    EVENT_MANAGER:RegisterForEvent(eventName, EVENT_EFFECT_CHANGED, OnEffectChanged)
+    EVENT_MANAGER:AddFilterForEvent(eventName, EVENT_EFFECT_CHANGED, REGISTER_FILTER_ABILITY_ID, abilityId)
+end
+
 function Tracker.ApplySettings()
     EnsureControl()
     ApplyPosition()
@@ -1340,6 +1363,7 @@ function Tracker.ApplySettings()
     SetMoveMode(IsHudUnlocked())
     ApplyStyle()
     ScanEquipment()
+    targetEffectsDirty = true
     RefreshState()
     RefreshUpdateRegistration()
 end
@@ -1400,7 +1424,12 @@ function Tracker.Init()
     end
 
     EVENT_MANAGER:RegisterForEvent(ADDON_NAME .. "_AlkoshCombat", EVENT_PLAYER_COMBAT_STATE, OnCombatState)
-    EVENT_MANAGER:RegisterForEvent(ADDON_NAME .. "_AlkoshEffects", EVENT_EFFECT_CHANGED, OnEffectChanged)
+    for abilityId in pairs(OBSERVED_DEBUFF_IDS) do
+        RegisterEffectFilter(abilityId)
+    end
+    if EVENT_RETICLE_TARGET_CHANGED then
+        EVENT_MANAGER:RegisterForEvent(ADDON_NAME .. "_AlkoshReticle", EVENT_RETICLE_TARGET_CHANGED, OnReticleTargetChanged)
+    end
     if EVENT_SYNERGY_ABILITY_CHANGED then
         EVENT_MANAGER:RegisterForEvent(ADDON_NAME .. "_AlkoshSynergy", EVENT_SYNERGY_ABILITY_CHANGED, RefreshState)
     end

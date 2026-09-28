@@ -11,11 +11,11 @@ For support, bug reports, and suggestions, join Discord: https://discord.gg/ekw8
 
 EZOMetter is in public beta. The addon is usable, but several combat metrics depend on ESO client events, visible target state, and optional libraries. Treat the numbers as practical helper information, not as a full replacement for dedicated combat log analysis.
 
-Current version: **0.1.60**.
+Current version: **0.1.74**.
 
 ## Requirements
 
-- *The Elder Scrolls Online* for PC.
+- *The Elder Scrolls Online* for PC (Update 51, addon API `101051`).
 - [LibAddonMenu-2.0](https://www.esoui.com/downloads/info7-LibAddonMenu.html) is required for the settings panel.
 - Optional libraries:
   - `LibCombat` enables observed damage/healing panels, damage-weighted DD stat summaries, Off Balance damage attribution, and preferred Z'en stack tracking.
@@ -50,8 +50,9 @@ Current version: **0.1.60**.
 ### Role Buff Alerts
 
 - Movable alert for missing required self buffs for the selected role.
-- DD currently checks Major Brutality, Major Sorcery, Major Savagery, Major Prophecy, and Banner Bearer when a Banner skill is slotted.
-- Healer currently checks Major Sorcery and Major Prophecy.
+- DD currently checks Major Brutality and Major Savagery, plus Banner Bearer when a Banner skill is slotted. Banner Bearer uses the player's own active action-bar toggle, so an allied Banner does not satisfy the check.
+- Healer currently checks Major Brutality and Major Savagery. While Spaulder of Ruin is equipped, its equipped shoulder-item icon is also shown until Aura of Pride is active. Aura of Pride is tracked from its native Spaulders of Ruin combat event, rather than inferred from crouch/Prowl or a normal player-buff list. It is not required without that Mythic.
+- Under U51, Major Brutality covers weapon and spell damage (`61665`), and Major Savagery covers weapon and spell critical chance (`61667`). The obsolete Major Sorcery and Major Prophecy checks have been removed.
 - Tank currently has no required self-buff list.
 - The alert records last-combat uptime for required checks when combat reporting is enabled.
 
@@ -64,6 +65,7 @@ Current version: **0.1.60**.
 - Display mode selector can turn Off Balance off, show only the panel, show only the independent icon, or show both panel and icon.
 - The panel has no visibility filters: whenever the panel surface is selected in the display mode, it is always shown.
 - The floating icon has three icon-only filters that combine: show only in combat, show only on bosses, and show only while the Exploiter Champion Point star is slotted.
+- The independent icon starts at 50 px and remains adjustable from 10 to 100 px.
 - The selected Off Balance surface follows the combat, boss, role-profile, and Exploiter CP filters. If combat-only and boss-only visibility are disabled, selected surfaces remain visible in the ready state outside combat.
 - Configurable colors for ready, active, and cooldown states.
 - Optional pulse when Off Balance starts.
@@ -128,8 +130,10 @@ Current version: **0.1.60**.
 - Tracks Touch of Z'en directly by abilityId and keeps its effective value for the detected Touch duration even if a weapon swap lowers the currently equipped Z'en piece count.
 - Rejects ESO's `offline` pseudo-unit as a target name, prioritizes targets with active Touch/DoTs, and returns to the internal DoT counter as soon as LibCombat reports Touch faded.
 - Shows pieces, potential stacks, effective value, Touch remaining time, target, stack source, and a stack bar.
-- Optional debug event logging.
-- Last-combat tooltip/report includes Touch uptime, potential/effective averages, cap time, and target data.
+- Shows a custom world-projected Touch icon above the matching enemy while it remains under the reticle, following the renderer pattern established by `EZOCustomSupportIcons`. It does not use native group markers and hides safely when ESO no longer exposes that enemy through a stable unit tag.
+- Optional diagnostics record outgoing light/heavy attack impacts for comparison and one settled equipment entry per weapon swap, but only correlate an initial Touch application with a same-target light attack carrying the 5-piece state. The short deferred window handles ESO reporting Touch shortly before the light-attack impact and never attributes an older heavy attack.
+- Includes a manual reticle-target scan for Touch/player DoTs and a direct button to open DebugLogViewer. It does not use native group markers.
+- Last-combat tooltip/report includes Touch uptime, potential/effective averages, cap time, target data, and the application/highest piece count plus stack source observed during combat rather than only the final weapon bar.
 
 ### DD Stats
 
@@ -150,7 +154,8 @@ Current version: **0.1.60**.
 - Optional `LibCombat` panels for observed outgoing damage and healing.
 - Observed Damage shows current DPS, average DPS, observed group share, and boss damage/share when available.
 - Observed Healing shows current HPS, average HPS, and observed group healing share when available.
-- Both panels support combat-only and role-based visibility.
+- Observed Healing can optionally remain visible for Tank and DD role profiles.
+- Both panels support compact presentation, with a subtle DPS/Healer icon above the values and a distinct text tint, plus combat-only and role-based visibility.
 - Group totals are client-observed values and depend on events received by the local client.
 
 ### Fatecarver Helper
@@ -175,6 +180,9 @@ Current version: **0.1.60**.
 
 ## Safety Limits
 
+- Unlocking the HUD moves each compatible panel with the right mouse button;
+  left-click behavior remains unchanged and the mode does not intercept global
+  input.
 - EZOMetter does not automate combat, rotations, ability use, movement, targeting, blocking, equipment changes, Champion Point changes, or keybinds.
 - It does not intercept global input.
 - It does not replace vanilla UI elements.
@@ -202,13 +210,14 @@ Recommended in-game checks:
 - Section-level and field-level help tooltips in the settings panel.
 - English/Spanish language selection and automatic language mode.
 - HUD visibility in combat, out of combat, inventory, map, crafting, Champion Points, Tales of Tribute, and addon settings.
-- DD role buff alerts with and without required buffs.
-- Banner Bearer alert when a Banner skill is slotted and when no Banner skill is slotted.
+- Healer role buff alerts with Spaulder of Ruin equipped: Aura of Pride appears while inactive, clears when its native effect is observed, and does not appear after unequipping the Mythic.
+- In PvP, activate a Scribed skill granting Major Savagery: its single alert should clear while the character sheet shows both critical bonuses. Check Major Brutality separately against both damage bonuses.
+- Banner Bearer with the skill slotted: cast your own Banner and confirm it clears the alert; remain inside an allied Banner without casting yours and confirm the alert stays active.
 - Off Balance on dummy/boss, including real active time, cooldown/cycle, and Exploiter reporting.
 - Coral Riptide with fewer than 5 pieces, 5 pieces, and different stamina levels.
 - Azureblight Reaper on the front bar, back-bar DoTs ticking after both bar swaps, target changes, effect refreshes, and one or multiple set wearers.
 - Roar of Alkosh with 0-2 pieces (hidden), 3-4 pieces (visible without the 5-piece bonus), 5 pieces, Monitor/Cycle modes, repeated updates of one proc, activations before/inside/after the window, an available synergy after expiry, offers lost in the window, Trial Dummy debuff, and a normal target when available.
-- Z'en's Redress with 3-4 pieces, 5 pieces, multiple DoTs, Touch refreshes, target changes, weapon swaps, and with/without `LibCombat`.
+- Z'en's Redress with 3-4 pieces and 5 pieces; light and heavy attacks from both weapon bars; multiple DoTs; initial Touch, refresh and fade events; target changes; weapon swaps; manual reticle scans; and with/without `LibCombat`. Verify that only a 5-piece light attack resolves the initial Touch correlation, including when the Touch event precedes the impact; heavy attacks must remain non-candidates.
 - DD Stats own/effective/max values and tooltip after combat.
 - Observed Damage/Healing with `LibCombat` installed and with `LibCombat` missing.
 - Fatecarver channel start, completion, early stop, and warning color.

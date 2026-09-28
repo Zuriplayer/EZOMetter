@@ -4,6 +4,9 @@ EZOMetter_Zen = EZOMetter_Zen or {}
 local Tracker = EZOMetter_Zen
 local ADDON_NAME = "EZOMetter"
 local CONTROL_NAME = "EZOMetterZenTracker"
+local MARKER_RENDER_NAME = "EZOMetterZenMarkerRenderControl"
+local MARKER_WINDOW_NAME = "EZOMetterZenMarkerWindow"
+local MARKER_CONTROL_NAME = "EZOMetterZenTargetMarker"
 local LIBCOMBAT_CALLBACK_NAME = ADDON_NAME .. "_ZenLibCombat"
 local UPDATE_INTERVAL_MS = 250
 local EQUIPMENT_SCAN_INTERVAL_MS = 1000
@@ -20,6 +23,12 @@ local MODE_ON = "on"
 local ZEN_TOUCH_ID = 126597
 local ZEN_TOUCH_FALLBACK_DURATION_MS = 20000
 local MAX_STACKS = 5
+local MARKER_UPDATE_MS = 100
+local MARKER_ICON_SIZE = 96
+local MARKER_OFFSET_M = 2.8
+local DEBUG_COMBAT_EVENT_NAME = ADDON_NAME .. "_ZenDebugAttacks"
+local ATTACK_CORRELATION_BEFORE_MS = 250
+local ATTACK_CORRELATION_AFTER_MS = 250
 
 local ZEN_SET_IDS = {
     [455] = true,
@@ -45,13 +54,29 @@ local effectiveLabel
 local leftLabel
 local targetLabel
 local bar
+local markerRenderControl
+local markerWindow
+local marker
+local markerUpdateRegistered = false
+local markerDebugState = ""
+local markerCamera = {}
+local markerVisible = false
+local markerX
+local markerY
+local markerScale
+local weaponPairScanSequence = 0
 local updateRegistered = false
 local libCombatRegistered = false
+local debugCombatRegistered = false
+local effectEventsRegistered = false
 local isCombat = false
 local forceShow = false
 local lastEquipmentScanMs = 0
 local currentSnapshot = { hasSet = false, numEquipped = 0, maxEquipped = 0 }
 local targets = {}
+local recentAttacks = {}
+local pendingTouchApplications = {}
+local pendingTouchSequence = 0
 local combatStartMs = 0
 local lastSampleMs = 0
 local requiredMs = 0
@@ -62,9 +87,17 @@ local potentialCapMs = 0
 local effectiveCapMs = 0
 local lastCombatSummary = nil
 local combatRelevant = false
+local combatMaxPieces = 0
+local combatTouchPieces = 0
+local combatTouchPair = ""
+local combatTargetName = ""
+local combatUsedLibCombat = false
 local IsHudUnlocked
 local RefreshState
 local RefreshUpdateRegistration
+local RefreshDebugCombatRegistration
+local RefreshEffectRegistration
+local GetActiveWeaponPairName
 
 local function GetSettings()
     if not EZOMetter.sv then return nil end
@@ -116,14 +149,17 @@ local function IsOfflinePlaceholder(value)
     return string.lower(tostring(value or "")) == "offline"
 end
 
-local function DebugLog(message)
+local function IsDebugEnabled()
     local settings = GetSettings()
-    if settings
+    return settings
         and settings.debugEvents == true
         and EZOMetter.sv
         and EZOMetter.sv.general
         and EZOMetter.sv.general.debugMode == true
-        and EZOMetter.DebugLog then
+end
+
+local function DebugLog(message)
+    if IsDebugEnabled() and EZOMetter.DebugLog then
         EZOMetter.DebugLog("[Z'en] " .. tostring(message))
     end
 end
@@ -154,12 +190,28 @@ local function ScanEquipment()
     lastEquipmentScanMs = GetNowMs()
 end
 
-local function QueueEquipmentScan(delayMs)
+local function QueueEquipmentScan(delayMs, debugWeaponSwap)
     delayMs = tonumber(delayMs) or 0
     lastEquipmentScanMs = GetNowMs()
+    local scanSequence
+    if debugWeaponSwap then
+        weaponPairScanSequence = weaponPairScanSequence + 1
+        scanSequence = weaponPairScanSequence
+    end
+
     if delayMs > 0 and type(zo_callLater) == "function" then
         zo_callLater(function()
+            if scanSequence and scanSequence ~= weaponPairScanSequence then return end
             ScanEquipment()
+            if debugWeaponSwap then
+                DebugLog(string.format(
+                    "weapon swap pair=%s pieces=%s hasFive=%s",
+                    tostring(GetActiveWeaponPairName()),
+                    tostring(currentSnapshot.numEquipped or 0),
+                    tostring(currentSnapshot.hasSet == true and (currentSnapshot.numEquipped or 0) >= 5)
+                ))
+            end
+            RefreshEffectRegistration()
             RefreshUpdateRegistration()
             RefreshState()
         end, delayMs)
@@ -167,6 +219,7 @@ local function QueueEquipmentScan(delayMs)
     end
 
     ScanEquipment()
+    RefreshEffectRegistration()
     RefreshUpdateRegistration()
     RefreshState()
 end
@@ -177,6 +230,19 @@ end
 
 local function HasFivePieces()
     return currentSnapshot and currentSnapshot.hasSet == true and GetPieces() >= 5
+end
+
+local function GetWeaponPairName(pair)
+    pair = tonumber(pair) or 0
+    if ACTIVE_WEAPON_PAIR_MAIN ~= nil and pair == ACTIVE_WEAPON_PAIR_MAIN then return "main" end
+    if ACTIVE_WEAPON_PAIR_BACKUP ~= nil and pair == ACTIVE_WEAPON_PAIR_BACKUP then return "backup" end
+    if ACTIVE_WEAPON_PAIR_NONE ~= nil and pair == ACTIVE_WEAPON_PAIR_NONE then return "none" end
+    return tostring(pair)
+end
+
+GetActiveWeaponPairName = function()
+    if type(GetActiveWeaponPairInfo) ~= "function" then return "unknown" end
+    return GetWeaponPairName(GetActiveWeaponPairInfo())
 end
 
 local function HasVisibleSet()
@@ -322,6 +388,186 @@ local function GetCurrentValues(nowMs)
     return potential, effective, target, stackSource
 end
 
+local function StoreRecentAttack(attack)
+    local unitId = tonumber(attack and attack.targetUnitId) or 0
+    local targetName = CleanName(attack and attack.targetName)
+    if unitId > 0 then recentAttacks["id:" .. tostring(unitId)] = attack end
+    if targetName ~= "" then recentAttacks["name:" .. targetName] = attack end
+end
+
+local function GetCorrelationKey(targetName, unitId)
+    unitId = tonumber(unitId) or 0
+    if unitId > 0 then return "id:" .. tostring(unitId) end
+
+    local cleanName = CleanName(targetName)
+    if cleanName ~= "" then return "name:" .. cleanName end
+    return nil
+end
+
+local function GetRecentLightAttack(targetName, unitId, nowMs)
+    nowMs = nowMs or GetNowMs()
+    unitId = tonumber(unitId) or 0
+    local cleanName = CleanName(targetName)
+    local attack
+    if unitId > 0 then attack = recentAttacks["id:" .. tostring(unitId)] end
+    if not attack and cleanName ~= "" then attack = recentAttacks["name:" .. cleanName] end
+    local ageMs = nowMs - (tonumber(attack and attack.timeMs) or 0)
+    if not attack
+        or attack.attackType ~= "light"
+        or ageMs < 0
+        or ageMs > ATTACK_CORRELATION_BEFORE_MS then
+        return nil
+    end
+    return attack
+end
+
+local function RecordTouchApplication(target, pieces, pair)
+    pieces = tonumber(pieces) or 0
+    combatMaxPieces = math.max(combatMaxPieces, pieces)
+    combatTouchPieces = math.max(combatTouchPieces, pieces)
+    if pair and pair ~= "" then combatTouchPair = pair end
+    if target and target.name and target.name ~= "" then combatTargetName = target.name end
+    if pieces >= MAX_STACKS then combatRelevant = true end
+end
+
+local function ClearPendingTouch(targetName, unitId)
+    local key = GetCorrelationKey(targetName, unitId)
+    if key then pendingTouchApplications[key] = nil end
+end
+
+local function ResolvePendingTouchWithAttack(attack)
+    if not attack or attack.attackType ~= "light" then return false end
+
+    local key = GetCorrelationKey(attack.targetName, attack.targetUnitId)
+    local pending = key and pendingTouchApplications[key]
+    if not pending then return false end
+
+    local delayMs = (tonumber(attack.timeMs) or 0) - (tonumber(pending.timeMs) or 0)
+    if delayMs < 0 then return false end
+    if delayMs > ATTACK_CORRELATION_AFTER_MS then
+        pendingTouchApplications[key] = nil
+        return false
+    end
+
+    pendingTouchApplications[key] = nil
+    DebugLog(string.format(
+        "touch correlation resolved direction=after attack=light target=%s unitId=%s attackDelayMs=%s attackPair=%s attackPieces=%s attackHasFive=%s validApplication=%s",
+        tostring(attack.targetName),
+        tostring(attack.targetUnitId),
+        tostring(delayMs),
+        tostring(attack.pair),
+        tostring(attack.pieces),
+        tostring(attack.hasFive),
+        tostring(attack.hasFive == true)
+    ))
+    return true
+end
+
+local function QueuePendingTouch(target, nowMs)
+    local key = GetCorrelationKey(target and target.name, target and target.unitId)
+    if not key then return false end
+
+    pendingTouchSequence = pendingTouchSequence + 1
+    local sequence = pendingTouchSequence
+    pendingTouchApplications[key] = {
+        sequence = sequence,
+        timeMs = nowMs,
+        targetName = target.name,
+        targetUnitId = target.unitId,
+    }
+
+    if type(zo_callLater) == "function" then
+        zo_callLater(function()
+            local pending = pendingTouchApplications[key]
+            if not pending or pending.sequence ~= sequence then return end
+            pendingTouchApplications[key] = nil
+            DebugLog(string.format(
+                "touch correlation unresolved target=%s unitId=%s waitMs=%s reason=no-light-impact",
+                tostring(pending.targetName),
+                tostring(pending.targetUnitId),
+                tostring(ATTACK_CORRELATION_AFTER_MS)
+            ))
+        end, ATTACK_CORRELATION_AFTER_MS)
+    end
+    return true
+end
+
+local function IsAttackImpactResult(result)
+    return result == ACTION_RESULT_DAMAGE
+        or result == ACTION_RESULT_CRITICAL_DAMAGE
+        or result == ACTION_RESULT_DAMAGE_SHIELDED
+end
+
+local function GetAttackType(actionSlotType)
+    if actionSlotType == ACTION_SLOT_TYPE_LIGHT_ATTACK then return "light" end
+    if actionSlotType == ACTION_SLOT_TYPE_HEAVY_ATTACK then return "heavy" end
+    return nil
+end
+
+local function OnDebugCombatEvent(
+    _,
+    result,
+    isError,
+    abilityName,
+    _,
+    actionSlotType,
+    _,
+    sourceType,
+    targetName,
+    _,
+    hitValue,
+    _,
+    _,
+    _,
+    _,
+    targetUnitId,
+    abilityId
+)
+    if isError or not IsAttackImpactResult(result) then return end
+    if COMBAT_UNIT_TYPE_PLAYER ~= nil and sourceType ~= COMBAT_UNIT_TYPE_PLAYER then return end
+
+    local attackType = GetAttackType(actionSlotType)
+    if not attackType then return end
+
+    ScanEquipment()
+    local nowMs = GetNowMs()
+    local key = GetTargetKey(nil, targetName, targetUnitId)
+    local target = GetTarget(key, nil, targetName, targetUnitId)
+    local touchActive = IsTouchActive(target, nowMs)
+    local attack = {
+        timeMs = nowMs,
+        attackType = attackType,
+        targetName = CleanName(targetName),
+        targetUnitId = tonumber(targetUnitId) or 0,
+        abilityId = tonumber(abilityId) or 0,
+        abilityName = CleanName(abilityName),
+        pair = GetActiveWeaponPairName(),
+        pieces = GetPieces(),
+        hasFive = HasFivePieces(),
+    }
+    StoreRecentAttack(attack)
+    local resolvedPendingTouch = ResolvePendingTouchWithAttack(attack)
+
+    DebugLog(string.format(
+        "attack type=%s target=%s unitId=%s ability=%s(%s) result=%s hit=%s pair=%s pieces=%s hasFive=%s touchObservedAtImpact=%s touchAbsentAtImpact=%s remainingMs=%s touchCandidate=%s resolvedPendingTouch=%s",
+        tostring(attack.attackType),
+        tostring(attack.targetName),
+        tostring(attack.targetUnitId),
+        tostring(attack.abilityName),
+        tostring(attack.abilityId),
+        tostring(result),
+        tostring(hitValue),
+        tostring(attack.pair),
+        tostring(attack.pieces),
+        tostring(attack.hasFive),
+        tostring(touchActive),
+        tostring(not touchActive),
+        tostring(GetTouchRemainingMs(target, nowMs)),
+        tostring(attack.attackType == "light"),
+        tostring(resolvedPendingTouch)
+    ))
+end
+
 local function GetAverage(weightedMs)
     if requiredMs <= 0 then return 0 end
     return (tonumber(weightedMs) or 0) / requiredMs
@@ -330,13 +576,17 @@ end
 local function BuildSummary(nowMs)
     nowMs = nowMs or GetNowMs()
     local durationMs = combatStartMs > 0 and math.max(0, nowMs - combatStartMs) or requiredMs
-    local potential, effective, target, stackSource = GetCurrentValues(nowMs)
+    local potential, effective, target = GetCurrentValues(nowMs)
+    local summaryPieces = combatTouchPieces > 0 and combatTouchPieces or combatMaxPieces
+    if summaryPieces <= 0 then summaryPieces = GetPieces() end
+    local summaryTarget = combatTargetName
+    if summaryTarget == "" and target then summaryTarget = target.name or "" end
     return {
         hasData = requiredMs > 0,
         durationMs = durationMs,
         requiredMs = requiredMs,
-        pieces = GetPieces(),
-        hasFivePieces = HasFivePieces(),
+        pieces = summaryPieces,
+        hasFivePieces = summaryPieces >= MAX_STACKS,
         relevant = combatRelevant,
         potential = potential,
         effective = effective,
@@ -346,8 +596,9 @@ local function BuildSummary(nowMs)
         potentialCapTime = requiredMs > 0 and (potentialCapMs / requiredMs) * 100 or 0,
         effectiveCapTime = requiredMs > 0 and (effectiveCapMs / requiredMs) * 100 or 0,
         remainingMs = GetTouchRemainingMs(target, nowMs),
-        target = target and target.name or "",
-        stackSource = stackSource,
+        target = summaryTarget,
+        stackSource = combatUsedLibCombat and "libcombat" or "fallback",
+        touchPair = combatTouchPair,
     }
 end
 
@@ -360,7 +611,8 @@ local function SampleCombat(nowMs)
         return
     end
 
-    local potential, effective, target = GetCurrentValues(nowMs)
+    local potential, effective, target, stackSource = GetCurrentValues(nowMs)
+    local pieces = GetPieces()
     requiredMs = requiredMs + deltaMs
     potentialWeightedMs = potentialWeightedMs + (potential * deltaMs)
     effectiveWeightedMs = effectiveWeightedMs + (effective * deltaMs)
@@ -369,6 +621,9 @@ local function SampleCombat(nowMs)
     end
     if potential >= MAX_STACKS then potentialCapMs = potentialCapMs + deltaMs end
     if effective >= MAX_STACKS then effectiveCapMs = effectiveCapMs + deltaMs end
+    combatMaxPieces = math.max(combatMaxPieces, pieces)
+    if target and target.name and target.name ~= "" then combatTargetName = target.name end
+    if stackSource == "libcombat" then combatUsedLibCombat = true end
 
     lastSampleMs = nowMs
 end
@@ -533,6 +788,213 @@ local function CanShowHud()
     return EZOMetter_VisualContext and EZOMetter_VisualContext.CanShowHud and EZOMetter_VisualContext.CanShowHud()
 end
 
+local function SetMarkerHidden(reason)
+    if marker and markerVisible then
+        marker:SetHidden(true)
+        markerVisible = false
+    end
+
+    local state = "hidden:" .. tostring(reason or "unknown")
+    if markerDebugState ~= state then
+        markerDebugState = state
+        DebugLog("target marker hidden reason=" .. tostring(reason or "unknown"))
+    end
+end
+
+local function EnsureMarker()
+    if marker then return marker end
+
+    local wm = WINDOW_MANAGER
+    markerRenderControl = wm:CreateControl(MARKER_RENDER_NAME, GuiRoot, CT_CONTROL)
+    markerRenderControl:SetAnchorFill(GuiRoot)
+    markerRenderControl:Create3DRenderSpace()
+    markerRenderControl:SetHidden(true)
+
+    markerWindow = wm:CreateTopLevelWindow(MARKER_WINDOW_NAME)
+    markerWindow:SetAnchorFill(GuiRoot)
+    markerWindow:SetMouseEnabled(false)
+    markerWindow:SetDrawLayer(DL_OVERLAY)
+    markerWindow:SetHidden(false)
+
+    local icon = type(GetAbilityIcon) == "function" and GetAbilityIcon(ZEN_TOUCH_ID) or ""
+    if not icon or icon == "" then icon = "/esoui/art/icons/icon_missing.dds" end
+
+    marker = wm:CreateControl(MARKER_CONTROL_NAME, markerWindow, CT_TEXTURE)
+    marker:SetAnchor(BOTTOM, markerWindow, CENTER, 0, 0)
+    marker:SetDimensions(MARKER_ICON_SIZE, MARKER_ICON_SIZE)
+    marker:SetTexture(icon)
+    marker:SetColor(0.35, 1, 0.45, 1)
+    marker:SetAlpha(0.95)
+    marker:SetPixelRoundingEnabled(false)
+    marker:SetHidden(true)
+
+    if EZOMetter_VisualContext and EZOMetter_VisualContext.AddHudFragment then
+        EZOMetter_VisualContext.AddHudFragment(markerWindow)
+    end
+    return marker
+end
+
+local function ReticleMatchesTarget(target)
+    if not target
+        or type(DoesUnitExist) ~= "function"
+        or not DoesUnitExist("reticleover") then
+        return false, "no-reticle-target"
+    end
+
+    local targetUnitId = tonumber(target.unitId) or 0
+    local reticleUnitId = type(GetUnitId) == "function" and (tonumber(GetUnitId("reticleover")) or 0) or 0
+    if targetUnitId > 0 and reticleUnitId > 0 then
+        if targetUnitId == reticleUnitId then return true end
+        return false, "different-unit-id"
+    end
+
+    local targetName = CleanName(target.name)
+    local reticleName = type(GetUnitName) == "function" and CleanName(GetUnitName("reticleover")) or ""
+    if targetName ~= "" and targetName == reticleName then return true end
+    return false, "different-unit-name"
+end
+
+-- Camera projection follows the renderer used by EZOCustomSupportIcons.
+local function GetMarkerCamera()
+    if type(Set3DRenderSpaceToCurrentCamera) ~= "function"
+        or type(GuiRender3DPositionToWorldPosition) ~= "function" then
+        return nil
+    end
+
+    Set3DRenderSpaceToCurrentCamera(markerRenderControl:GetName())
+    local cameraX, cameraY, cameraZ = GuiRender3DPositionToWorldPosition(markerRenderControl:Get3DRenderSpaceOrigin())
+    local forwardX, forwardY, forwardZ = markerRenderControl:Get3DRenderSpaceForward()
+    local rightX, rightY, rightZ = markerRenderControl:Get3DRenderSpaceRight()
+    local upX, upY, upZ = markerRenderControl:Get3DRenderSpaceUp()
+    local uiW, uiH = GuiRoot:GetDimensions()
+
+    local camera = markerCamera
+    camera.x, camera.y, camera.z = cameraX, cameraY, cameraZ
+    camera.uiW, camera.uiH = uiW, uiH
+    camera.i11 = -(upY * forwardZ - upZ * forwardY)
+    camera.i12 = -(rightZ * forwardY - rightY * forwardZ)
+    camera.i13 = -(rightY * upZ - rightZ * upY)
+    camera.i21 = -(upZ * forwardX - upX * forwardZ)
+    camera.i22 = -(rightX * forwardZ - rightZ * forwardX)
+    camera.i23 = -(rightZ * upX - rightX * upZ)
+    camera.i31 = -(upX * forwardY - upY * forwardX)
+    camera.i32 = -(rightY * forwardX - rightX * forwardY)
+    camera.i33 = -(rightX * upY - rightY * upX)
+    camera.i41 = -(upZ * forwardY * cameraX + upY * forwardX * cameraZ + upX * forwardZ * cameraY - upX * forwardY * cameraZ - upY * forwardZ * cameraX - upZ * forwardX * cameraY)
+    camera.i42 = -(rightX * forwardY * cameraZ + rightY * forwardZ * cameraX + rightZ * forwardX * cameraY - rightZ * forwardY * cameraX - rightY * forwardX * cameraZ - rightX * forwardZ * cameraY)
+    camera.i43 = -(rightZ * upY * cameraX + rightY * upX * cameraZ + rightX * upZ * cameraY - rightX * upY * cameraZ - rightY * upZ * cameraX - rightZ * upX * cameraY)
+    return camera
+end
+
+local function ProjectTargetMarker(target, camera)
+    if type(GetUnitRawWorldPosition) ~= "function"
+        or type(GetWorldDimensionsOfViewFrustumAtDepth) ~= "function" then
+        return false, "projection-api-unavailable"
+    end
+
+    local _, worldX, worldY, worldZ = GetUnitRawWorldPosition("reticleover")
+    worldX = tonumber(worldX) or 0
+    worldY = tonumber(worldY) or 0
+    worldZ = tonumber(worldZ) or 0
+    if worldX == 0 and worldY == 0 and worldZ == 0 then
+        return false, "world-position-unavailable"
+    end
+    worldY = worldY + MARKER_OFFSET_M * 100
+
+    local screenX = worldX * camera.i11 + worldY * camera.i21 + worldZ * camera.i31 + camera.i41
+    local screenY = worldX * camera.i12 + worldY * camera.i22 + worldZ * camera.i32 + camera.i42
+    local screenZ = worldX * camera.i13 + worldY * camera.i23 + worldZ * camera.i33 + camera.i43
+    if screenZ <= 0 then return false, "behind-camera" end
+
+    local viewW, viewH = GetWorldDimensionsOfViewFrustumAtDepth(screenZ)
+    if not viewW or not viewH or viewW == 0 or viewH == 0 then
+        return false, "view-frustum-unavailable"
+    end
+
+    local uiX = screenX * camera.uiW / viewW
+    local uiY = -screenY * camera.uiH / viewH
+    local dx = worldX - camera.x
+    local dy = worldY - camera.y
+    local dz = worldZ - camera.z
+    local distance = 1 + zo_sqrt(dx * dx + dy * dy + dz * dz)
+    local scale = 1000 / distance
+    if not markerVisible or not markerX or math.abs(markerX - uiX) > 0.5 or math.abs(markerY - uiY) > 0.5 then
+        marker:ClearAnchors()
+        marker:SetAnchor(BOTTOM, markerWindow, CENTER, uiX, uiY)
+        markerX, markerY = uiX, uiY
+    end
+    if not markerVisible or not markerScale or math.abs(markerScale - scale) > 0.01 then
+        marker:SetScale(scale)
+        markerScale = scale
+    end
+    if not markerVisible then
+        marker:SetHidden(false)
+        markerVisible = true
+    end
+
+    local state = "visible:" .. tostring(target.unitId or target.name or "unknown")
+    if markerDebugState ~= state then
+        markerDebugState = state
+        DebugLog(string.format(
+            "target marker visible target=%s unitId=%s remainingMs=%s",
+            tostring(target.name),
+            tostring(target.unitId),
+            tostring(GetTouchRemainingMs(target, GetNowMs()))
+        ))
+    end
+    return true
+end
+
+local function UpdateTargetMarker()
+    EnsureMarker()
+    local nowMs = GetNowMs()
+    local target = GetActiveTarget()
+    if not CanShowHud() then
+        SetMarkerHidden("hud-scene-hidden")
+        return
+    end
+    if GetMode() == MODE_OFF then
+        SetMarkerHidden("zen-off")
+        return
+    end
+    if not IsTouchActive(target, nowMs) then
+        SetMarkerHidden("touch-inactive")
+        return
+    end
+
+    local matches, reason = ReticleMatchesTarget(target)
+    if not matches then
+        SetMarkerHidden(reason)
+        return
+    end
+
+    local camera = GetMarkerCamera()
+    if not camera then
+        SetMarkerHidden("camera-unavailable")
+        return
+    end
+
+    local visible, projectionReason = ProjectTargetMarker(target, camera)
+    if not visible then
+        SetMarkerHidden(projectionReason)
+    end
+end
+
+local function RegisterMarkerUpdate()
+    if markerUpdateRegistered then return end
+    EnsureMarker()
+    EVENT_MANAGER:RegisterForUpdate(ADDON_NAME .. "_ZenMarkerUpdate", MARKER_UPDATE_MS, UpdateTargetMarker)
+    markerUpdateRegistered = true
+end
+
+local function UnregisterMarkerUpdate(reason)
+    if markerUpdateRegistered then
+        EVENT_MANAGER:UnregisterForUpdate(ADDON_NAME .. "_ZenMarkerUpdate")
+        markerUpdateRegistered = false
+    end
+    SetMarkerHidden(reason)
+end
+
 function IsHudUnlocked()
     return EZOMetter_VisualContext and EZOMetter_VisualContext.IsHudUnlocked and EZOMetter_VisualContext.IsHudUnlocked()
 end
@@ -612,7 +1074,17 @@ local function UnregisterUpdate()
 end
 
 function RefreshUpdateRegistration()
-    if IsHudUnlocked() or forceShow or IsEnabled() then
+    local target = GetActiveTarget()
+    local nowMs = GetNowMs()
+    local touchActive = IsTouchActive(target, nowMs)
+    if GetMode() ~= MODE_OFF and touchActive then
+        RegisterMarkerUpdate()
+        UpdateTargetMarker()
+    else
+        UnregisterMarkerUpdate(GetMode() == MODE_OFF and "zen-off" or "touch-inactive")
+    end
+
+    if IsHudUnlocked() or forceShow or IsEnabled() or touchActive then
         RegisterUpdate()
     else
         UnregisterUpdate()
@@ -629,6 +1101,13 @@ local function ResetCombatData(nowMs)
     effectiveWeightedMs = 0
     potentialCapMs = 0
     effectiveCapMs = 0
+    combatMaxPieces = 0
+    combatTouchPieces = 0
+    combatTouchPair = ""
+    combatTargetName = ""
+    combatUsedLibCombat = false
+    recentAttacks = {}
+    pendingTouchApplications = {}
 end
 
 local function IsEffectGain(changeType)
@@ -652,6 +1131,10 @@ local function OnLibCombatEffectsOut(_, _timeMs, unitId, abilityId, changeType, 
 
     target.libCombatStacks = math.max(0, math.min(MAX_STACKS, tonumber(stacks) or 0))
     target.libCombatUpdatedMs = nowMs
+    if isCombat then
+        combatUsedLibCombat = true
+        if target.name and target.name ~= "" then combatTargetName = target.name end
+    end
 
     if IsEffectGain(changeType) and (tonumber(target.touchUntilMs) or 0) <= nowMs then
         target.touchUntilMs = nowMs + ZEN_TOUCH_FALLBACK_DURATION_MS
@@ -666,6 +1149,7 @@ local function OnLibCombatEffectsOut(_, _timeMs, unitId, abilityId, changeType, 
         tostring(target.libCombatStacks),
         tostring(changeType)
     ))
+    RefreshUpdateRegistration()
 end
 
 local function RegisterLibCombat()
@@ -673,6 +1157,39 @@ local function RegisterLibCombat()
     LibCombat:RegisterCallbackType(LIBCOMBAT_EVENT_EFFECTS_OUT, OnLibCombatEffectsOut, LIBCOMBAT_CALLBACK_NAME)
     libCombatRegistered = true
     DebugLog("LibCombat Z'en stack callback registered")
+end
+
+function RefreshDebugCombatRegistration()
+    if IsDebugEnabled() then
+        if debugCombatRegistered or not EVENT_COMBAT_EVENT then return end
+        EVENT_MANAGER:RegisterForEvent(DEBUG_COMBAT_EVENT_NAME, EVENT_COMBAT_EVENT, OnDebugCombatEvent)
+        if REGISTER_FILTER_SOURCE_COMBAT_UNIT_TYPE ~= nil and COMBAT_UNIT_TYPE_PLAYER ~= nil then
+            EVENT_MANAGER:AddFilterForEvent(
+                DEBUG_COMBAT_EVENT_NAME,
+                EVENT_COMBAT_EVENT,
+                REGISTER_FILTER_SOURCE_COMBAT_UNIT_TYPE,
+                COMBAT_UNIT_TYPE_PLAYER
+            )
+        end
+        debugCombatRegistered = true
+        DebugLog(string.format(
+            "debug capture started touchAbilityId=%s correlationBeforeMs=%s correlationAfterMs=%s applicationAttack=light pair=%s pieces=%s hasFive=%s",
+            tostring(ZEN_TOUCH_ID),
+            tostring(ATTACK_CORRELATION_BEFORE_MS),
+            tostring(ATTACK_CORRELATION_AFTER_MS),
+            tostring(GetActiveWeaponPairName()),
+            tostring(GetPieces()),
+            tostring(HasFivePieces())
+        ))
+        return
+    end
+
+    if debugCombatRegistered then
+        EVENT_MANAGER:UnregisterForEvent(DEBUG_COMBAT_EVENT_NAME, EVENT_COMBAT_EVENT)
+        debugCombatRegistered = false
+        recentAttacks = {}
+        pendingTouchApplications = {}
+    end
 end
 
 local function OnCombatState(_, inCombat)
@@ -698,7 +1215,7 @@ local function OnCombatState(_, inCombat)
     RefreshUpdateRegistration()
 end
 
-local function OnEffectChanged(_, changeType, effectSlot, _effectName, unitTag, _beginTime, endTime, _stackCount, _iconName, _buffType, effectType, abilityType, _statusEffectType, unitName, unitId, abilityId, sourceType)
+local function OnEffectChanged(_, changeType, effectSlot, effectName, unitTag, beginTime, endTime, stackCount, _iconName, _buffType, effectType, abilityType, _statusEffectType, unitName, unitId, abilityId, sourceType)
     if sourceType ~= COMBAT_UNIT_TYPE_PLAYER then return end
     if IsIgnoredUnitTag(unitTag) then return end
 
@@ -718,14 +1235,64 @@ local function OnEffectChanged(_, changeType, effectSlot, _effectName, unitTag, 
     local endMs = (tonumber(endTime) or 0) * 1000
 
     if abilityId == ZEN_TOUCH_ID then
+        local previousRemainingMs = GetTouchRemainingMs(target, nowMs)
+        local isInitialApplication = isGain and previousRemainingMs <= 0
         if isGain then
             if endMs <= nowMs then endMs = nowMs + ZEN_TOUCH_FALLBACK_DURATION_MS end
             target.touchUntilMs = endMs
-            DebugLog(string.format("touch gained target=%s end=%s", tostring(target.name), tostring(target.touchUntilMs)))
         elseif isFade then
             target.touchUntilMs = 0
-            DebugLog(string.format("touch faded target=%s", tostring(target.name)))
+            ClearPendingTouch(unitName, unitId)
         end
+
+        if isInitialApplication then ScanEquipment() end
+        local currentPair = GetActiveWeaponPairName()
+        local currentPieces = GetPieces()
+        if isInitialApplication then
+            RecordTouchApplication(target, currentPieces, currentPair)
+        end
+
+        if IsDebugEnabled() then
+            local attack = isInitialApplication and GetRecentLightAttack(unitName, unitId, nowMs) or nil
+            local correlation = "not-applicable"
+            if isInitialApplication and attack then
+                correlation = "resolved-before"
+                DebugLog(string.format(
+                    "touch correlation resolved direction=before attack=light target=%s unitId=%s attackAgeMs=%s attackPair=%s attackPieces=%s attackHasFive=%s validApplication=%s",
+                    tostring(target.name),
+                    tostring(unitId),
+                    tostring(nowMs - attack.timeMs),
+                    tostring(attack.pair),
+                    tostring(attack.pieces),
+                    tostring(attack.hasFive),
+                    tostring(attack.hasFive == true)
+                ))
+            elseif isInitialApplication and QueuePendingTouch(target, nowMs) then
+                correlation = "pending-after"
+            end
+            DebugLog(string.format(
+                "touch change=%s target=%s unitId=%s effect=%s(%s) stackCount=%s slot=%s sourceType=%s begin=%.3f end=%.3f durationMs=%s previousRemainingMs=%s initialApplication=%s currentPair=%s currentPieces=%s currentHasFive=%s correlation=%s correlatedLightAgeMs=%s",
+                tostring(changeType),
+                tostring(target.name),
+                tostring(unitId),
+                tostring(CleanName(effectName)),
+                tostring(abilityId),
+                tostring(stackCount),
+                tostring(effectSlot),
+                tostring(sourceType),
+                tonumber(beginTime) or 0,
+                tonumber(endTime) or 0,
+                tostring(math.max(0, endMs - nowMs)),
+                tostring(previousRemainingMs),
+                tostring(isInitialApplication),
+                tostring(currentPair),
+                tostring(currentPieces),
+                tostring(currentPieces >= MAX_STACKS),
+                tostring(correlation),
+                tostring(attack and (nowMs - attack.timeMs) or -1)
+            ))
+        end
+        RefreshUpdateRegistration()
         return
     end
 
@@ -736,11 +1303,100 @@ local function OnEffectChanged(_, changeType, effectSlot, _effectName, unitTag, 
             abilityId = abilityId,
             endMs = endMs,
         }
-        DebugLog(string.format("dot gained target=%s ability=%s end=%s", tostring(target.name), tostring(abilityId), tostring(endMs)))
+        if IsDebugEnabled() then
+            DebugLog(string.format("dot gained target=%s ability=%s end=%s", tostring(target.name), tostring(abilityId), tostring(endMs)))
+        end
     elseif isFade then
         target.dots[dotKey] = nil
-        DebugLog(string.format("dot faded target=%s ability=%s", tostring(target.name), tostring(abilityId)))
+        if IsDebugEnabled() then
+            DebugLog(string.format("dot faded target=%s ability=%s", tostring(target.name), tostring(abilityId)))
+        end
     end
+end
+
+RefreshEffectRegistration = function()
+    local mode = GetMode()
+    local shouldListen = mode ~= MODE_OFF and (mode == MODE_ON or currentSnapshot.hasSet == true)
+    if shouldListen == effectEventsRegistered then return end
+
+    local eventName = ADDON_NAME .. "_ZenEffects"
+    if shouldListen then
+        EVENT_MANAGER:RegisterForEvent(eventName, EVENT_EFFECT_CHANGED, OnEffectChanged)
+        if REGISTER_FILTER_SOURCE_COMBAT_UNIT_TYPE ~= nil and COMBAT_UNIT_TYPE_PLAYER ~= nil then
+            EVENT_MANAGER:AddFilterForEvent(
+                eventName,
+                EVENT_EFFECT_CHANGED,
+                REGISTER_FILTER_SOURCE_COMBAT_UNIT_TYPE,
+                COMBAT_UNIT_TYPE_PLAYER
+            )
+        end
+    else
+        EVENT_MANAGER:UnregisterForEvent(eventName, EVENT_EFFECT_CHANGED)
+        targets = {}
+        pendingTouchApplications = {}
+    end
+    effectEventsRegistered = shouldListen
+end
+
+function Tracker.DebugScanReticle()
+    if not IsDebugEnabled() then
+        if EZOMetter.Print then EZOMetter.Print(GetString(EZOM_ZEN_DEBUG_DISABLED)) end
+        return
+    end
+
+    ScanEquipment()
+    if type(DoesUnitExist) ~= "function" or not DoesUnitExist("reticleover") then
+        DebugLog(string.format(
+            "reticle scan no-target pair=%s pieces=%s hasFive=%s",
+            tostring(GetActiveWeaponPairName()),
+            tostring(GetPieces()),
+            tostring(HasFivePieces())
+        ))
+        if EZOMetter.Print then EZOMetter.Print(GetString(EZOM_ZEN_DEBUG_SCAN_DONE)) end
+        return
+    end
+
+    local unitName = type(GetUnitName) == "function" and CleanName(GetUnitName("reticleover")) or ""
+    local unitId = type(GetUnitId) == "function" and GetUnitId("reticleover") or 0
+    local total = type(GetNumBuffs) == "function" and GetNumBuffs("reticleover") or 0
+    local relevant = 0
+    DebugLog(string.format(
+        "reticle scan start target=%s unitId=%s buffs=%s pair=%s pieces=%s hasFive=%s",
+        tostring(unitName),
+        tostring(unitId),
+        tostring(total),
+        tostring(GetActiveWeaponPairName()),
+        tostring(GetPieces()),
+        tostring(HasFivePieces())
+    ))
+
+    if type(GetUnitBuffInfo) == "function" then
+        for index = 1, total do
+            local buffName, beginTime, endTime, effectSlot, stacks, _, _, effectType, abilityType, _, abilityId, _, castByPlayer = GetUnitBuffInfo("reticleover", index)
+            abilityId = tonumber(abilityId) or 0
+            if abilityId == ZEN_TOUCH_ID or (castByPlayer == true and abilityType == ABILITY_TYPE_DAMAGE) then
+                relevant = relevant + 1
+                DebugLog(string.format(
+                    "reticle effect index=%s name=%s abilityId=%s touch=%s castByPlayer=%s stacks=%s slot=%s effectType=%s abilityType=%s begin=%.3f end=%.3f remainingMs=%s",
+                    tostring(index),
+                    tostring(CleanName(buffName)),
+                    tostring(abilityId),
+                    tostring(abilityId == ZEN_TOUCH_ID),
+                    tostring(castByPlayer),
+                    tostring(stacks),
+                    tostring(effectSlot),
+                    tostring(effectType),
+                    tostring(abilityType),
+                    tonumber(beginTime) or 0,
+                    tonumber(endTime) or 0,
+                    tostring(math.max(0, ((tonumber(endTime) or 0) * 1000) - GetNowMs()))
+                ))
+            end
+        end
+    end
+
+    DebugLog(string.format("reticle scan end target=%s relevant=%s", tostring(unitName), tostring(relevant)))
+    if EZOMetter.Print then EZOMetter.Print(GetString(EZOM_ZEN_DEBUG_SCAN_DONE)) end
 end
 
 function Tracker.ApplySettings()
@@ -749,6 +1405,8 @@ function Tracker.ApplySettings()
     SetMoveMode(IsHudUnlocked())
     RegisterLibCombat()
     ScanEquipment()
+    RefreshEffectRegistration()
+    RefreshDebugCombatRegistration()
     RefreshUpdateRegistration()
     RefreshState()
 end
@@ -760,6 +1418,7 @@ function Tracker.SetForceShow(enabled)
     else
         ScanEquipment()
     end
+    RefreshEffectRegistration()
     RefreshUpdateRegistration()
     RefreshState()
 end
@@ -772,7 +1431,6 @@ function Tracker.Init()
     end
 
     EVENT_MANAGER:RegisterForEvent(ADDON_NAME .. "_ZenCombat", EVENT_PLAYER_COMBAT_STATE, OnCombatState)
-    EVENT_MANAGER:RegisterForEvent(ADDON_NAME .. "_ZenEffects", EVENT_EFFECT_CHANGED, OnEffectChanged)
 
     if EVENT_INVENTORY_SINGLE_SLOT_UPDATE then
         EVENT_MANAGER:RegisterForEvent(ADDON_NAME .. "_ZenInventory", EVENT_INVENTORY_SINGLE_SLOT_UPDATE, function()
@@ -781,11 +1439,13 @@ function Tracker.Init()
     end
     if EVENT_ACTIVE_WEAPON_PAIR_CHANGED then
         EVENT_MANAGER:RegisterForEvent(ADDON_NAME .. "_ZenWeaponPair", EVENT_ACTIVE_WEAPON_PAIR_CHANGED, function()
-            QueueEquipmentScan(WEAPON_SWAP_SCAN_DELAY_MS)
+            QueueEquipmentScan(WEAPON_SWAP_SCAN_DELAY_MS, true)
         end)
     end
 
     RegisterLibCombat()
+    RefreshEffectRegistration()
+    RefreshDebugCombatRegistration()
     RefreshUpdateRegistration()
     OnCombatState(nil, type(IsUnitInCombat) == "function" and IsUnitInCombat("player"))
 end

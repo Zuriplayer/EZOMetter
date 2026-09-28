@@ -26,6 +26,8 @@ local statsTracker
 local lastCombatSummary
 local ScanPlayerBuffs
 local ScanPlayerBuffsOnly
+local spaulderAuraActive = false
+local SPAULDER_AURA_ABILITY_ID = 163359
 
 local function GetSettings()
     if not EZOMetter.sv then return nil end
@@ -64,6 +66,18 @@ local function GetEffectIcon(effect)
     if not effect then return "" end
     if lastIconByKey[effect.key] then
         return lastIconByKey[effect.key]
+    end
+
+    if EZOMetter.Effects and EZOMetter.Effects.GetEquippedSetIcon then
+        local equippedIcon = EZOMetter.Effects.GetEquippedSetIcon(effect)
+        if equippedIcon then
+            lastIconByKey[effect.key] = equippedIcon
+            return equippedIcon
+        end
+    end
+
+    if effect.icon and effect.icon ~= "" then
+        return effect.icon
     end
 
     local abilityId = EZOMetter.Effects and EZOMetter.Effects.GetPrimaryAbilityId(effect) or nil
@@ -272,6 +286,34 @@ local function EffectMatchesBuffEvent(effect, abilityId, effectName)
     return EZOMetter.Effects.Matches(effect, abilityId, effectName)
 end
 
+local function IsSpaulderAuraRequired()
+    if not EZOMetter.Effects then return false end
+
+    for _, effect in ipairs(EZOMetter.Effects.GetRequiredForRole(GetRole())) do
+        if effect.key == "spaulder_aura" and EZOMetter.Effects.ShouldRequire(effect) then
+            return true
+        end
+    end
+
+    return false
+end
+
+local function ResetSpaulderAuraState()
+    spaulderAuraActive = false
+    lastIconByKey.spaulder_aura = nil
+end
+
+local function LogSpaulderState(source, result)
+    if type(EZOMetter.DebugLog) == "function" then
+        EZOMetter.DebugLog(string.format(
+            "[Spaulder] source=%s result=%s auraActive=%s",
+            tostring(source or "unknown"),
+            tostring(result or "unknown"),
+            tostring(spaulderAuraActive)
+        ))
+    end
+end
+
 local function GetMissingEffects()
     local missing = {}
     local required = EZOMetter.Effects and EZOMetter.Effects.GetRequiredForRole(GetRole()) or {}
@@ -406,6 +448,17 @@ end
 function ScanPlayerBuffsOnly()
     activeEffects = {}
 
+    if EZOMetter.Effects then
+        for _, effect in ipairs(EZOMetter.Effects.GetRequiredForRole(GetRole())) do
+            if EZOMetter.Effects.IsOwnToggleActive and EZOMetter.Effects.IsOwnToggleActive(effect) then
+                activeEffects[effect.key] = true
+            end
+            if effect.key == "spaulder_aura" and spaulderAuraActive then
+                activeEffects[effect.key] = true
+            end
+        end
+    end
+
     if type(GetNumBuffs) ~= "function" or type(GetUnitBuffInfo) ~= "function" then
         return
     end
@@ -417,12 +470,34 @@ function ScanPlayerBuffsOnly()
             for _, effect in ipairs(EZOMetter.Effects.GetRequiredForRole(GetRole())) do
                 if EffectMatchesBuff(effect, abilityId, buffName, castByPlayer) then
                     activeEffects[effect.key] = true
-                    if iconFilename then
+                    if iconFilename and effect.key ~= "spaulder_aura" then
                         lastIconByKey[effect.key] = iconFilename
                     end
                 end
             end
         end
+    end
+end
+
+local function OnSpaulderCombatEvent(_, result, _, _, _, _, _, sourceType, _, _, _, _, _, _, _, abilityId)
+    if abilityId ~= SPAULDER_AURA_ABILITY_ID or not IsSpaulderAuraRequired() then return end
+    if COMBAT_UNIT_TYPE_PLAYER and sourceType ~= COMBAT_UNIT_TYPE_PLAYER then return end
+
+    local wasActive = spaulderAuraActive
+    if result == ACTION_RESULT_EFFECT_GAINED then
+        spaulderAuraActive = true
+    elseif result == ACTION_RESULT_EFFECT_FADED then
+        spaulderAuraActive = false
+    else
+        -- Keep the last confirmed state. The one concise debug entry records
+        -- any client-side result variant without treating it as activation.
+        LogSpaulderState("combat", result)
+        return
+    end
+
+    if wasActive ~= spaulderAuraActive then
+        LogSpaulderState("combat", result)
+        ScanPlayerBuffs()
     end
 end
 
@@ -443,7 +518,7 @@ local function OnEffectChanged(_, changeType, _, effectName, unitTag, _, _, _, i
                         return
                     end
                     activeEffects[effect.key] = true
-                    if iconName then
+                    if iconName and effect.key ~= "spaulder_aura" then
                         lastIconByKey[effect.key] = iconName
                     end
                 end
@@ -490,6 +565,10 @@ end
 
 local function OnPlayerStateRefresh()
     zo_callLater(function()
+        if EZOMetter.Effects and EZOMetter.Effects.InvalidateEquipmentConditions then
+            EZOMetter.Effects.InvalidateEquipmentConditions()
+        end
+        ResetSpaulderAuraState()
         if not isCombat and IsEnabled() then
             RegisterIdleUpdate()
         end
@@ -538,6 +617,33 @@ function BuffAlert.Init()
     end
     if EVENT_ACTIVE_WEAPON_PAIR_CHANGED then
         EVENT_MANAGER:RegisterForEvent(ADDON_NAME .. "_BuffAlertWeaponPair", EVENT_ACTIVE_WEAPON_PAIR_CHANGED, ScanPlayerBuffs)
+    end
+    if EVENT_INVENTORY_SINGLE_SLOT_UPDATE then
+        EVENT_MANAGER:RegisterForEvent(ADDON_NAME .. "_BuffAlertEquipment", EVENT_INVENTORY_SINGLE_SLOT_UPDATE, function(_, bagId)
+            if bagId ~= BAG_WORN then return end
+            if EZOMetter.Effects and EZOMetter.Effects.InvalidateEquipmentConditions then
+                EZOMetter.Effects.InvalidateEquipmentConditions()
+            end
+            ResetSpaulderAuraState()
+            ScanPlayerBuffs()
+        end)
+    end
+    if EVENT_COMBAT_EVENT then
+        EVENT_MANAGER:RegisterForEvent(ADDON_NAME .. "_BuffAlertSpaulder", EVENT_COMBAT_EVENT, OnSpaulderCombatEvent)
+        EVENT_MANAGER:AddFilterForEvent(
+            ADDON_NAME .. "_BuffAlertSpaulder",
+            EVENT_COMBAT_EVENT,
+            REGISTER_FILTER_ABILITY_ID,
+            SPAULDER_AURA_ABILITY_ID
+        )
+        if REGISTER_FILTER_SOURCE_COMBAT_UNIT_TYPE and COMBAT_UNIT_TYPE_PLAYER then
+            EVENT_MANAGER:AddFilterForEvent(
+                ADDON_NAME .. "_BuffAlertSpaulder",
+                EVENT_COMBAT_EVENT,
+                REGISTER_FILTER_SOURCE_COMBAT_UNIT_TYPE,
+                COMBAT_UNIT_TYPE_PLAYER
+            )
+        end
     end
     EVENT_MANAGER:RegisterForEvent(ADDON_NAME .. "_BuffAlertCombat", EVENT_PLAYER_COMBAT_STATE, OnCombatState)
 

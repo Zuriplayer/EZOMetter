@@ -382,11 +382,11 @@ function EZOMetter_Menu.Init()
                     type = "slider",
                     name = GetString(EZOM_OPTION_OFF_BALANCE_ICON_SIZE),
                     tooltip = GetString(EZOM_OPTION_OFF_BALANCE_ICON_SIZE_TOOLTIP),
-                    min = 16,
-                    max = 64,
+                    min = 10,
+                    max = 100,
                     step = 2,
                     getFunc = function()
-                        return EZOMetter.sv.offBalance and tonumber(EZOMetter.sv.offBalance.iconSize) or 18
+                        return EZOMetter.sv.offBalance and tonumber(EZOMetter.sv.offBalance.iconSize) or 50
                     end,
                     setFunc = function(value)
                         EZOMetter.sv.offBalance.iconSize = value
@@ -395,7 +395,7 @@ function EZOMetter_Menu.Init()
                         end
                     end,
                     disabled = function() return not IsOffBalanceIconEnabled() end,
-                    default = 18,
+                    default = 50,
                 },
                 {
                     type = "checkbox",
@@ -949,8 +949,38 @@ function EZOMetter_Menu.Init()
                     end,
                     setFunc = function(value)
                         EZOMetter.sv.zen.debugEvents = value == true
+                        if EZOMetter_Zen and EZOMetter_Zen.ApplySettings then
+                            EZOMetter_Zen.ApplySettings()
+                        end
+                        RequestSettingsRefresh(true)
                     end,
                     default = false,
+                },
+                {
+                    type = "button",
+                    name = GetString(EZOM_OPTION_ZEN_DEBUG_SCAN),
+                    tooltip = GetString(EZOM_OPTION_ZEN_DEBUG_SCAN_TOOLTIP),
+                    func = function()
+                        if EZOMetter_Zen and EZOMetter_Zen.DebugScanReticle then
+                            EZOMetter_Zen.DebugScanReticle()
+                        end
+                    end,
+                    disabled = function()
+                        return not EZOMetter.IsDebugModeEnabled()
+                            or not EZOMetter.sv.zen
+                            or EZOMetter.sv.zen.debugEvents ~= true
+                    end,
+                },
+                {
+                    type = "button",
+                    name = GetString(EZOM_OPTION_ZEN_OPEN_LOG_VIEWER),
+                    tooltip = GetString(EZOM_OPTION_ZEN_OPEN_LOG_VIEWER_TOOLTIP),
+                    func = function()
+                        local opened = EZOMetter.OpenDebugLogViewer and EZOMetter.OpenDebugLogViewer()
+                        if not opened and EZOMetter.Print then
+                            EZOMetter.Print(GetString(EZOM_DEBUG_LOG_VIEWER_UNAVAILABLE))
+                        end
+                    end,
                 },
             },
         },
@@ -1287,15 +1317,16 @@ function EZOMetter_Menu.Init()
                     name = GetString(EZOM_OPTION_HEALING_HEALER_ONLY),
                     tooltip = GetString(EZOM_OPTION_HEALING_HEALER_ONLY_TOOLTIP),
                     getFunc = function()
-                        return EZOMetter.sv.observedHealing and EZOMetter.sv.observedHealing.healerOnly ~= false
+                        return EZOMetter.sv.observedHealing and EZOMetter.sv.observedHealing.healerOnly == false
                     end,
                     setFunc = function(value)
-                        EZOMetter.sv.observedHealing.healerOnly = value == true
+                        EZOMetter.sv.observedHealing.healerOnly = value ~= true
                         if EZOMetter_ObservedHealing and EZOMetter_ObservedHealing.ApplySettings then
                             EZOMetter_ObservedHealing.ApplySettings()
                         end
+                        RequestSettingsRefresh(true)
                     end,
-                    default = true,
+                    default = false,
                 },
                 {
                     type = "checkbox",

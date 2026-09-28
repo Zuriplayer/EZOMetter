@@ -10,7 +10,7 @@ local MAX_STACKS = 3
 local HEAT_SHOCK_DURATION_MS = 7000
 local WINDOW_MS = 6000
 local EXPIRY_WARNING_MS = 1500
-local UPDATE_INTERVAL_MS = 50
+local UPDATE_INTERVAL_MS = 100
 local REFRESH_TOLERANCE_MS = 250
 local EVENT_REFRESH_DEDUPE_MS = 450
 local SAME_CAST_GUARD_MS = 600
@@ -24,6 +24,7 @@ local timerLabel
 local stackBackdrop
 local stackLabel
 local updateRegistered = false
+local UnregisterUpdate
 local forceShow = false
 local previewEndMs = 0
 local isCombat = false
@@ -528,6 +529,14 @@ end
 local function Refresh()
     UpdateVisuals()
     UpdateVisibility()
+    local nowMs = GetNowMs()
+    if updateRegistered
+        and not forceShow
+        and not IsHudUnlocked()
+        and not IsWindowActive(nowMs)
+        and (not IsEnabled() or not hasMagmaFistSlotted or GetCurrentStackState(nowMs) == nil) then
+        UnregisterUpdate()
+    end
 end
 
 local function RegisterUpdate()
@@ -536,17 +545,18 @@ local function RegisterUpdate()
     updateRegistered = true
 end
 
-local function UnregisterUpdate()
+UnregisterUpdate = function()
     if not updateRegistered then return end
     EVENT_MANAGER:UnregisterForUpdate(ADDON_NAME .. "_MagmaFistUpdate")
     updateRegistered = false
 end
 
 local function RefreshUpdateRegistration()
+    local nowMs = GetNowMs()
     if forceShow
         or IsHudUnlocked()
-        or IsWindowActive(GetNowMs())
-        or (IsEnabled() and hasMagmaFistSlotted) then
+        or IsWindowActive(nowMs)
+        or (IsEnabled() and hasMagmaFistSlotted and GetCurrentStackState(nowMs) ~= nil) then
         RegisterUpdate()
     else
         UnregisterUpdate()
